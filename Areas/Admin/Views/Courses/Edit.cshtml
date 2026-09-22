@@ -1,0 +1,43 @@
+﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.CourseEditViewModel
+
+@{
+    ViewData["Title"] = "編輯課程";
+}
+
+<h1 class="h3 mb-4">編輯課程</h1>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form asp-area="Admin" asp-controller="Courses" asp-action="Edit" asp-route-id="@Model.Id" method="post">
+            <input asp-for="Id" type="hidden" />
+            <input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.RowVersion ?? Array.Empty<byte>())" />
+            <span asp-validation-for="RowVersion" class="text-danger"></span>
+
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="StartDate" class="form-label"></label>
+                    <input asp-for="StartDate" class="form-control" />
+                    <span asp-validation-for="StartDate" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="EndDate" class="form-label"></label>
+                    <input asp-for="EndDate" class="form-control" />
+                    <span asp-validation-for="EndDate" class="text-danger"></span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">儲存修改</button>
+            <a asp-area="Admin" asp-controller="Courses" asp-action="Index" class="btn btn-outline-secondary">返回列表</a>
+            <a asp-area="Admin" asp-controller="Courses" asp-action="Edit"  asp-route-id="@Model.Id" class="btn btn-outline-secondary">放棄修改並重新載入 </a>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,42 @@
+﻿@model EnjoySpace.Web.Models.ClassSessionDetailModel
+
+@{
+    ViewData["Title"] = "場次詳細";
+    var taiwanOffset = TimeSpan.FromHours(8);
+}
+
+<h1 class="h3 mb-4">場次詳細</h1>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">課程</dt>
+            <dd class="col-sm-9">@Model.CourseName</dd>
+
+            <dt class="col-sm-3">老師</dt>
+            <dd class="col-sm-9">@Model.TeacherName</dd>
+
+            <dt class="col-sm-3">地點</dt>
+            <dd class="col-sm-9">@Model.LocationName</dd>
+
+            <dt class="col-sm-3">開始時間（台灣）</dt>
+            <dd class="col-sm-9"> @(Model.StartsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm"))</dd>
+
+            <dt class="col-sm-3">結束時間（台灣）</dt>
+            <dd class="col-sm-9">@(Model.EndsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm"))</dd>
+
+            <dt class="col-sm-3">正常名額</dt>
+            <dd class="col-sm-9">@Model.Capacity</dd>
+
+            <dt class="col-sm-3">超收核准上限</dt>
+            <dd class="col-sm-9">
+                @(Model.CapacityOverride?.ToString() ?? "未設定")
+            </dd>
+
+            <dt class="col-sm-3">目前名額上限</dt>
+            <dd class="col-sm-9">@Model.EffectiveCapacity</dd>
+        </dl>
+    </div>
+</div>
+
+<a asp-area="Admin" asp-controller="ClassSessions" asp-action="Index" class="btn btn-outline-secondary">返回場次列表</a>

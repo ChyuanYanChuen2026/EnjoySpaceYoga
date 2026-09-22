@@ -1,0 +1,117 @@
+﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.DashboardViewModel
+
+@{
+    ViewData["Title"] = "儀表板";
+}
+
+<div class="mb-4">
+    <h1 class="h3 mb-2">儀表板</h1>
+    <p class="text-secondary mb-0">
+        瑜珈課程與出缺勤管理系統
+    </p>
+</div>
+
+<div class="row g-3">
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-secondary">今日課程數</h2>
+                <p class="display-6 fw-semibold mb-0"> @Model.TodayClassSessionCount </p>
+                <p class="small text-secondary mb-0">依台灣時間計算</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-secondary">固定期課總數</h2>
+                <p class="display-6 fw-semibold mb-0">@Model.CourseCount </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <h2 class="h5">課程行事曆</h2>
+            <p class="text-secondary small"> 時間皆以台灣時間顯示，點選場次可查看詳細資料。</p>
+            <div id="calendarError" class="alert alert-danger d-none" role="alert"> 無法載入課程資料，請重新整理頁面。</div>
+            <div  id="calendar"  data-events-url="@Url.Action("Events", "ClassSessions", new { area = "Admin" })"></div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.21/index.global.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/luxon@2.3.0/build/global/luxon.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.21/index.global.min.js'></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@@fullcalendar/core@@6.1.21/locales/zh-tw.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@fullcalendar/luxon3@@6.1.21/index.global.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const calendarElement = document.getElementById('calendar');
+            const errorElement = document.getElementById('calendarError');
+
+            if (!window.FullCalendar || !window.luxon ||  !window.FullCalendar.Luxon3) {
+                errorElement.textContent =  '行事曆元件載入失敗，請確認網路連線後重新整理。';
+                errorElement.classList.remove('d-none');
+                return;
+            }
+
+            const calendar = new FullCalendar.Calendar(calendarElement, {
+                initialView: 'dayGridMonth',
+                locale: 'zh-tw',
+                timeZone: 'Asia/Taipei',
+
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+
+                buttonText: {
+                    today: '今天',
+                    month: '月',
+                    week: '週',
+                    day: '日'
+                },
+
+                height: 'auto',
+                nowIndicator: true,
+                editable: false,
+                selectable: false,
+                dayMaxEvents: true,
+                displayEventEnd: true,
+
+                eventTimeFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                },
+
+                slotLabelFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                },
+
+                events: {
+                    url: calendarElement.dataset.eventsUrl,
+                    success: function () {
+                        errorElement.classList.add('d-none');
+                    },
+                    failure: function () {
+                        errorElement.textContent =
+                            '無法載入課程資料，請重新整理頁面。';
+                        errorElement.classList.remove('d-none');
+                    }
+                }
+            });
+
+            calendar.render();
+        });
+    </script>
+}

@@ -1,0 +1,56 @@
+﻿@model IReadOnlyList<EnjoySpace.Web.Models.ClassSessionListItem>
+
+@{
+    ViewData["Title"] = "場次管理";
+    var taiwanOffset = TimeSpan.FromHours(8);
+}
+
+<div class="mb-4">
+    <h1 class="h3 mb-2">場次管理</h1>
+    <p class="text-secondary mb-0">
+        實際上課場次，時間皆以台灣時間顯示。
+    </p>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        @if (Model.Count == 0)
+        {
+            <p class="text-secondary mb-0">目前沒有場次資料。</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">課程</th>
+                            <th scope="col">老師</th>
+                            <th scope="col">地點</th>
+                            <th scope="col">開始時間</th>
+                            <th scope="col">結束時間</th>
+                            <th scope="col">名額上限</th>
+                            <th scope="col">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var session in Model)
+                        {
+                            <tr>
+                                <td>@session.CourseName</td>
+                                <td>@session.TeacherName</td>
+                                <td>@session.LocationName</td>
+                                <td>@session.StartsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm")</td>
+                                <td>@session.EndsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm")</td>
+                                <td>@session.EffectiveCapacity</td>
+                                <td>
+                                    <a asp-area="Admin" asp-controller="ClassSessions" asp-action="Details" asp-route-id="@session.Id" class="btn btn-sm btn-outline-primary">詳細</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,40 @@
+﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.CourseCreateViewModel
+
+@{
+    ViewData["Title"] = "新增課程";
+}
+
+<h1 class="h3 mb-4">新增課程</h1>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form asp-area="Admin" asp-controller="Courses"  asp-action="Create" method="post">
+
+            <div asp-validation-summary="ModelOnly"  class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="StartDate" class="form-label"></label>
+                    <input asp-for="StartDate" class="form-control" />
+                    <span asp-validation-for="StartDate" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="EndDate" class="form-label"></label>
+                    <input asp-for="EndDate" class="form-control" />
+                    <span asp-validation-for="EndDate"  class="text-danger"></span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary"> 儲存課程</button>
+
+            <a asp-area="Admin" asp-controller="Courses"  asp-action="Index" class="btn btn-outline-secondary">返回列表</a>
+        </form>
+    </div>
+</div>
