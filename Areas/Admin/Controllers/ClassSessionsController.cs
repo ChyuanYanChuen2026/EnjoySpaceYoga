@@ -1,5 +1,7 @@
 ﻿using EnjoySpace.Web.Services;
+using EnjoySpace.Web.Areas.Admin.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
@@ -18,6 +20,7 @@ public class ClassSessionsController : Controller
         var sessions = await _classSessionService.GetAllAsync();
         return View(sessions);
     }
+
 
     [HttpGet]
     public async Task<IActionResult> Details(int id)
@@ -51,4 +54,43 @@ public class ClassSessionsController : Controller
         });
         return Json(events);
     }
+
+
+    [HttpGet]
+    public async Task<IActionResult> Create()
+    {
+        var model = new ClassSessionCreateViewModel();
+
+        await PopulateOptionsAsync(model);
+
+        return View(model);
+    }
+
+    private async Task PopulateOptionsAsync(
+    ClassSessionCreateViewModel model)
+    {
+        var courses = await _classSessionService.GetCourseOptionsAsync();
+        var teachers = await _classSessionService.GetTeacherOptionsAsync();
+        var locations = await _classSessionService.GetLocationOptionsAsync();
+
+        model.CourseOptions = courses.Select(course => new SelectListItem
+        {
+            Value = course.Id.ToString(),
+            Text = $"{course.Name}（{course.StartDate:yyyy/MM/dd}～{course.EndDate:yyyy/MM/dd}）"
+        }).ToList();
+
+        model.TeacherOptions = teachers.Select(teacher => new SelectListItem
+        {
+            Value = teacher.Id.ToString(),
+            Text = teacher.Name
+        }).ToList();
+
+        model.LocationOptions = locations.Select(location => new SelectListItem
+        {
+            Value = location.Id.ToString(),
+            Text = location.Name
+        }).ToList();
+    }
+
+
 }

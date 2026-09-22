@@ -1,5 +1,6 @@
 ﻿using EnjoySpace.Web.Data;
 using EnjoySpace.Web.Models;
+using EnjoySpace.Web.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace EnjoySpace.Web.Services;
@@ -76,5 +77,32 @@ public class ClassSessionService
                 EndsAt = session.EndsAt,
                 EffectiveCapacity = session.CapacityOverride ?? session.Capacity
             }).ToListAsync();
+    }
+
+    public async Task<List<Course>> GetCourseOptionsAsync()
+    {
+        return await _db.Courses
+            .AsNoTracking()
+            .OrderByDescending(course => course.StartDate)
+            .ThenBy(course => course.Id)
+            .ToListAsync();
+    }
+
+    public async Task<List<Teacher>> GetTeacherOptionsAsync()
+    {
+        return await _db.Teachers
+            .AsNoTracking()
+            .OrderBy(teacher => teacher.Name)
+            .ThenBy(teacher => teacher.Id)
+            .ToListAsync();
+    }
+
+    public async Task<List<Location>> GetLocationOptionsAsync()
+    {
+        return await _db.Locations
+            .AsNoTracking()
+            .OrderBy(location => location.Name)
+            .ThenBy(location => location.Id)
+            .ToListAsync();
     }
 }
