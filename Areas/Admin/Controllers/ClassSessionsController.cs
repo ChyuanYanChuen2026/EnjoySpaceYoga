@@ -92,5 +92,37 @@ public class ClassSessionsController : Controller
         }).ToList();
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(ClassSessionCreateViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            await PopulateOptionsAsync(model);
+
+            return View(model);
+        }
+
+        var errorMessage = await _classSessionService.CreateAsync(
+            model.CourseId,
+            model.TeacherId,
+            model.LocationId,
+            model.StartsAt!.Value,
+            model.EndsAt!.Value);
+
+        if (errorMessage is not null)
+        {
+            ModelState.AddModelError(string.Empty, errorMessage);
+
+            await PopulateOptionsAsync(model);
+
+            return View(model);
+        }
+
+        TempData["SuccessMessage"] = "場次新增成功。";
+
+        return RedirectToAction(nameof(Index));
+    }
+
 
 }

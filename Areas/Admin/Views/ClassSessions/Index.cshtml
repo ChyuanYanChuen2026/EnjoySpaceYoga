@@ -12,6 +12,13 @@
     </p>
 </div>
 
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success" role="alert">
+        @message
+    </div>
+}
+
 <div class="mb-3">
     <a asp-area="Admin"  asp-controller="ClassSessions" asp-action="Create" class="btn btn-primary">新增場次</a>
 </div>

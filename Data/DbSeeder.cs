@@ -1,4 +1,5 @@
-﻿using EnjoySpace.Web.Models.Entities;
+﻿using EnjoySpace.Web.Models.Enums;
+using EnjoySpace.Web.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace EnjoySpace.Web.Data;
@@ -92,6 +93,46 @@ public static class DbSeeder
             };
 
             db.ClassSessions.Add(session);
+
+            await db.SaveChangesAsync();
+        }
+
+        const string studentEmail = "demo.student@example.com";
+
+        var student = await db.Students
+            .OrderBy(student => student.Id)
+            .FirstOrDefaultAsync(student =>
+                student.Email == studentEmail);
+
+        if (student is null)
+        {
+            student = new Student
+            {
+                Name = "測試學生",
+                Email = studentEmail
+            };
+
+            db.Students.Add(student);
+
+            await db.SaveChangesAsync();
+        }
+
+        var applicationExists = await db.EnrollmentApplications
+            .AnyAsync(application =>
+                application.StudentId == student.Id &&
+                application.CourseId == course.Id);
+
+        if (!applicationExists)
+        {
+            var application = new EnrollmentApplication
+            {
+                StudentId = student.Id,
+                CourseId = course.Id,
+                Status = EnrollmentApplicationStatus.Pending,
+                SubmittedAt = DateTimeOffset.UtcNow
+            };
+
+            db.EnrollmentApplications.Add(application);
 
             await db.SaveChangesAsync();
         }

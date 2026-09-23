@@ -105,4 +105,78 @@ public class ClassSessionService
             .ThenBy(location => location.Id)
             .ToListAsync();
     }
+
+    public async Task<string?> CreateAsync(
+    int courseId,
+    int teacherId,
+    int locationId,
+    DateTime startsAt,
+    DateTime endsAt)
+    {
+        if (endsAt <= startsAt)
+        {
+            return "結束時間必須晚於開始時間。";
+        }
+
+        var course = await _db.Courses
+            .AsNoTracking()
+            .SingleOrDefaultAsync(course => course.Id == courseId);
+
+        if (course is null)
+        {
+            return "所選課程不存在，請重新選擇。";
+        }
+
+        var startDate = DateOnly.FromDateTime(startsAt);
+        var endDate = DateOnly.FromDateTime(endsAt);
+
+        if (startDate < course.StartDate || endDate > course.EndDate)
+        {
+            return $"場次必須位於課程期間 "
+                + $"{course.StartDate:yyyy/MM/dd}～"
+                + $"{course.EndDate:yyyy/MM/dd} 內。";
+        }
+
+        var teacherExists = await _db.Teachers
+            .AnyAsync(teacher => teacher.Id == teacherId);
+
+        if (!teacherExists)
+        {
+            return "所選老師不存在，請重新選擇。";
+        }
+
+        var locationExists = await _db.Locations
+            .AnyAsync(location => location.Id == locationId);
+
+        if (!locationExists)
+        {
+            return "所選地點不存在，請重新選擇。";
+        }
+
+        var taiwanOffset = TimeSpan.FromHours(8);
+
+        var session = new ClassSession
+        {
+            CourseId = courseId,
+            TeacherId = teacherId,
+            LocationId = locationId,
+
+            StartsAt = new DateTimeOffset(
+                DateTime.SpecifyKind(startsAt, DateTimeKind.Unspecified),
+                taiwanOffset),
+
+            EndsAt = new DateTimeOffset(
+                DateTime.SpecifyKind(endsAt, DateTimeKind.Unspecified),
+                taiwanOffset),
+
+            Capacity = 10,
+            CapacityOverride = null
+        };
+
+        _db.ClassSessions.Add(session);
+
+        await _db.SaveChangesAsync();
+
+        return null;
+    }
 }

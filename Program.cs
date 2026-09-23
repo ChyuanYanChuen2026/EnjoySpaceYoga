@@ -13,6 +13,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>options.UseSqlServer(conne
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<CourseService>();
 builder.Services.AddScoped<ClassSessionService>();
+builder.Services.AddScoped<EnrollmentApplicationService>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())

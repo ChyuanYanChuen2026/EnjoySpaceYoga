@@ -1,0 +1,60 @@
+﻿@model IReadOnlyList<EnjoySpace.Web.Models.EnrollmentApplicationListItem>
+
+@{
+    ViewData["Title"] = "待審核報名";
+    var taiwanOffset = TimeSpan.FromHours(8);
+}
+
+<div class="mb-4">
+    <h1 class="h3 mb-2">待審核報名</h1>
+    <p class="text-secondary mb-0">
+        共 @Model.Count 筆待審核申請，依申請時間排序。
+    </p>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        @if (Model.Count == 0)
+        {
+            <p class="text-secondary mb-0">目前沒有待審核的報名申請。</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">申請編號</th>
+                            <th scope="col">學生</th>
+                            <th scope="col">電話</th>
+                            <th scope="col">Email</th>
+                            <th scope="col">課程</th>
+                            <th scope="col">申請時間（台灣）</th>
+                            <th scope="col">狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var application in Model)
+                        {
+                            <tr>
+                                <td>@application.Id</td>
+                                <td>@application.StudentName</td>
+                                <td>@(application.Phone ?? "未提供")</td>
+                                <td>@(application.Email ?? "未提供")</td>
+                                <td>@application.CourseName</td>
+                                <td>
+                                    @(application.SubmittedAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm"))
+                                </td>
+                                <td>
+                                    <span class="badge text-bg-warning">
+                                        待審核
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
