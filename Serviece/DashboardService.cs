@@ -1,4 +1,5 @@
 ﻿using EnjoySpace.Web.Data;
+using EnjoySpace.Web.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace EnjoySpace.Web.Services;
@@ -33,5 +34,11 @@ public class DashboardService
         return await _db.ClassSessions.CountAsync(session =>
             session.StartsAt >= todayStart &&
             session.StartsAt < tomorrowStart);
+    }
+
+    public async Task<int> GetPendingEnrollmentCountAsync()
+    {
+        return await _db.EnrollmentApplications.CountAsync(application =>
+            application.Status == EnrollmentApplicationStatus.Pending);
     }
 }

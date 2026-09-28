@@ -10,9 +10,9 @@ public class ClassSession
 
     public int CourseId { get; set; }
 
-    public int TeacherId { get; set; }
+    public long TeacherId { get; set; }
 
-    public int LocationId { get; set; }
+    public long StudioLocationId { get; set; }
 
     public DateTimeOffset StartsAt { get; set; }
 
@@ -30,5 +30,6 @@ public class ClassSession
 
     public Teacher Teacher { get; set; } = null!;
 
-    public Location Location { get; set; } = null!;
+    public StudioLocation StudioLocation { get; set; } = null!;
+
 }

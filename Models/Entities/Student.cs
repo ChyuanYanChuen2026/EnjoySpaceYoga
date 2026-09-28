@@ -6,19 +6,23 @@ namespace EnjoySpace.Web.Models.Entities;
 [Table("Students", Schema = "dbo")]
 public class Student
 {
-    public int Id { get; set; }
+    public long StudentId { get; set; }
 
-    [Required]
-    [StringLength(100)]
-    public string Name { get; set; } = string.Empty;
+    public long UserId { get; set; }
 
-    [Phone]
+    public User User { get; set; } = null!;
+
     [StringLength(30)]
-    public string? Phone { get; set; }
+    public string? StudentNo { get; set; }
 
-    [EmailAddress]
-    [StringLength(254)]
-    public string? Email { get; set; }
+    public DateOnly? JoinedDate { get; set; }
 
-    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    public bool IsActive { get; set; } = true;
+
+    [StringLength(500)]
+    public string? Note { get; set; }
+
+    [Column(TypeName = "datetime2(0)")]
+    public DateTime CreatedAtUtc { get; set; }
+
 }

@@ -10,12 +10,12 @@ public class ClassSessionCreateViewModel : IValidatableObject
     public int CourseId { get; set; }
 
     [Display(Name = "老師")]
-    [Range(1, int.MaxValue, ErrorMessage = "請選擇老師")]
-    public int TeacherId { get; set; }
+    [Range(typeof(long), "1", "9223372036854775807", ErrorMessage = "請選擇老師")]
+    public long TeacherId { get; set; }
 
     [Display(Name = "地點")]
-    [Range(1, int.MaxValue, ErrorMessage = "請選擇地點")]
-    public int LocationId { get; set; }
+    [Range(typeof(long), "1", "9223372036854775807", ErrorMessage = "請選擇地點")]
+    public long StudioLocationId { get; set; }
 
     [Display(Name = "開始時間（台灣）")]
     [Required(ErrorMessage = "請選擇開始時間")]

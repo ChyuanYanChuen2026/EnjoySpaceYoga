@@ -12,6 +12,15 @@
 </div>
 
 <div class="row g-3">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-secondary">待審核報名</h2>
+                <p class="display-6 fw-semibold mb-2"> @Model.PendingEnrollmentCount</p>
+                <a asp-area="Admin" asp-controller="EnrollmentApplications" asp-action="Index" class="btn btn-sm btn-outline-primary">查看申請</a>
+            </div>
+        </div>
+    </div>
 
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="card shadow-sm h-100">

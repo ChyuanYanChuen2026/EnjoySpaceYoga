@@ -25,9 +25,9 @@ public class EnrollmentApplicationService
             .Select(application => new EnrollmentApplicationListItem
             {
                 Id = application.Id,
-                StudentName = application.Student.Name,
-                Phone = application.Student.Phone,
-                Email = application.Student.Email,
+                StudentName = application.Student.User!.DisplayName,
+                Phone = application.Student.User!.Phone,
+                Email = application.Student.User!.Email,
                 CourseName = application.Course.Name,
                 SubmittedAt = application.SubmittedAt
             })

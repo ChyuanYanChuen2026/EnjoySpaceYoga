@@ -12,12 +12,34 @@ public class CourseService
     {
         _db = db;
     }
+
+    private async Task ValidateTermAsync(long termId, DateOnly startDate, DateOnly endDate)
+    {
+        var term = await _db.Terms.AsNoTracking().SingleOrDefaultAsync(item => item.TermId == termId);
+        if (term is null)
+        {
+            throw new ArgumentException("所選學期不存在，請重新選擇。");
+        }
+        if (startDate < term.StartDate || endDate > term.EndDate)
+        {
+            throw new ArgumentException($"課程日期必須位於學期期間 " + $"{term.StartDate:yyyy/MM/dd}～{term.EndDate:yyyy/MM/dd} 內。");
+        }
+    }
+
+    public async Task<List<Term>> GetTermOptionsAsync()
+    {
+        return await _db.Terms
+            .AsNoTracking()
+            .OrderByDescending(term => term.StartDate)
+            .ThenBy(term => term.TermId)
+            .ToListAsync();
+    }
     public async Task<List<Course>> GetAllAsync()
     {
         return await _db.Courses.AsNoTracking().OrderByDescending(course => course.StartDate).ThenBy(course => course.Id).ToListAsync();
     }
 
-    public async Task CreateAsync(string name, DateOnly startDate, DateOnly endDate)
+    public async Task CreateAsync(string name, long termId, DateOnly startDate, DateOnly endDate)
     {
         if (string.IsNullOrWhiteSpace(name) || name.Length > 100)
         {
@@ -28,10 +50,11 @@ public class CourseService
         {
             throw new ArgumentException("結束日期不得早於開始日期。");
         }
-
+        await ValidateTermAsync(termId, startDate, endDate);
         var course = new Course
         {
             Name = name.Trim(),
+            TermId = termId,
             StartDate = startDate,
             EndDate = endDate
         };
@@ -46,7 +69,7 @@ public class CourseService
         return await _db.Courses.AsNoTracking().SingleOrDefaultAsync(course => course.Id == id);
     }
 
-    public async Task<CourseUpdateResult>UpdateAsync(int id, string name, DateOnly startDate, DateOnly endDate, byte[] rowVersion)
+    public async Task<CourseUpdateResult> UpdateAsync( int id, string name,  long termId, DateOnly startDate, DateOnly endDate,byte[] rowVersion)
     {
         if (string.IsNullOrWhiteSpace(name) || name.Length > 100)
         {
@@ -75,9 +98,11 @@ public class CourseService
             return CourseUpdateResult.Conflict;
         }
 
+        await ValidateTermAsync(termId, startDate, endDate);
         _db.Entry(course).Property(course => course.RowVersion).OriginalValue = rowVersion;
 
         course.Name = name.Trim();
+        course.TermId = termId;
         course.StartDate = startDate;
         course.EndDate = endDate;
 

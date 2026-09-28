@@ -9,7 +9,7 @@ public class EnrollmentApplication
 {
     public int Id { get; set; }
 
-    public int StudentId { get; set; }
+    public long StudentId { get; set; }
 
     public int CourseId { get; set; }
 

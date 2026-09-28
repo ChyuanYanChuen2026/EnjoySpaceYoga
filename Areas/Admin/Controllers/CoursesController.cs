@@ -2,6 +2,7 @@
 using EnjoySpace.Web.Services;
 using EnjoySpace.Web.Serviece;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
@@ -21,23 +22,24 @@ public class CoursesController : Controller
         return View(courses);
     }
 
-    [HttpGet]
-    public IActionResult Create()
+    private async Task<List<SelectListItem>> GetTermOptionsAsync()
     {
-        return View(new CourseCreateViewModel());
+        var terms = await _courseService.GetTermOptionsAsync();
+        return terms.Select(term => new SelectListItem
+        {
+            Value = term.TermId.ToString(),
+            Text = $"{term.Name}（{term.StartDate:yyyy/MM/dd}～{term.EndDate:yyyy/MM/dd}）"
+        }).ToList();
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(CourseCreateViewModel model)
+    [HttpGet]
+    public async Task<IActionResult> Create()
     {
-        if (!ModelState.IsValid)
+        var model = new CourseCreateViewModel
         {
-            return View(model);
-        }
-        await _courseService.CreateAsync(model.Name, model.StartDate!.Value, model.EndDate!.Value);
-        TempData["SuccessMessage"] = "課程新增成功。";
-        return RedirectToAction(nameof(Index));
+            TermOptions = await GetTermOptionsAsync()
+        };
+        return View(model);
     }
 
     [HttpGet]
@@ -52,6 +54,8 @@ public class CoursesController : Controller
         {
             Id = course.Id,
             Name = course.Name,
+            TermId = course.TermId,
+            TermOptions = await GetTermOptionsAsync(),
             StartDate = course.StartDate,
             EndDate = course.EndDate,
             RowVersion = course.RowVersion
@@ -61,25 +65,66 @@ public class CoursesController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(CourseCreateViewModel model)
+    {
+        model.TermOptions = await GetTermOptionsAsync();
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+        try
+        {
+            await _courseService.CreateAsync(
+                model.Name,
+                model.TermId!.Value,
+                model.StartDate!.Value,
+                model.EndDate!.Value);
+        }
+        catch (ArgumentException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(model);
+        }
+        TempData["SuccessMessage"] = "課程新增成功。";
+        return RedirectToAction(nameof(Index));
+    }
+
+    
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit([FromRoute] int id, CourseEditViewModel model)
     {
         if (id != model.Id)
         {
             return BadRequest();
         }
-
+        model.TermOptions = await GetTermOptionsAsync();
         if (!ModelState.IsValid)
         {
             return View(model);
         }
+        CourseUpdateResult result;
 
-        var result = await _courseService.UpdateAsync(id, model.Name,  model.StartDate!.Value, model.EndDate!.Value, model.RowVersion);
-
+        try
+        {
+            result = await _courseService.UpdateAsync(
+                id,
+                model.Name,
+                model.TermId!.Value,
+                model.StartDate!.Value,
+                model.EndDate!.Value,
+                model.RowVersion);
+        }
+        catch (ArgumentException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(model);
+        }
         if (result == CourseUpdateResult.NotFound)
         {
             return NotFound();
         }
-
         if (result == CourseUpdateResult.Conflict)
         {
             ModelState.AddModelError(string.Empty, "這筆課程已被其他操作修改或刪除，本次修改未儲存。" + "請先保留需要的輸入，再重新載入最新資料。");

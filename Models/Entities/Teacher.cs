@@ -6,11 +6,21 @@ namespace EnjoySpace.Web.Models.Entities;
 [Table("Teachers", Schema = "dbo")]
 public class Teacher
 {
-    public int Id { get; set; }
+    public long TeacherId { get; set; }
 
-    [Required]
-    [StringLength(100)]
-    public string Name { get; set; } = string.Empty;
+    public long UserId { get; set; }
 
-    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    public User User { get; set; } = null!;
+
+    [StringLength(30)]
+    public string? TeacherNo { get; set; }
+
+    public bool IsActive { get; set; } = true;
+
+    [StringLength(500)]
+    public string? Note { get; set; }
+
+    [Column(TypeName = "datetime2(0)")]
+    public DateTime CreatedAtUtc { get; set; }
+
 }

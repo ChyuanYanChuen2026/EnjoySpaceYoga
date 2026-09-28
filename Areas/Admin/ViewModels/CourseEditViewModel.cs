@@ -1,9 +1,17 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace EnjoySpace.Web.Areas.Admin.ViewModels;
 
 public class CourseEditViewModel : IValidatableObject
 {
+    [Display(Name = "學期")]
+    [Required(ErrorMessage = "請選擇學期")]
+    [Range(typeof(long), "1", "9223372036854775807", ErrorMessage = "學期編號無效")]
+    public long? TermId { get; set; }
+
+    public List<SelectListItem> TermOptions { get; set; } = new();
+
     [Range(1, int.MaxValue, ErrorMessage = "課程編號無效")]
     public int Id { get; set; }
 

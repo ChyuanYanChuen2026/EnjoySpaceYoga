@@ -11,6 +11,10 @@ public class Course
     [Required]
     [StringLength(100)]
     public string Name { get; set; } = string.Empty;
+    
+    public long? TermId { get; set; }
+
+    public Term? Term { get; set; }
 
     public DateOnly StartDate { get; set; }
 

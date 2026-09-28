@@ -24,8 +24,8 @@ public class ClassSessionService
             {
                 Id = session.Id,
                 CourseName = session.Course.Name,
-                TeacherName = session.Teacher.Name,
-                LocationName = session.Location.Name,
+                TeacherName = session.Teacher.User!.DisplayName,
+                LocationName = session.StudioLocation.Name,
                 StartsAt = session.StartsAt,
                 EndsAt = session.EndsAt,
                 EffectiveCapacity =
@@ -43,8 +43,8 @@ public class ClassSessionService
             {
                 Id = session.Id,
                 CourseName = session.Course.Name,
-                TeacherName = session.Teacher.Name,
-                LocationName = session.Location.Name,
+                TeacherName = session.Teacher.User!.DisplayName,
+                LocationName = session.StudioLocation.Name,
                 StartsAt = session.StartsAt,
                 EndsAt = session.EndsAt,
                 Capacity = session.Capacity,
@@ -71,8 +71,8 @@ public class ClassSessionService
             {
                 Id = session.Id,
                 CourseName = session.Course.Name,
-                TeacherName = session.Teacher.Name,
-                LocationName = session.Location.Name,
+                TeacherName = session.Teacher.User!.DisplayName,
+                LocationName = session.StudioLocation.Name,
                 StartsAt = session.StartsAt,
                 EndsAt = session.EndsAt,
                 EffectiveCapacity = session.CapacityOverride ?? session.Capacity
@@ -92,36 +92,31 @@ public class ClassSessionService
     {
         return await _db.Teachers
             .AsNoTracking()
-            .OrderBy(teacher => teacher.Name)
-            .ThenBy(teacher => teacher.Id)
+            .Include(teacher => teacher.User)
+            .OrderBy(teacher => teacher.User!.DisplayName)
+            .ThenBy(teacher => teacher.TeacherId)
             .ToListAsync();
     }
 
-    public async Task<List<Location>> GetLocationOptionsAsync()
+    public async Task<List<StudioLocation>> GetLocationOptionsAsync()
     {
-        return await _db.Locations
+        return await _db.StudioLocations
             .AsNoTracking()
+            .Where(location => location.IsActive)
             .OrderBy(location => location.Name)
-            .ThenBy(location => location.Id)
+            .ThenBy(location => location.StudioLocationId)
             .ToListAsync();
     }
 
-    public async Task<string?> CreateAsync(
-    int courseId,
-    int teacherId,
-    int locationId,
-    DateTime startsAt,
-    DateTime endsAt)
+    public async Task<string?> CreateAsync( int courseId, long teacherId,  long studioLocationId, DateTime startsAt, DateTime endsAt)
     {
         if (endsAt <= startsAt)
         {
             return "結束時間必須晚於開始時間。";
         }
-
         var course = await _db.Courses
             .AsNoTracking()
             .SingleOrDefaultAsync(course => course.Id == courseId);
-
         if (course is null)
         {
             return "所選課程不存在，請重新選擇。";
@@ -138,43 +133,38 @@ public class ClassSessionService
         }
 
         var teacherExists = await _db.Teachers
-            .AnyAsync(teacher => teacher.Id == teacherId);
-
+            .AnyAsync(teacher => teacher.TeacherId == teacherId);
         if (!teacherExists)
         {
             return "所選老師不存在，請重新選擇。";
         }
 
-        var locationExists = await _db.Locations
-            .AnyAsync(location => location.Id == locationId);
-
+        var locationExists = await _db.StudioLocations
+            .AnyAsync(location =>
+                location.StudioLocationId == studioLocationId &&
+                location.IsActive);
         if (!locationExists)
         {
-            return "所選地點不存在，請重新選擇。";
+            return "所選地點不存在或已停用，請重新選擇。";
         }
 
         var taiwanOffset = TimeSpan.FromHours(8);
-
         var session = new ClassSession
         {
             CourseId = courseId,
             TeacherId = teacherId,
-            LocationId = locationId,
-
+            StudioLocationId = studioLocationId,
             StartsAt = new DateTimeOffset(
                 DateTime.SpecifyKind(startsAt, DateTimeKind.Unspecified),
                 taiwanOffset),
-
             EndsAt = new DateTimeOffset(
                 DateTime.SpecifyKind(endsAt, DateTimeKind.Unspecified),
                 taiwanOffset),
-
             Capacity = 10,
             CapacityOverride = null
         };
 
         _db.ClassSessions.Add(session);
-
         await _db.SaveChangesAsync();
 
         return null;

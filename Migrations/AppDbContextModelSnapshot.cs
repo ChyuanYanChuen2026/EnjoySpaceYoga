@@ -22,6 +22,37 @@ namespace EnjoySpace.Web.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.ClassCategory", b =>
+                {
+                    b.Property<int>("ClassCategoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ClassCategoryId"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true, "DF_ClassCategories_IsActive");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("ClassCategoryId");
+
+                    b.HasAlternateKey("Code")
+                        .HasName("UQ_ClassCategories_Code");
+
+                    b.ToTable("ClassCategories", "dbo");
+                });
+
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.ClassSession", b =>
                 {
                     b.Property<int>("Id")
@@ -42,9 +73,6 @@ namespace EnjoySpace.Web.Migrations
                     b.Property<DateTimeOffset>("EndsAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<int>("LocationId")
-                        .HasColumnType("int");
-
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -54,14 +82,17 @@ namespace EnjoySpace.Web.Migrations
                     b.Property<DateTimeOffset>("StartsAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<int>("TeacherId")
-                        .HasColumnType("int");
+                    b.Property<long>("StudioLocationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TeacherId")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CourseId");
 
-                    b.HasIndex("LocationId");
+                    b.HasIndex("StudioLocationId");
 
                     b.HasIndex("TeacherId");
 
@@ -93,7 +124,12 @@ namespace EnjoySpace.Web.Migrations
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
 
+                    b.Property<long?>("TermId")
+                        .HasColumnType("bigint");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TermId");
 
                     b.ToTable("Courses", "dbo");
                 });
@@ -125,8 +161,8 @@ namespace EnjoySpace.Web.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.Property<int>("StudentId")
-                        .HasColumnType("int");
+                    b.Property<long>("StudentId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset>("SubmittedAt")
                         .HasColumnType("datetimeoffset");
@@ -140,18 +176,194 @@ namespace EnjoySpace.Web.Migrations
                     b.ToTable("EnrollmentApplications", "dbo");
                 });
 
-            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Location", b =>
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Role", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("RoleId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoleId"));
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true, "DF_Roles_IsActive");
+
+                    b.Property<string>("RoleCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("RoleName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("RoleId");
+
+                    b.HasAlternateKey("RoleCode")
+                        .HasName("UQ_Roles_RoleCode");
+
+                    b.ToTable("Roles", "dbo");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Student", b =>
+                {
+                    b.Property<long>("StudentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("StudentId"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()", "DF_Students_CreatedAtUtc");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true, "DF_Students_IsActive");
+
+                    b.Property<DateOnly?>("JoinedDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("StudentNo")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("StudentId");
+
+                    b.HasAlternateKey("UserId")
+                        .HasName("UQ_Students_UserId");
+
+                    b.HasIndex("StudentNo")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Students_StudentNo")
+                        .HasFilter("[StudentNo] IS NOT NULL");
+
+                    b.ToTable("Students", "dbo");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.StudioLocation", b =>
+                {
+                    b.Property<long>("StudioLocationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("StudioLocationId"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("CheckInRadiusMeters")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(500, "DF_StudioLocations_Radius");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()", "DF_StudioLocations_CreatedAtUtc");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true, "DF_StudioLocations_IsActive");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasColumnType("decimal(9,6)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("StudioLocationId");
+
+                    b.ToTable("StudioLocations", "dbo");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Teacher", b =>
+                {
+                    b.Property<long>("TeacherId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("TeacherId"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()", "DF_Teachers_CreatedAtUtc");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true, "DF_Teachers_IsActive");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("TeacherNo")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("TeacherId");
+
+                    b.HasAlternateKey("UserId")
+                        .HasName("UQ_Teachers_UserId");
+
+                    b.HasIndex("TeacherNo")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Teachers_TeacherNo")
+                        .HasFilter("[TeacherNo] IS NOT NULL");
+
+                    b.ToTable("Teachers", "dbo");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Term", b =>
+                {
+                    b.Property<long>("TermId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("TermId"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()", "DF_Terms_CreatedAtUtc");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("RegistrationEndAtUtc")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<DateTime?>("RegistrationStartAtUtc")
+                        .HasColumnType("datetime2(0)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -159,27 +371,57 @@ namespace EnjoySpace.Web.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.HasKey("Id");
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
 
-                    b.ToTable("Locations", "dbo");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Draft", "DF_Terms_Status");
+
+                    b.HasKey("TermId");
+
+                    b.ToTable("Terms", "dbo");
                 });
 
-            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Student", b =>
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.User", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("UserId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("bigint");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("UserId"));
 
-                    b.Property<string>("Email")
-                        .HasMaxLength(254)
-                        .HasColumnType("nvarchar(254)");
-
-                    b.Property<string>("Name")
+                    b.Property<string>("Account")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()", "DF_Users_CreatedAtUtc");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true, "DF_Users_IsActive");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(30)
@@ -191,33 +433,41 @@ namespace EnjoySpace.Web.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.HasKey("Id");
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2(0)");
 
-                    b.ToTable("Students", "dbo");
+                    b.HasKey("UserId");
+
+                    b.HasAlternateKey("Account")
+                        .HasName("UQ_Users_Account");
+
+                    b.ToTable("Users", "dbo");
                 });
 
-            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Teacher", b =>
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.UserRole", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("RoleId")
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<DateTime>("AssignedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()", "DF_UserRoles_AssignedAtUtc");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<long?>("AssignedByUserId")
+                        .HasColumnType("bigint");
 
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
+                    b.HasKey("UserId", "RoleId")
+                        .HasName("PK_UserRoles");
 
-                    b.HasKey("Id");
+                    b.HasIndex("AssignedByUserId");
 
-                    b.ToTable("Teachers", "dbo");
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("UserRoles", "dbo");
                 });
 
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.ClassSession", b =>
@@ -228,11 +478,12 @@ namespace EnjoySpace.Web.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("EnjoySpace.Web.Models.Entities.Location", "Location")
+                    b.HasOne("EnjoySpace.Web.Models.Entities.StudioLocation", "StudioLocation")
                         .WithMany()
-                        .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .HasForeignKey("StudioLocationId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_ClassSessions_Locations");
 
                     b.HasOne("EnjoySpace.Web.Models.Entities.Teacher", "Teacher")
                         .WithMany()
@@ -242,9 +493,20 @@ namespace EnjoySpace.Web.Migrations
 
                     b.Navigation("Course");
 
-                    b.Navigation("Location");
+                    b.Navigation("StudioLocation");
 
                     b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Course", b =>
+                {
+                    b.HasOne("EnjoySpace.Web.Models.Entities.Term", "Term")
+                        .WithMany()
+                        .HasForeignKey("TermId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_Courses_Terms");
+
+                    b.Navigation("Term");
                 });
 
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.EnrollmentApplication", b =>
@@ -264,6 +526,59 @@ namespace EnjoySpace.Web.Migrations
                     b.Navigation("Course");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Student", b =>
+                {
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("EnjoySpace.Web.Models.Entities.Student", "UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_Students_Users");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Teacher", b =>
+                {
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("EnjoySpace.Web.Models.Entities.Teacher", "UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_Teachers_Users");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.UserRole", b =>
+                {
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", "AssignedByUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_UserRoles_AssignedBy");
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_UserRoles_Roles");
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_UserRoles_Users");
+
+                    b.Navigation("AssignedByUser");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

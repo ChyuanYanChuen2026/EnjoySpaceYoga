@@ -18,8 +18,11 @@ public class DashboardController : Controller
     {
         var model = new DashboardViewModel
         {
-            CourseCount = await _dashboardService.GetCourseCountAsync(), 
-            TodayClassSessionCount =  await _dashboardService.GetTodayClassSessionCountAsync()
+            CourseCount = await _dashboardService.GetCourseCountAsync(),
+
+            TodayClassSessionCount = await _dashboardService.GetTodayClassSessionCountAsync(),
+
+            PendingEnrollmentCount = await _dashboardService.GetPendingEnrollmentCountAsync()
         };
         return View(model);
     }

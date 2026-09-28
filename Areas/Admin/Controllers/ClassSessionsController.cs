@@ -60,14 +60,11 @@ public class ClassSessionsController : Controller
     public async Task<IActionResult> Create()
     {
         var model = new ClassSessionCreateViewModel();
-
         await PopulateOptionsAsync(model);
-
         return View(model);
     }
 
-    private async Task PopulateOptionsAsync(
-    ClassSessionCreateViewModel model)
+    private async Task PopulateOptionsAsync( ClassSessionCreateViewModel model)
     {
         var courses = await _classSessionService.GetCourseOptionsAsync();
         var teachers = await _classSessionService.GetTeacherOptionsAsync();
@@ -81,13 +78,13 @@ public class ClassSessionsController : Controller
 
         model.TeacherOptions = teachers.Select(teacher => new SelectListItem
         {
-            Value = teacher.Id.ToString(),
-            Text = teacher.Name
+            Value = teacher.TeacherId.ToString(),
+            Text = teacher.User!.DisplayName
         }).ToList();
 
         model.LocationOptions = locations.Select(location => new SelectListItem
         {
-            Value = location.Id.ToString(),
+            Value = location.StudioLocationId.ToString(),
             Text = location.Name
         }).ToList();
     }
@@ -106,7 +103,7 @@ public class ClassSessionsController : Controller
         var errorMessage = await _classSessionService.CreateAsync(
             model.CourseId,
             model.TeacherId,
-            model.LocationId,
+            model.StudioLocationId,
             model.StartsAt!.Value,
             model.EndsAt!.Value);
 
