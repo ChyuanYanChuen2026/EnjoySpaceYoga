@@ -32,12 +32,23 @@ public class CoursesController : Controller
         }).ToList();
     }
 
+    private async Task<List<SelectListItem>> GetClassCategoryOptionsAsync()
+    {
+        var categories = await _courseService.GetClassCategoryOptionsAsync();
+        return categories.Select(category => new SelectListItem
+        {
+            Value = category.ClassCategoryId.ToString(),
+            Text = category.Name
+        }).ToList();
+    }
+
     [HttpGet]
     public async Task<IActionResult> Create()
     {
         var model = new CourseCreateViewModel
         {
-            TermOptions = await GetTermOptionsAsync()
+            TermOptions = await GetTermOptionsAsync(),
+            ClassCategoryOptions = await GetClassCategoryOptionsAsync()
         };
         return View(model);
     }
@@ -56,6 +67,8 @@ public class CoursesController : Controller
             Name = course.Name,
             TermId = course.TermId,
             TermOptions = await GetTermOptionsAsync(),
+            ClassCategoryId = course.ClassCategoryId,
+            ClassCategoryOptions = await GetClassCategoryOptionsAsync(),
             StartDate = course.StartDate,
             EndDate = course.EndDate,
             RowVersion = course.RowVersion
@@ -68,6 +81,7 @@ public class CoursesController : Controller
     public async Task<IActionResult> Create(CourseCreateViewModel model)
     {
         model.TermOptions = await GetTermOptionsAsync();
+        model.ClassCategoryOptions = await GetClassCategoryOptionsAsync();
         if (!ModelState.IsValid)
         {
             return View(model);
@@ -77,6 +91,7 @@ public class CoursesController : Controller
             await _courseService.CreateAsync(
                 model.Name,
                 model.TermId!.Value,
+                model.ClassCategoryId!.Value,
                 model.StartDate!.Value,
                 model.EndDate!.Value);
         }
@@ -89,8 +104,6 @@ public class CoursesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    
-
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit([FromRoute] int id, CourseEditViewModel model)
@@ -100,21 +113,22 @@ public class CoursesController : Controller
             return BadRequest();
         }
         model.TermOptions = await GetTermOptionsAsync();
+        model.ClassCategoryOptions = await GetClassCategoryOptionsAsync();
         if (!ModelState.IsValid)
         {
             return View(model);
         }
         CourseUpdateResult result;
-
         try
         {
             result = await _courseService.UpdateAsync(
-                id,
-                model.Name,
-                model.TermId!.Value,
-                model.StartDate!.Value,
-                model.EndDate!.Value,
-                model.RowVersion);
+                 id,
+                 model.Name,
+                 model.TermId!.Value,
+                 model.ClassCategoryId!.Value,
+                 model.StartDate!.Value,
+                 model.EndDate!.Value,
+                 model.RowVersion);
         }
         catch (ArgumentException ex)
         {

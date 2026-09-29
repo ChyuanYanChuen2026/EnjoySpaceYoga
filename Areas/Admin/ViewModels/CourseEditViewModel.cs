@@ -12,6 +12,13 @@ public class CourseEditViewModel : IValidatableObject
 
     public List<SelectListItem> TermOptions { get; set; } = new();
 
+    [Display(Name = "課程類別")]
+    [Required(ErrorMessage = "請選擇課程類別")]
+    [Range(1, int.MaxValue, ErrorMessage = "課程分類編號無效")]
+    public int? ClassCategoryId { get; set; }
+
+    public List<SelectListItem> ClassCategoryOptions { get; set; } = new();
+
     [Range(1, int.MaxValue, ErrorMessage = "課程編號無效")]
     public int Id { get; set; }
 

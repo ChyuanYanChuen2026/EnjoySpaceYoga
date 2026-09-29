@@ -37,6 +37,13 @@ public class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.NoAction)
             .HasConstraintName("FK_Courses_Terms");
 
+        modelBuilder.Entity<Course>()
+            .HasOne(course => course.ClassCategory)
+            .WithMany()
+            .HasForeignKey(course => course.ClassCategoryId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_Courses_ClassCategories");
+
         modelBuilder.Entity<ClassSession>()
             .HasOne(session => session.Course)
             .WithMany()

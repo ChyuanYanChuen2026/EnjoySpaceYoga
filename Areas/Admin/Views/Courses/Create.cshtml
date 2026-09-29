@@ -21,6 +21,14 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="ClassCategoryId" class="form-label"></label>
+                <select asp-for="ClassCategoryId"  asp-items="Model.ClassCategoryOptions"  class="form-select">
+                    <option value="">請選擇課程分類</option>
+                </select>
+                <span asp-validation-for="ClassCategoryId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="Name" class="form-label"></label>
                 <input asp-for="Name" class="form-control" />
                 <span asp-validation-for="Name" class="text-danger"></span>

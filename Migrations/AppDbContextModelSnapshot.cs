@@ -107,6 +107,9 @@ namespace EnjoySpace.Web.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("ClassCategoryId")
+                        .HasColumnType("int");
+
                     b.Property<DateOnly>("EndDate")
                         .HasColumnType("date");
 
@@ -124,10 +127,12 @@ namespace EnjoySpace.Web.Migrations
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
 
-                    b.Property<long?>("TermId")
+                    b.Property<long>("TermId")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ClassCategoryId");
 
                     b.HasIndex("TermId");
 
@@ -500,11 +505,21 @@ namespace EnjoySpace.Web.Migrations
 
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Course", b =>
                 {
+                    b.HasOne("EnjoySpace.Web.Models.Entities.ClassCategory", "ClassCategory")
+                        .WithMany()
+                        .HasForeignKey("ClassCategoryId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_Courses_ClassCategories");
+
                     b.HasOne("EnjoySpace.Web.Models.Entities.Term", "Term")
                         .WithMany()
                         .HasForeignKey("TermId")
                         .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
                         .HasConstraintName("FK_Courses_Terms");
+
+                    b.Navigation("ClassCategory");
 
                     b.Navigation("Term");
                 });

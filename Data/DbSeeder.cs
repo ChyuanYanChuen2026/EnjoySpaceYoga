@@ -12,26 +12,44 @@ public static class DbSeeder
     {
         await using var transaction = await db.Database.BeginTransactionAsync();
 
-        const string courseName = "2026秋季週一晚間瑜珈班";
+        const string autumnTermName = "2026 秋季";
+        var autumnStartDate = new DateOnly(2026, 9, 1);
+        var autumnEndDate = new DateOnly(2026, 10, 31);
+
+        var autumnTerm = await db.Terms.SingleOrDefaultAsync(term => term.Name == autumnTermName);
+        if (autumnTerm is null)
+        {
+            autumnTerm = new Term
+            {
+                Name = autumnTermName,
+                StartDate = autumnStartDate,
+                EndDate = autumnEndDate,
+                Status = "Draft"
+            };
+            db.Terms.Add(autumnTerm);
+            await db.SaveChangesAsync();
+        }
+        else if (autumnTerm.StartDate != autumnStartDate ||
+                 autumnTerm.EndDate != autumnEndDate)
+        {
+            throw new InvalidOperationException("2026 秋季的日期與預期不符，請先確認。");
+        }
+
+        var corporateCategory = await db.ClassCategories.SingleAsync(category => category.Code == "Corporate" && category.IsActive);
+        const string courseName = "週一晚間瑜珈班";
         var startDate = new DateOnly(2026, 9, 7);
         var endDate = new DateOnly(2026, 10, 26);
-
-        var course = await db.Courses
-            .OrderBy(course => course.Id)
-            .FirstOrDefaultAsync(course =>
-                course.Name == courseName &&
-                course.StartDate == startDate &&
-                course.EndDate == endDate);
-
+        var course = await db.Courses.SingleOrDefaultAsync(item => item.TermId == autumnTerm.TermId && item.Name == courseName);
         if (course is null)
         {
             course = new Course
             {
                 Name = courseName,
+                TermId = autumnTerm.TermId,
+                ClassCategoryId = corporateCategory.ClassCategoryId,
                 StartDate = startDate,
                 EndDate = endDate
             };
-
             db.Courses.Add(course);
         }
 
@@ -82,8 +100,10 @@ public static class DbSeeder
                 EndDate = new DateOnly(2026, 10, 31),
                 CourseNames = new[]
                 {
-                    "2026秋季週一晚間瑜珈班",
-                    "2026秋季週四晚間瑜珈班"
+                    "週一晚間瑜珈班",
+                    "週三晚間瑜珈班",
+                    "週四晚間瑜珈班",
+                    "週六白天瑜珈班"
                 }
             },
             new
@@ -93,16 +113,17 @@ public static class DbSeeder
                 EndDate = new DateOnly(2026, 12, 31),
                 CourseNames = new[]
                 {
-                    "2026冬季週三晚間瑜珈班"
+                    "週一晚間瑜珈班",
+                    "週三晚間瑜珈班",
+                    "週四晚間瑜珈班",
+                    "週六白天瑜珈班"
                 }
             }
         };
 
         foreach (var termSeed in termSeeds)
         {
-            var term = await db.Terms
-                .SingleOrDefaultAsync(item => item.Name == termSeed.Name);
-
+            var term = await db.Terms.SingleOrDefaultAsync(item => item.Name == termSeed.Name);
             if (term is null)
             {
                 term = new Term
@@ -114,7 +135,6 @@ public static class DbSeeder
                 };
 
                 db.Terms.Add(term);
-
                 await db.SaveChangesAsync();
             }
             else if (term.StartDate != termSeed.StartDate ||
@@ -126,15 +146,11 @@ public static class DbSeeder
 
             foreach (var targetCourseName in termSeed.CourseNames)
             {
-                var courseToLink = await db.Courses
-                    .SingleOrDefaultAsync(item => item.Name == targetCourseName);
-
+                var courseToLink = await db.Courses.SingleOrDefaultAsync(item => item.TermId == term.TermId && item.Name == targetCourseName);
                 if (courseToLink is null)
                 {
-                    throw new InvalidOperationException(
-                        $"找不到課程「{targetCourseName}」，請先確認課程名稱。");
+                    continue;
                 }
-
                 if (courseToLink.StartDate < term.StartDate ||
                     courseToLink.EndDate > term.EndDate)
                 {
@@ -142,16 +158,9 @@ public static class DbSeeder
                         $"課程「{targetCourseName}」的日期超出學期範圍。");
                 }
 
-                if (courseToLink.TermId.HasValue &&
-                    courseToLink.TermId.Value != term.TermId)
+                if (courseToLink.TermId != term.TermId)
                 {
-                    throw new InvalidOperationException(
-                        $"課程「{targetCourseName}」已對應其他學期，停止修改。");
-                }
-
-                if (courseToLink.TermId is null)
-                {
-                    courseToLink.TermId = term.TermId;
+                    throw new InvalidOperationException( $"課程「{targetCourseName}」的學期對應與預期不符，停止修改。");
                 }
             }
 
@@ -264,7 +273,6 @@ public static class DbSeeder
 
             db.EnrollmentApplications.Add(application);
 
-            await db.SaveChangesAsync();
             await db.SaveChangesAsync();
         }
 
