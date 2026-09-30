@@ -1,6 +1,6 @@
 ﻿using EnjoySpace.Web.Areas.Admin.ViewModels;
 using EnjoySpace.Web.Services;
-using EnjoySpace.Web.Serviece;
+using EnjoySpace.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -42,19 +42,42 @@ public class CoursesController : Controller
         }).ToList();
     }
 
+    private async Task<List<SelectListItem>> GetTeacherOptionsAsync()
+    {
+        var teachers = await _courseService.GetTeacherOptionsAsync();
+
+        return teachers.Select(teacher => new SelectListItem
+        {
+            Value = teacher.TeacherId.ToString(),
+            Text = teacher.User.DisplayName
+        }).ToList();
+    }
+
+    private async Task<List<SelectListItem>> GetLocationOptionsAsync()
+    {
+        var locations = await _courseService.GetLocationOptionsAsync();
+        return locations.Select(location => new SelectListItem
+        {
+            Value = location.StudioLocationId.ToString(),
+            Text = location.Name
+        }).ToList();
+    }
+
     [HttpGet]
     public async Task<IActionResult> Create()
     {
         var model = new CourseCreateViewModel
         {
             TermOptions = await GetTermOptionsAsync(),
-            ClassCategoryOptions = await GetClassCategoryOptionsAsync()
+            ClassCategoryOptions = await GetClassCategoryOptionsAsync(),
+            TeacherOptions = await GetTeacherOptionsAsync(),
+            LocationOptions = await GetLocationOptionsAsync(),
         };
         return View(model);
     }
 
     [HttpGet]
-    public async Task<IActionResult> Edit(int id)
+    public async Task<IActionResult> Edit(long id)
     {
         var course = await _courseService.GetByIdAsync(id);
         if (course is null)
@@ -63,15 +86,23 @@ public class CoursesController : Controller
         }
         var model = new CourseEditViewModel
         {
-            Id = course.Id,
+            CourseId = course.CourseId,
             Name = course.Name,
             TermId = course.TermId,
             TermOptions = await GetTermOptionsAsync(),
             ClassCategoryId = course.ClassCategoryId,
             ClassCategoryOptions = await GetClassCategoryOptionsAsync(),
-            StartDate = course.StartDate,
-            EndDate = course.EndDate,
-            RowVersion = course.RowVersion
+            DefaultTeacherId = course.DefaultTeacherId,
+            TeacherOptions = await GetTeacherOptionsAsync(),
+            DefaultLocationId = course.DefaultLocationId,
+            LocationOptions = await GetLocationOptionsAsync(),
+            RowVersion = course.RowVersion,
+            DefaultCapacity = course.DefaultCapacity,
+            TermPrice = course.TermPrice,
+            IsPubliclyVisible = course.IsPubliclyVisible,
+            AllowsFlexibleBooking = course.AllowsFlexibleBooking,
+            AllowsMakeup = course.AllowsMakeup,
+            IsActive = course.IsActive,
         };
         return View(model);
     }
@@ -82,6 +113,8 @@ public class CoursesController : Controller
     {
         model.TermOptions = await GetTermOptionsAsync();
         model.ClassCategoryOptions = await GetClassCategoryOptionsAsync();
+        model.TeacherOptions = await GetTeacherOptionsAsync();
+        model.LocationOptions = await GetLocationOptionsAsync();
         if (!ModelState.IsValid)
         {
             return View(model);
@@ -89,11 +122,14 @@ public class CoursesController : Controller
         try
         {
             await _courseService.CreateAsync(
-                model.Name,
-                model.TermId!.Value,
-                model.ClassCategoryId!.Value,
-                model.StartDate!.Value,
-                model.EndDate!.Value);
+                 model.Name,
+                 model.TermId!.Value,
+                 model.ClassCategoryId!.Value,
+                 model.DefaultTeacherId!.Value,
+                 model.DefaultLocationId!.Value,
+                 model.TermPrice!.Value,
+                 new CourseSettings(model.DefaultCapacity!.Value,
+                     model.IsPubliclyVisible, model.AllowsFlexibleBooking, model.AllowsMakeup, model.IsActive));
         }
         catch (ArgumentException ex)
         {
@@ -106,14 +142,16 @@ public class CoursesController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit([FromRoute] int id, CourseEditViewModel model)
+    public async Task<IActionResult> Edit([FromRoute] long id, CourseEditViewModel model)
     {
-        if (id != model.Id)
+        if (id != model.CourseId)
         {
             return BadRequest();
         }
         model.TermOptions = await GetTermOptionsAsync();
         model.ClassCategoryOptions = await GetClassCategoryOptionsAsync();
+        model.TeacherOptions = await GetTeacherOptionsAsync();
+        model.LocationOptions = await GetLocationOptionsAsync();
         if (!ModelState.IsValid)
         {
             return View(model);
@@ -126,9 +164,12 @@ public class CoursesController : Controller
                  model.Name,
                  model.TermId!.Value,
                  model.ClassCategoryId!.Value,
-                 model.StartDate!.Value,
-                 model.EndDate!.Value,
-                 model.RowVersion);
+                 model.DefaultTeacherId!.Value,
+                 model.DefaultLocationId!.Value,
+                 model.TermPrice!.Value,
+                 model.RowVersion,
+                 new CourseSettings(model.DefaultCapacity!.Value,
+                     model.IsPubliclyVisible, model.AllowsFlexibleBooking, model.AllowsMakeup, model.IsActive));
         }
         catch (ArgumentException ex)
         {
@@ -148,5 +189,7 @@ public class CoursesController : Controller
         TempData["SuccessMessage"] = "課程修改成功。";
         return RedirectToAction(nameof(Index));
     }
+
+
 
 }

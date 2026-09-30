@@ -26,6 +26,19 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<Course>().Property(course => course.DefaultCapacity)
+            .HasDefaultValue((short)10, "DF_Courses_DefaultCapacity");
+        modelBuilder.Entity<Course>().Property(course => course.IsPubliclyVisible)
+            .HasDefaultValue(true, "DF_Courses_IsPubliclyVisible");
+        modelBuilder.Entity<Course>().Property(course => course.AllowsFlexibleBooking)
+            .HasDefaultValue(true, "DF_Courses_AllowsFlexibleBooking");
+        modelBuilder.Entity<Course>().Property(course => course.AllowsMakeup)
+            .HasDefaultValue(true, "DF_Courses_AllowsMakeup");
+        modelBuilder.Entity<Course>().Property(course => course.IsActive)
+            .HasDefaultValue(true, "DF_Courses_IsActive");
+        modelBuilder.Entity<Course>().Property(course => course.CreatedAtUtc)
+            .HasDefaultValueSql("SYSUTCDATETIME()", "DF_Courses_CreatedAtUtc");
+
         modelBuilder.Entity<Course>()
             .Property(course => course.RowVersion)
             .IsRowVersion();
@@ -43,6 +56,20 @@ public class AppDbContext : DbContext
             .HasForeignKey(course => course.ClassCategoryId)
             .OnDelete(DeleteBehavior.NoAction)
             .HasConstraintName("FK_Courses_ClassCategories");
+
+        modelBuilder.Entity<Course>()
+            .HasOne(course => course.DefaultTeacher)
+            .WithMany()
+            .HasForeignKey(course => course.DefaultTeacherId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_Courses_DefaultTeacher");
+
+        modelBuilder.Entity<Course>()
+            .HasOne(course => course.DefaultLocation)
+            .WithMany()
+            .HasForeignKey(course => course.DefaultLocationId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_Courses_DefaultLocation");
 
         modelBuilder.Entity<ClassSession>()
             .HasOne(session => session.Course)

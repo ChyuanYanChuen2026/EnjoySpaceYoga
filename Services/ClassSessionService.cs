@@ -83,8 +83,9 @@ public class ClassSessionService
     {
         return await _db.Courses
             .AsNoTracking()
-            .OrderByDescending(course => course.StartDate)
-            .ThenBy(course => course.Id)
+            .Include(course => course.Term)
+            .OrderByDescending(course => course.Term.StartDate)
+            .ThenBy(course => course.CourseId)
             .ToListAsync();
     }
 
@@ -108,7 +109,7 @@ public class ClassSessionService
             .ToListAsync();
     }
 
-    public async Task<string?> CreateAsync( int courseId, long teacherId,  long studioLocationId, DateTime startsAt, DateTime endsAt)
+    public async Task<string?> CreateAsync(long courseId, long teacherId, long studioLocationId, DateTime startsAt, DateTime endsAt)
     {
         if (endsAt <= startsAt)
         {
@@ -116,7 +117,8 @@ public class ClassSessionService
         }
         var course = await _db.Courses
             .AsNoTracking()
-            .SingleOrDefaultAsync(course => course.Id == courseId);
+            .Include(course => course.Term)
+            .SingleOrDefaultAsync(course => course.CourseId == courseId);
         if (course is null)
         {
             return "所選課程不存在，請重新選擇。";
@@ -125,11 +127,11 @@ public class ClassSessionService
         var startDate = DateOnly.FromDateTime(startsAt);
         var endDate = DateOnly.FromDateTime(endsAt);
 
-        if (startDate < course.StartDate || endDate > course.EndDate)
+        if (startDate < course.Term.StartDate || endDate > course.Term.EndDate)
         {
             return $"場次必須位於課程期間 "
-                + $"{course.StartDate:yyyy/MM/dd}～"
-                + $"{course.EndDate:yyyy/MM/dd} 內。";
+                + $"{course.Term.StartDate:yyyy/MM/dd}～"
+                + $"{course.Term.EndDate:yyyy/MM/dd} 內。";
         }
 
         var teacherExists = await _db.Teachers

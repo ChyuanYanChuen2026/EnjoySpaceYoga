@@ -6,8 +6,8 @@ namespace EnjoySpace.Web.Areas.Admin.ViewModels;
 public class ClassSessionCreateViewModel : IValidatableObject
 {
     [Display(Name = "課程")]
-    [Range(1, int.MaxValue, ErrorMessage = "請選擇課程")]
-    public int CourseId { get; set; }
+    [Range(typeof(long), "1", "9223372036854775807", ErrorMessage = "請選擇課程")]
+    public long CourseId { get; set; }
 
     [Display(Name = "老師")]
     [Range(typeof(long), "1", "9223372036854775807", ErrorMessage = "請選擇老師")]

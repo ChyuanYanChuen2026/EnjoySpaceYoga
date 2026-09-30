@@ -67,8 +67,8 @@ namespace EnjoySpace.Web.Migrations
                     b.Property<int?>("CapacityOverride")
                         .HasColumnType("int");
 
-                    b.Property<int>("CourseId")
-                        .HasColumnType("int");
+                    b.Property<long>("CourseId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset>("EndsAt")
                         .HasColumnType("datetimeoffset");
@@ -101,22 +101,55 @@ namespace EnjoySpace.Web.Migrations
 
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Course", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("CourseId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("bigint");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("CourseId"));
+
+                    b.Property<bool>("AllowsFlexibleBooking")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true, "DF_Courses_AllowsFlexibleBooking");
+
+                    b.Property<bool>("AllowsMakeup")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true, "DF_Courses_AllowsMakeup");
 
                     b.Property<int>("ClassCategoryId")
                         .HasColumnType("int");
 
-                    b.Property<DateOnly>("EndDate")
-                        .HasColumnType("date");
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()", "DF_Courses_CreatedAtUtc");
+
+                    b.Property<short>("DefaultCapacity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("smallint")
+                        .HasDefaultValue((short)10, "DF_Courses_DefaultCapacity");
+
+                    b.Property<long>("DefaultLocationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("DefaultTeacherId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true, "DF_Courses_IsActive");
+
+                    b.Property<bool>("IsPubliclyVisible")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true, "DF_Courses_IsPubliclyVisible");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -124,15 +157,19 @@ namespace EnjoySpace.Web.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<DateOnly>("StartDate")
-                        .HasColumnType("date");
-
                     b.Property<long>("TermId")
                         .HasColumnType("bigint");
 
-                    b.HasKey("Id");
+                    b.Property<decimal>("TermPrice")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("CourseId");
 
                     b.HasIndex("ClassCategoryId");
+
+                    b.HasIndex("DefaultLocationId");
+
+                    b.HasIndex("DefaultTeacherId");
 
                     b.HasIndex("TermId");
 
@@ -147,8 +184,8 @@ namespace EnjoySpace.Web.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CourseId")
-                        .HasColumnType("int");
+                    b.Property<long>("CourseId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("ReviewNote")
                         .HasMaxLength(500)
@@ -512,6 +549,20 @@ namespace EnjoySpace.Web.Migrations
                         .IsRequired()
                         .HasConstraintName("FK_Courses_ClassCategories");
 
+                    b.HasOne("EnjoySpace.Web.Models.Entities.StudioLocation", "DefaultLocation")
+                        .WithMany()
+                        .HasForeignKey("DefaultLocationId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_Courses_DefaultLocation");
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.Teacher", "DefaultTeacher")
+                        .WithMany()
+                        .HasForeignKey("DefaultTeacherId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_Courses_DefaultTeacher");
+
                     b.HasOne("EnjoySpace.Web.Models.Entities.Term", "Term")
                         .WithMany()
                         .HasForeignKey("TermId")
@@ -520,6 +571,10 @@ namespace EnjoySpace.Web.Migrations
                         .HasConstraintName("FK_Courses_Terms");
 
                     b.Navigation("ClassCategory");
+
+                    b.Navigation("DefaultLocation");
+
+                    b.Navigation("DefaultTeacher");
 
                     b.Navigation("Term");
                 });

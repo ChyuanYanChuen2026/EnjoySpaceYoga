@@ -1,4 +1,4 @@
-﻿namespace EnjoySpace.Web.Serviece
+namespace EnjoySpace.Web.Services
 {
     public enum CourseUpdateResult
     {

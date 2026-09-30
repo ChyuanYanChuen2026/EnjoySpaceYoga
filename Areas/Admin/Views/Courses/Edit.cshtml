@@ -8,8 +8,8 @@
 
 <div class="card shadow-sm">
     <div class="card-body">
-        <form asp-area="Admin" asp-controller="Courses" asp-action="Edit" asp-route-id="@Model.Id" method="post">
-            <input asp-for="Id" type="hidden" />
+        <form asp-area="Admin" asp-controller="Courses" asp-action="Edit" asp-route-id="@Model.CourseId" method="post">
+            <input asp-for="CourseId" type="hidden" />
             <input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.RowVersion ?? Array.Empty<byte>())" />
             <span asp-validation-for="RowVersion" class="text-danger"></span>
 
@@ -31,29 +31,58 @@
                 <span asp-validation-for="ClassCategoryId" class="text-danger"></span>
             </div>
 
+             <div class="mb-3">
+                <label asp-for="DefaultTeacherId" class="form-label"></label>
+                <select asp-for="DefaultTeacherId" asp-items="Model.TeacherOptions"  class="form-select">
+                    <option value="">請選擇預設老師</option>
+                </select>
+                <span asp-validation-for="DefaultTeacherId"  class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="DefaultLocationId" class="form-label"></label>
+                <select asp-for="DefaultLocationId" asp-items="Model.LocationOptions" class="form-select">
+                    <option value="">請選擇預設地點</option>
+                </select>
+                <span asp-validation-for="DefaultLocationId" class="text-danger"></span>
+            </div>
+
             <div class="mb-3">
                 <label asp-for="Name" class="form-label"></label>
                 <input asp-for="Name" class="form-control" />
                 <span asp-validation-for="Name" class="text-danger"></span>
             </div>
 
+
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label asp-for="StartDate" class="form-label"></label>
-                    <input asp-for="StartDate" class="form-control" />
-                    <span asp-validation-for="StartDate" class="text-danger"></span>
+                    <label asp-for="DefaultCapacity" class="form-label"></label>
+                    <input asp-for="DefaultCapacity" type="number" min="1" max="32767" step="1" class="form-control" />
+                    <span asp-validation-for="DefaultCapacity" class="text-danger"></span>
                 </div>
-
                 <div class="col-md-6 mb-3">
-                    <label asp-for="EndDate" class="form-label"></label>
-                    <input asp-for="EndDate" class="form-control" />
-                    <span asp-validation-for="EndDate" class="text-danger"></span>
+                    <label asp-for="TermPrice" class="form-label"></label>
+                    <input asp-for="TermPrice" type="number" min="0" max="99999999.99" step="0.01" class="form-control" />
+                    <span asp-validation-for="TermPrice" class="text-danger"></span>
                 </div>
             </div>
-
+            <div class="row mb-3">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="form-check"><input asp-for="IsPubliclyVisible" class="form-check-input" /><label asp-for="IsPubliclyVisible" class="form-check-label"></label></div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="form-check"><input asp-for="AllowsFlexibleBooking" class="form-check-input" /><label asp-for="AllowsFlexibleBooking" class="form-check-label"></label></div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="form-check"><input asp-for="AllowsMakeup" class="form-check-input" /><label asp-for="AllowsMakeup" class="form-check-label"></label></div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="form-check"><input asp-for="IsActive" class="form-check-input" /><label asp-for="IsActive" class="form-check-label"></label></div>
+                </div>
+            </div>
             <button type="submit" class="btn btn-primary">儲存修改</button>
             <a asp-area="Admin" asp-controller="Courses" asp-action="Index" class="btn btn-outline-secondary">返回列表</a>
-            <a asp-area="Admin" asp-controller="Courses" asp-action="Edit"  asp-route-id="@Model.Id" class="btn btn-outline-secondary">放棄修改並重新載入 </a>
+            <a asp-area="Admin" asp-controller="Courses" asp-action="Edit"  asp-route-id="@Model.CourseId" class="btn btn-outline-secondary">放棄修改並重新載入 </a>
         </form>
     </div>
 </div>

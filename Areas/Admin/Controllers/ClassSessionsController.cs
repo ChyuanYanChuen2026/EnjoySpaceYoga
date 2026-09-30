@@ -72,8 +72,8 @@ public class ClassSessionsController : Controller
 
         model.CourseOptions = courses.Select(course => new SelectListItem
         {
-            Value = course.Id.ToString(),
-            Text = $"{course.Name}（{course.StartDate:yyyy/MM/dd}～{course.EndDate:yyyy/MM/dd}）"
+            Value = course.CourseId.ToString(),
+            Text = $"{course.Name}（{course.Term.StartDate:yyyy/MM/dd}～{course.Term.EndDate:yyyy/MM/dd}）"
         }).ToList();
 
         model.TeacherOptions = teachers.Select(teacher => new SelectListItem

@@ -1,283 +1,430 @@
-﻿using EnjoySpace.Web.Models.Enums;
-using EnjoySpace.Web.Models.Entities;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
 using System.Security.Cryptography;
+using EnjoySpace.Web.Models.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace EnjoySpace.Web.Data;
 
 public static class DbSeeder
 {
-    public static async Task SeedAsync(AppDbContext db)
+    private const string TermName = "2026 秋季";
+    private const string MiaAccount = "teacher-1";
+    private const string CeliaAccount = "teacher-celia";
+    private const string StudioName = "Enjoy Sport Space 享運動空間";
+    private const string StudioAddress = "104臺北市中山區撫順街16號2樓";
+    private static readonly DateOnly TermStartDate = new(2026, 9, 1);
+    private static readonly DateOnly TermEndDate = new(2026, 10, 31);
+    private static readonly TimeSpan TaiwanOffset = TimeSpan.FromHours(8);
+
+    public static async Task<ScheduleSyncResult> SeedAsync(AppDbContext db)
     {
         await using var transaction = await db.Database.BeginTransactionAsync();
 
-        const string autumnTermName = "2026 秋季";
-        var autumnStartDate = new DateOnly(2026, 9, 1);
-        var autumnEndDate = new DateOnly(2026, 10, 31);
+        var term = await EnsureTermAsync(db);
+        var location = await EnsureStudioLocationAsync(db);
+        var (mia, miaCreated) = await EnsureTeacherAsync(
+            db,
+            MiaAccount,
+            "Mia老師",
+            note: null);
+        var (celia, celiaCreated) = await EnsureTeacherAsync(
+            db,
+            CeliaAccount,
+            "Celia老師",
+            "2026 秋季正式課表老師；登入帳號尚未啟用。");
 
-        var autumnTerm = await db.Terms.SingleOrDefaultAsync(term => term.Name == autumnTermName);
-        if (autumnTerm is null)
+        var teachers = new Dictionary<string, Teacher>(StringComparer.OrdinalIgnoreCase)
         {
-            autumnTerm = new Term
-            {
-                Name = autumnTermName,
-                StartDate = autumnStartDate,
-                EndDate = autumnEndDate,
-                Status = "Draft"
-            };
-            db.Terms.Add(autumnTerm);
-            await db.SaveChangesAsync();
-        }
-        else if (autumnTerm.StartDate != autumnStartDate ||
-                 autumnTerm.EndDate != autumnEndDate)
-        {
-            throw new InvalidOperationException("2026 秋季的日期與預期不符，請先確認。");
-        }
+            [MiaAccount] = mia,
+            [CeliaAccount] = celia
+        };
 
-        var corporateCategory = await db.ClassCategories.SingleAsync(category => category.Code == "Corporate" && category.IsActive);
-        const string courseName = "週一晚間瑜珈班";
-        var startDate = new DateOnly(2026, 9, 7);
-        var endDate = new DateOnly(2026, 10, 26);
-        var course = await db.Courses.SingleOrDefaultAsync(item => item.TermId == autumnTerm.TermId && item.Name == courseName);
-        if (course is null)
+        var categories = await db.ClassCategories
+            .Where(item => item.IsActive &&
+                           (item.Code == "Corporate" || item.Code == "General"))
+            .ToDictionaryAsync(item => item.Code, StringComparer.OrdinalIgnoreCase);
+
+        if (!categories.ContainsKey("Corporate") || !categories.ContainsKey("General"))
         {
-            course = new Course
-            {
-                Name = courseName,
-                TermId = autumnTerm.TermId,
-                ClassCategoryId = corporateCategory.ClassCategoryId,
-                StartDate = startDate,
-                EndDate = endDate
-            };
-            db.Courses.Add(course);
+            throw new InvalidOperationException("找不到啟用中的一般班或企業班分類，停止建立課表。");
         }
 
-        const string teacherName = "Mia老師";
-        const string seedAccount = "teacher-1";
+        var specifications = BuildSpecifications();
+        var courses = new Dictionary<CourseSpecification, Course>();
+        var coursesCreated = 0;
+        var coursesUpdated = 0;
 
-        var teacher = await db.Teachers.SingleOrDefaultAsync(teacher => teacher.User.Account == seedAccount);
-
-        if (teacher is null)
+        foreach (var specification in specifications)
         {
-            var seedAccountExists = await db.Users.AnyAsync(user => user.Account == seedAccount);
-            if (seedAccountExists)
+            var matches = await db.Courses
+                .Where(item => item.TermId == term.TermId &&
+                               specification.CourseNames.Contains(item.Name))
+                .ToListAsync();
+
+            if (matches.Count > 1)
             {
                 throw new InvalidOperationException(
-                    $"帳號 {seedAccount} 已存在，請先確認老師對應。");
+                    $"課程「{specification.DisplayName}」找到 {matches.Count} 筆，請先處理重複課程。");
             }
-            var seedTeacherRole = await db.Roles.SingleAsync(role =>role.RoleCode == "Teacher" && role.IsActive);
-            var seedUser = new User
+
+            var category = categories[specification.CategoryCode];
+            var defaultTeacher = teachers[specification.DefaultTeacherAccount];
+            Course course;
+
+            if (matches.Count == 0)
             {
-                Account = seedAccount,
-                DisplayName = teacherName,
-                IsActive = false
-            };
-            var seedPassword = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-            seedUser.PasswordHash = new PasswordHasher<User>().HashPassword(seedUser, seedPassword);
-            teacher = new Teacher
+                course = new Course
+                {
+                    Name = specification.DisplayName,
+                    TermId = term.TermId,
+                    ClassCategoryId = category.ClassCategoryId,
+                    DefaultTeacherId = defaultTeacher.TeacherId,
+                    DefaultLocationId = location.StudioLocationId,
+                    DefaultCapacity = 10,
+                    TermPrice = specification.TermPrice,
+                    IsPubliclyVisible = true,
+                    AllowsFlexibleBooking = true,
+                    AllowsMakeup = true,
+                    IsActive = true
+                };
+                db.Courses.Add(course);
+                coursesCreated++;
+            }
+            else
             {
-                User = seedUser,
-                IsActive = true
-            };
-            db.Teachers.Add(teacher);
-            db.UserRoles.Add(new UserRole
-            {
-                User = seedUser,
-                RoleId = seedTeacherRole.RoleId,
-                AssignedByUserId = null
-            });
+                course = matches[0];
+                var changed =
+                    course.ClassCategoryId != category.ClassCategoryId ||
+                    course.DefaultTeacherId != defaultTeacher.TeacherId ||
+                    course.DefaultLocationId != location.StudioLocationId ||
+                    course.DefaultCapacity != 10 ||
+                    course.TermPrice != specification.TermPrice ||
+                    !course.IsActive;
+
+                course.ClassCategoryId = category.ClassCategoryId;
+                course.DefaultTeacherId = defaultTeacher.TeacherId;
+                course.DefaultLocationId = location.StudioLocationId;
+                course.DefaultCapacity = 10;
+                course.TermPrice = specification.TermPrice;
+                course.IsActive = true;
+
+                if (changed)
+                {
+                    coursesUpdated++;
+                }
+            }
+
+            courses.Add(specification, course);
         }
 
         await db.SaveChangesAsync();
 
-        var termSeeds = new[]
+        var courseIds = courses.Values.Select(item => item.CourseId).ToArray();
+        var termStart = At(2026, 9, 1, 0, 0);
+        var termEndExclusive = At(2026, 11, 1, 0, 0);
+        var existingSessions = await db.ClassSessions
+            .Where(item => courseIds.Contains(item.CourseId) &&
+                           item.StartsAt >= termStart &&
+                           item.StartsAt < termEndExclusive)
+            .OrderBy(item => item.Id)
+            .ToListAsync();
+
+        var retainedIds = new HashSet<int>();
+        var removedIds = new HashSet<int>();
+        var sessionsCreated = 0;
+        var sessionsUpdated = 0;
+        var sessionsRemoved = 0;
+
+        foreach (var (specification, course) in courses)
         {
-            new
+            foreach (var expected in specification.Sessions)
             {
-                Name = "2026 秋季",
-                StartDate = new DateOnly(2026, 9, 1),
-                EndDate = new DateOnly(2026, 10, 31),
-                CourseNames = new[]
-                {
-                    "週一晚間瑜珈班",
-                    "週三晚間瑜珈班",
-                    "週四晚間瑜珈班",
-                    "週六白天瑜珈班"
-                }
-            },
-            new
-            {
-                Name = "2026 冬季",
-                StartDate = new DateOnly(2026, 11, 1),
-                EndDate = new DateOnly(2026, 12, 31),
-                CourseNames = new[]
-                {
-                    "週一晚間瑜珈班",
-                    "週三晚間瑜珈班",
-                    "週四晚間瑜珈班",
-                    "週六白天瑜珈班"
-                }
-            }
-        };
+                var matches = existingSessions
+                    .Where(item => item.CourseId == course.CourseId &&
+                                   item.StartsAt == expected.StartsAt)
+                    .ToList();
+                var expectedTeacher = teachers[expected.TeacherAccount];
 
-        foreach (var termSeed in termSeeds)
-        {
-            var term = await db.Terms.SingleOrDefaultAsync(item => item.Name == termSeed.Name);
-            if (term is null)
-            {
-                term = new Term
+                if (matches.Count == 0)
                 {
-                    Name = termSeed.Name,
-                    StartDate = termSeed.StartDate,
-                    EndDate = termSeed.EndDate,
-                    Status = "Draft"
-                };
-
-                db.Terms.Add(term);
-                await db.SaveChangesAsync();
-            }
-            else if (term.StartDate != termSeed.StartDate ||
-                     term.EndDate != termSeed.EndDate)
-            {
-                throw new InvalidOperationException(
-                    $"學期「{termSeed.Name}」日期與預期不符，請先確認。");
-            }
-
-            foreach (var targetCourseName in termSeed.CourseNames)
-            {
-                var courseToLink = await db.Courses.SingleOrDefaultAsync(item => item.TermId == term.TermId && item.Name == targetCourseName);
-                if (courseToLink is null)
-                {
+                    db.ClassSessions.Add(new ClassSession
+                    {
+                        CourseId = course.CourseId,
+                        TeacherId = expectedTeacher.TeacherId,
+                        StudioLocationId = location.StudioLocationId,
+                        StartsAt = expected.StartsAt,
+                        EndsAt = expected.EndsAt,
+                        Capacity = course.DefaultCapacity,
+                        CapacityOverride = null
+                    });
+                    sessionsCreated++;
                     continue;
                 }
-                if (courseToLink.StartDate < term.StartDate ||
-                    courseToLink.EndDate > term.EndDate)
+
+                var session = matches[0];
+                retainedIds.Add(session.Id);
+                var changed =
+                    session.TeacherId != expectedTeacher.TeacherId ||
+                    session.StudioLocationId != location.StudioLocationId ||
+                    session.EndsAt != expected.EndsAt ||
+                    session.Capacity != course.DefaultCapacity ||
+                    session.CapacityOverride is not null;
+
+                session.TeacherId = expectedTeacher.TeacherId;
+                session.StudioLocationId = location.StudioLocationId;
+                session.EndsAt = expected.EndsAt;
+                session.Capacity = course.DefaultCapacity;
+                session.CapacityOverride = null;
+
+                if (changed)
                 {
-                    throw new InvalidOperationException(
-                        $"課程「{targetCourseName}」的日期超出學期範圍。");
+                    sessionsUpdated++;
                 }
 
-                if (courseToLink.TermId != term.TermId)
+                foreach (var duplicate in matches.Skip(1))
                 {
-                    throw new InvalidOperationException( $"課程「{targetCourseName}」的學期對應與預期不符，停止修改。");
+                    db.ClassSessions.Remove(duplicate);
+                    removedIds.Add(duplicate.Id);
+                    sessionsRemoved++;
                 }
             }
-
-            await db.SaveChangesAsync();
         }
 
-        const string studioName = "Enjoy Sport Space 享運動空間";
-        const string studioAddress = "104臺北市中山區撫順街16號2樓";
-
-        var studioLocation = await db.StudioLocations
-            .SingleOrDefaultAsync(location =>
-                location.Name == studioName &&
-                location.Address == studioAddress);
-
-        if (studioLocation is null)
+        foreach (var obsolete in existingSessions.Where(item =>
+                     !retainedIds.Contains(item.Id) && !removedIds.Contains(item.Id)))
         {
-            studioLocation = new StudioLocation
+            db.ClassSessions.Remove(obsolete);
+            sessionsRemoved++;
+        }
+
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return new ScheduleSyncResult(
+            miaCreated,
+            celiaCreated,
+            coursesCreated,
+            coursesUpdated,
+            sessionsCreated,
+            sessionsUpdated,
+            sessionsRemoved);
+    }
+
+    private static async Task<Term> EnsureTermAsync(AppDbContext db)
+    {
+        var term = await db.Terms.SingleOrDefaultAsync(item => item.Name == TermName);
+        if (term is null)
+        {
+            term = new Term
             {
-                Name = studioName,
-                Address = studioAddress,
+                Name = TermName,
+                StartDate = TermStartDate,
+                EndDate = TermEndDate,
+                Status = "Draft"
+            };
+            db.Terms.Add(term);
+            await db.SaveChangesAsync();
+            return term;
+        }
+
+        if (term.StartDate != TermStartDate || term.EndDate != TermEndDate)
+        {
+            throw new InvalidOperationException($"學期「{TermName}」日期與正式課表不符，停止同步。");
+        }
+
+        return term;
+    }
+
+    private static async Task<StudioLocation> EnsureStudioLocationAsync(AppDbContext db)
+    {
+        var locations = await db.StudioLocations
+            .Where(item => item.Name == StudioName || item.Address == StudioAddress)
+            .ToListAsync();
+
+        if (locations.Count > 1)
+        {
+            throw new InvalidOperationException("正式教室找到多筆資料，請先處理重複地點。");
+        }
+
+        var location = locations.SingleOrDefault();
+        if (location is null)
+        {
+            location = new StudioLocation
+            {
+                Name = StudioName,
+                Address = StudioAddress,
                 Latitude = 25.063488m,
                 Longitude = 121.517764m,
                 CheckInRadiusMeters = 500,
                 IsActive = true
             };
-
-            db.StudioLocations.Add(studioLocation);
-
-            await db.SaveChangesAsync();
+            db.StudioLocations.Add(location);
         }
-
-        var startsAt = new DateTimeOffset(
-            2026, 9, 28, 19, 0, 0, TimeSpan.FromHours(8));
-
-        var endsAt = startsAt.AddHours(1);
-
-        var sessionExists = await db.ClassSessions.AnyAsync(session =>
-            session.CourseId == course.Id &&
-            session.StartsAt == startsAt);
-
-        if (!sessionExists)
+        else
         {
-            var session = new ClassSession
-            {
-                CourseId = course.Id,
-                TeacherId = teacher.TeacherId,
-                StudioLocationId = studioLocation.StudioLocationId,
-                StartsAt = startsAt,
-                EndsAt = endsAt,
-                Capacity = 10,
-                CapacityOverride = null
-            };
-
-            db.ClassSessions.Add(session);
-
-            await db.SaveChangesAsync();
-        }
-
-        const string studentEmail = "demo.student@example.com";
-        const string seedStudentAccount = "student-1";
-
-        var student = await db.Students
-            .SingleOrDefaultAsync(student =>
-                student.User.Account == seedStudentAccount);
-
-        if (student is null)
-        {
-            var seedStudentAccountExists = await db.Users
-                .AnyAsync(user => user.Account == seedStudentAccount);
-            if (seedStudentAccountExists)
-            {
-                throw new InvalidOperationException(
-                    $"帳號 {seedStudentAccount} 已存在，請先確認學生對應。");
-            }
-            var seedStudentRole = await db.Roles.SingleAsync(role => role.RoleCode == "Student" && role.IsActive);
-            var seedStudentUser = new User
-            {
-                Account = seedStudentAccount,
-                DisplayName = "測試學生",
-                Email = studentEmail,
-                IsActive = false
-            };
-            var seedStudentPassword = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-            seedStudentUser.PasswordHash = new PasswordHasher<User>().HashPassword(seedStudentUser, seedStudentPassword);
-            student = new Student
-            {
-                User = seedStudentUser,
-                IsActive = true
-            };
-            db.Students.Add(student);
-            db.UserRoles.Add(new UserRole
-            {
-                User = seedStudentUser,
-                RoleId = seedStudentRole.RoleId,
-                AssignedByUserId = null
-            });
-            await db.SaveChangesAsync();
-        }
-
-        var applicationExists = await db.EnrollmentApplications.AnyAsync(application => application.StudentId == student.StudentId && application.CourseId == course.Id);
-        if (!applicationExists)
-        {
-            var application = new EnrollmentApplication
-            {
-                StudentId = student.StudentId,
-                CourseId = course.Id,
-                Status = EnrollmentApplicationStatus.Pending,
-                SubmittedAt = DateTimeOffset.UtcNow
-            };
-
-            db.EnrollmentApplications.Add(application);
-
-            await db.SaveChangesAsync();
+            location.Name = StudioName;
+            location.Address = StudioAddress;
+            location.Latitude = 25.063488m;
+            location.Longitude = 121.517764m;
+            location.CheckInRadiusMeters = 500;
+            location.IsActive = true;
         }
 
         await db.SaveChangesAsync();
-
-        await transaction.CommitAsync();
+        return location;
     }
+
+    private static async Task<(Teacher Teacher, bool Created)> EnsureTeacherAsync(
+        AppDbContext db,
+        string account,
+        string displayName,
+        string? note)
+    {
+        var teacher = await db.Teachers
+            .Include(item => item.User)
+            .SingleOrDefaultAsync(item => item.User.Account == account);
+        var created = false;
+
+        if (teacher is null)
+        {
+            var user = await db.Users.SingleOrDefaultAsync(item => item.Account == account);
+            if (user is null)
+            {
+                user = new User
+                {
+                    Account = account,
+                    DisplayName = displayName,
+                    IsActive = false
+                };
+                var unavailablePassword = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+                user.PasswordHash = new PasswordHasher<User>().HashPassword(user, unavailablePassword);
+                db.Users.Add(user);
+            }
+
+            teacher = new Teacher
+            {
+                User = user,
+                IsActive = true,
+                Note = note
+            };
+            db.Teachers.Add(teacher);
+            await db.SaveChangesAsync();
+            created = true;
+        }
+        else
+        {
+            teacher.IsActive = true;
+            if (note is not null && string.IsNullOrWhiteSpace(teacher.Note))
+            {
+                teacher.Note = note;
+            }
+        }
+
+        var teacherRole = await db.Roles.SingleAsync(item =>
+            item.RoleCode == "Teacher" && item.IsActive);
+        var hasTeacherRole = await db.UserRoles.AnyAsync(item =>
+            item.UserId == teacher.UserId && item.RoleId == teacherRole.RoleId);
+        if (!hasTeacherRole)
+        {
+            db.UserRoles.Add(new UserRole
+            {
+                UserId = teacher.UserId,
+                RoleId = teacherRole.RoleId,
+                AssignedByUserId = null
+            });
+        }
+
+        await db.SaveChangesAsync();
+        return (teacher, created);
+    }
+
+    private static IReadOnlyList<CourseSpecification> BuildSpecifications()
+    {
+        return
+        [
+            new(
+                ["週一晚間瑜珈班"],
+                "Corporate",
+                MiaAccount,
+                2460m,
+                Sessions([7, 14, 21], 9, 18, 40, 80, MiaAccount)
+                    .Concat(Sessions([5, 12, 19], 10, 18, 40, 80, MiaAccount)).ToArray()),
+            new(
+                ["週三晚間瑜珈班"],
+                "General",
+                MiaAccount,
+                3690m,
+                Sessions([2, 9, 16, 23, 30], 9, 20, 0, 80, MiaAccount)
+                    .Concat(Sessions([7, 14, 21, 28], 10, 20, 0, 80, MiaAccount)).ToArray()),
+            new(
+                ["週四晚間瑜珈班"],
+                "General",
+                MiaAccount,
+                3690m,
+                Sessions([3, 10, 17, 24], 9, 19, 40, 80, MiaAccount)
+                    .Concat(Sessions([1, 8, 15, 22, 29], 10, 19, 40, 80, MiaAccount)).ToArray()),
+            new(
+                ["週六TRX核心懸吊班", "週六白天TRX班"],
+                "General",
+                CeliaAccount,
+                3280m,
+                Sessions([5, 12, 19], 9, 9, 0, 60, CeliaAccount)
+                    .Concat(Sessions([3, 17, 24, 31], 10, 9, 0, 60, CeliaAccount))
+                    .Append(new SessionSpecification(
+                        At(2026, 10, 10, 9, 0),
+                        At(2026, 10, 10, 10, 0),
+                        MiaAccount))
+                    .OrderBy(item => item.StartsAt)
+                    .ToArray()),
+            new(
+                ["週六白天瑜珈班", "週六上午瑜珈班"],
+                "General",
+                MiaAccount,
+                3280m,
+                Sessions([5, 12, 19], 9, 10, 30, 80, MiaAccount)
+                    .Concat(Sessions([3, 10, 17, 24, 31], 10, 10, 30, 80, MiaAccount)).ToArray())
+        ];
+    }
+
+    private static IEnumerable<SessionSpecification> Sessions(
+        int[] days,
+        int month,
+        int hour,
+        int minute,
+        int durationMinutes,
+        string teacherAccount)
+    {
+        return days.Select(day =>
+        {
+            var startsAt = At(2026, month, day, hour, minute);
+            return new SessionSpecification(startsAt, startsAt.AddMinutes(durationMinutes), teacherAccount);
+        });
+    }
+
+    private static DateTimeOffset At(int year, int month, int day, int hour, int minute) =>
+        new(year, month, day, hour, minute, 0, TaiwanOffset);
+
+    private sealed record CourseSpecification(
+        string[] CourseNames,
+        string CategoryCode,
+        string DefaultTeacherAccount,
+        decimal TermPrice,
+        IReadOnlyList<SessionSpecification> Sessions)
+    {
+        public string DisplayName => CourseNames[0];
+    }
+
+    private sealed record SessionSpecification(
+        DateTimeOffset StartsAt,
+        DateTimeOffset EndsAt,
+        string TeacherAccount);
 }
+
+public sealed record ScheduleSyncResult(
+    bool MiaCreated,
+    bool CeliaCreated,
+    int CoursesCreated,
+    int CoursesUpdated,
+    int SessionsCreated,
+    int SessionsUpdated,
+    int SessionsRemoved);

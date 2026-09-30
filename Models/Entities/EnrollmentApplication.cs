@@ -11,7 +11,7 @@ public class EnrollmentApplication
 
     public long StudentId { get; set; }
 
-    public int CourseId { get; set; }
+    public long CourseId { get; set; }
 
     public EnrollmentApplicationStatus Status { get; set; }  = EnrollmentApplicationStatus.Pending;
 

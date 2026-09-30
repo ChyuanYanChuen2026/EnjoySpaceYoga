@@ -16,11 +16,22 @@ builder.Services.AddScoped<ClassSessionService>();
 builder.Services.AddScoped<EnrollmentApplicationService>();
 
 var app = builder.Build();
-if (app.Environment.IsDevelopment())
+var seedOnly = args.Contains("--seed-only", StringComparer.OrdinalIgnoreCase);
+if (app.Environment.IsDevelopment() &&
+    (seedOnly || builder.Configuration.GetValue<bool>("Seed:SyncAutumn2026Schedule")))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await DbSeeder.SeedAsync(db);
+    var result = await DbSeeder.SeedAsync(db);
+    Console.WriteLine(
+        $"2026 秋季課表同步完成：Mia 建立={result.MiaCreated}，Celia 建立={result.CeliaCreated}，" +
+        $"課程新增={result.CoursesCreated}，課程更新={result.CoursesUpdated}，" +
+        $"場次新增={result.SessionsCreated}，" +
+        $"場次更新={result.SessionsUpdated}，場次移除={result.SessionsRemoved}。");
+}
+if (seedOnly)
+{
+    return;
 }
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
