@@ -1,0 +1,59 @@
+﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.ClassSessionCreateViewModel
+
+@{
+    ViewData["Title"] = "新增場次";
+}
+
+<h1 class="h3 mb-4">新增場次</h1>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form asp-area="Admin" asp-controller="ClassSessions" asp-action="Create" method="post">
+
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="CourseId" class="form-label"></label>
+                <select asp-for="CourseId" asp-items="Model.CourseOptions" class="form-select">
+                    <option value="0">請選擇課程</option>
+                </select>
+                <span asp-validation-for="CourseId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="TeacherId" class="form-label"></label>
+                <select asp-for="TeacherId" asp-items="Model.TeacherOptions" class="form-select">
+                    <option value="0">請選擇老師</option>
+                </select>
+                <span asp-validation-for="TeacherId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="StudioLocationId" class="form-label"></label>
+                <select asp-for="StudioLocationId" asp-items="Model.LocationOptions" class="form-select">
+                    <option value="0">請選擇地點</option>
+                </select>
+                <span asp-validation-for="StudioLocationId"  class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="StartsAt" class="form-label"></label>
+                    <input asp-for="StartsAt" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
+                    <span asp-validation-for="StartsAt" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="EndsAt" class="form-label"></label>
+                    <input asp-for="EndsAt"  type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
+                    <span asp-validation-for="EndsAt"  class="text-danger"></span>
+                </div>
+            </div>
+
+            <p class="text-secondary">正常名額：10 人</p>
+            <button type="submit" class="btn btn-primary"> 儲存場次</button>
+            <a asp-area="Admin" asp-controller="ClassSessions" asp-action="Index" class="btn btn-outline-secondary">返回場次列表</a>
+
+        </form>
+    </div>
+</div>
