@@ -1,11 +1,37 @@
 using EnjoySpace.Web.Data;
 using EnjoySpace.Web.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Account/Login";
+    options.ExpireTimeSpan = TimeSpan.FromHours(2);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+        if (!long.TryParse(context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ||
+            !await db.UserRoles.AnyAsync(x => x.UserId == id && x.User.IsActive && x.Role.IsActive && x.Role.RoleCode == "Admin"))
+            context.RejectPrincipal();
+    };
+});
+builder.Services.AddAuthorization();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = 429;
+    options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("找不到 DefaultConnection 連線字串。");
 
@@ -14,8 +40,18 @@ builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<CourseService>();
 builder.Services.AddScoped<ClassSessionService>();
 builder.Services.AddScoped<EnrollmentApplicationService>();
+builder.Services.AddScoped<EnrollmentWorkflowService>();
 
 var app = builder.Build();
+var adminArgument = Array.IndexOf(args, "--create-admin");
+if (adminArgument >= 0)
+{
+    if (!app.Environment.IsDevelopment() || adminArgument + 1 >= args.Length)
+        throw new InvalidOperationException("請在 Development 環境使用 --create-admin 帳號。");
+    using var scope = app.Services.CreateScope();
+    await AdminAccountSetup.CreateAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), args[adminArgument + 1]);
+    return;
+}
 var seedOnly = args.Contains("--seed-only", StringComparer.OrdinalIgnoreCase);
 if (app.Environment.IsDevelopment() &&
     (seedOnly || builder.Configuration.GetValue<bool>("Seed:SyncAutumn2026Schedule")))
@@ -43,6 +79,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseRouting();
+app.UseRateLimiter();
+app.UseAuthentication();
 
 app.UseAuthorization();
 

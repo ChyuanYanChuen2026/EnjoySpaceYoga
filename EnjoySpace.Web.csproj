@@ -7,6 +7,10 @@
     <UserSecretsId>b2d7e4d7-fe46-428a-9ff6-ee78add5aed1</UserSecretsId>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Workflow'">
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Remove="Models\Entities\Location.cs" />
   </ItemGroup>

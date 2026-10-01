@@ -176,23 +176,30 @@ namespace EnjoySpace.Web.Migrations
                     b.ToTable("Courses", "dbo");
                 });
 
-            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.EnrollmentApplication", b =>
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.CourseEnrollment", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("CourseEnrollmentId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("bigint");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("CourseEnrollmentId"));
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("datetime2(0)");
 
                     b.Property<long>("CourseId")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("ReviewNote")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                    b.Property<long>("CreatedByUserId")
+                        .HasColumnType("bigint");
 
-                    b.Property<DateTimeOffset?>("ReviewedAt")
-                        .HasColumnType("datetimeoffset");
+                    b.Property<DateTime>("EnrolledAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<long>("EnrollmentApplicationId")
+                        .HasColumnType("bigint");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -200,22 +207,179 @@ namespace EnjoySpace.Web.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<long>("StudentId")
                         .HasColumnType("bigint");
 
-                    b.Property<DateTimeOffset>("SubmittedAt")
-                        .HasColumnType("datetimeoffset");
+                    b.HasKey("CourseEnrollmentId");
+
+                    b.HasAlternateKey("EnrollmentApplicationId")
+                        .HasName("UQ_CourseEnrollments_Application");
+
+                    b.HasAlternateKey("CourseId", "StudentId")
+                        .HasName("UQ_CourseEnrollments_Course_Student");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("CourseEnrollments", "dbo");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.EnrollmentApplication", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("EnrollmentApplicationId");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ApplicationType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long>("CourseId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("FirstSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("PaymentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("QuotedAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<short>("QuotedSessionCount")
+                        .HasColumnType("smallint");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2(0)")
+                        .HasColumnName("ReviewedAtUtc");
+
+                    b.Property<long?>("ReviewedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long>("StudentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2(0)")
+                        .HasColumnName("AppliedAtUtc");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CourseId");
 
+                    b.HasIndex("FirstSessionId");
+
+                    b.HasIndex("PaymentId")
+                        .IsUnique()
+                        .HasFilter("[PaymentId] IS NOT NULL");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("Status");
+
                     b.HasIndex("StudentId");
 
-                    b.ToTable("EnrollmentApplications", "dbo");
+                    b.ToTable("EnrollmentApplications", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_EnrollmentApplications_QuotedAmount", "[QuotedAmount] >= 0");
+
+                            t.HasCheckConstraint("CK_EnrollmentApplications_QuotedSessionCount", "[QuotedSessionCount] > 0");
+
+                            t.HasCheckConstraint("CK_EnrollmentApplications_Status", "[Status] IN (N'Pending',N'Approved',N'Rejected',N'Cancelled')");
+                        });
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Payment", b =>
+                {
+                    b.Property<long>("PaymentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("PaymentId"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("ConfirmedAtUtc")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<long?>("ConfirmedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("PaidAtUtc")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("PaymentPurpose")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Status")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long?>("StudentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("TrialGuestId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("PaymentId");
+
+                    b.HasIndex("ConfirmedByUserId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("TrialGuestId");
+
+                    b.ToTable("Payments", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_Payments_Amount", "[Amount] >= 0");
+
+                            t.HasCheckConstraint("CK_Payments_Payer", "([StudentId] IS NOT NULL AND [TrialGuestId] IS NULL) OR ([StudentId] IS NULL AND [TrialGuestId] IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Role", b =>
@@ -428,6 +592,80 @@ namespace EnjoySpace.Web.Migrations
                     b.ToTable("Terms", "dbo");
                 });
 
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.TrialGuest", b =>
+                {
+                    b.Property<long>("TrialGuestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("TrialGuestId"));
+
+                    b.Property<long?>("ConvertedStudentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<long?>("CreatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("LineId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long?>("ReferrerStudentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2(0)");
+
+                    b.HasKey("TrialGuestId");
+
+                    b.HasIndex("ConvertedStudentId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("Email");
+
+                    b.HasIndex("Phone");
+
+                    b.HasIndex("ReferrerStudentId");
+
+                    b.ToTable("TrialGuests", "dbo");
+                });
+
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.User", b =>
                 {
                     b.Property<long>("UserId")
@@ -579,6 +817,39 @@ namespace EnjoySpace.Web.Migrations
                     b.Navigation("Term");
                 });
 
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.CourseEnrollment", b =>
+                {
+                    b.HasOne("EnjoySpace.Web.Models.Entities.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.EnrollmentApplication", "EnrollmentApplication")
+                        .WithMany()
+                        .HasForeignKey("EnrollmentApplicationId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+
+                    b.Navigation("EnrollmentApplication");
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.EnrollmentApplication", b =>
                 {
                     b.HasOne("EnjoySpace.Web.Models.Entities.Course", "Course")
@@ -586,6 +857,21 @@ namespace EnjoySpace.Web.Migrations
                         .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.ClassSession", null)
+                        .WithMany()
+                        .HasForeignKey("FirstSessionId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.Payment", "Payment")
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("EnjoySpace.Web.Models.Entities.Student", "Student")
                         .WithMany()
@@ -595,7 +881,33 @@ namespace EnjoySpace.Web.Migrations
 
                     b.Navigation("Course");
 
+                    b.Navigation("Payment");
+
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Payment", b =>
+                {
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", "ConfirmedByUser")
+                        .WithMany()
+                        .HasForeignKey("ConfirmedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.TrialGuest", "TrialGuest")
+                        .WithMany()
+                        .HasForeignKey("TrialGuestId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("ConfirmedByUser");
+
+                    b.Navigation("Student");
+
+                    b.Navigation("TrialGuest");
                 });
 
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Student", b =>
@@ -620,6 +932,24 @@ namespace EnjoySpace.Web.Migrations
                         .HasConstraintName("FK_Teachers_Users");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.TrialGuest", b =>
+                {
+                    b.HasOne("EnjoySpace.Web.Models.Entities.Student", null)
+                        .WithMany()
+                        .HasForeignKey("ConvertedStudentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.Student", null)
+                        .WithMany()
+                        .HasForeignKey("ReferrerStudentId")
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.UserRole", b =>

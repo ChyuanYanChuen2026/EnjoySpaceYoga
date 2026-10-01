@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
+[Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 public class DashboardController : Controller
 {
     private readonly DashboardService _dashboardService;
@@ -22,7 +23,8 @@ public class DashboardController : Controller
 
             TodayClassSessionCount = await _dashboardService.GetTodayClassSessionCountAsync(),
 
-            PendingEnrollmentCount = await _dashboardService.GetPendingEnrollmentCountAsync()
+            PendingEnrollmentCount = await _dashboardService.GetPendingEnrollmentCountAsync(),
+            PendingPaymentCount = await _dashboardService.GetPendingPaymentCountAsync()
         };
         return View(model);
     }

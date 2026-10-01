@@ -7,7 +7,16 @@ namespace EnjoySpace.Web.Models.Entities;
 [Table("EnrollmentApplications", Schema = "dbo")]
 public class EnrollmentApplication
 {
-    public int Id { get; set; }
+    [Column("EnrollmentApplicationId")]
+    public long Id { get; set; }
+
+    [MaxLength(30)] public string ApplicationType { get; set; } = "FullTerm";
+    public int? FirstSessionId { get; set; }
+    public short QuotedSessionCount { get; set; }
+    [Column(TypeName = "decimal(10,2)")] public decimal QuotedAmount { get; set; }
+    public long? PaymentId { get; set; }
+    public long? ReviewedByUserId { get; set; }
+    public Payment? Payment { get; set; }
 
     public long StudentId { get; set; }
 

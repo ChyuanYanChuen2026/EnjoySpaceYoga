@@ -11,7 +11,14 @@
         <nav class="navbar navbar-dark bg-dark" aria-label="後台導覽">
             <div class="container-fluid px-4">
                 <a class="navbar-brand" asp-area="Admin"  asp-controller="Dashboard" asp-action="Index"> Enjoy Space 米亞工作室 </a>
-                <span class="navbar-text">管理後台</span>
+                <div class="d-flex gap-2 align-items-center">
+                    <span class="navbar-text">@User.Identity?.Name</span>
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <form asp-area="" asp-controller="Account" asp-action="Logout" method="post"><button class="btn btn-sm btn-outline-light">登出</button></form>
+                    }
+                    else { <a asp-area="" asp-controller="Account" asp-action="Login" class="btn btn-sm btn-outline-light">管理員登入</a> }
+                </div>
             </div>
         </nav>
     </header>
@@ -24,10 +31,14 @@
                     <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="Courses" asp-action="Index"> 課程管理</a>
                     <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="ClassSessions" asp-action="Index">場次管理</a>
                     <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="EnrollmentApplications" asp-action="Index">待審核報名</a>
+                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="Payments" asp-action="Index">付款管理</a>
+                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="CourseEnrollments" asp-action="Index">正式報名名單</a>
                 </nav>
             </aside>
 
             <main class="col-12 col-md-9 col-lg-10">
+                @if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+                @if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
                 @RenderBody()
             </main>
         </div>

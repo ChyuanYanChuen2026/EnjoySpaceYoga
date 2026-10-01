@@ -1,60 +1,22 @@
-﻿@model IReadOnlyList<EnjoySpace.Web.Models.EnrollmentApplicationListItem>
-
-@{
-    ViewData["Title"] = "待審核報名";
-    var taiwanOffset = TimeSpan.FromHours(8);
-}
-
-<div class="mb-4">
-    <h1 class="h3 mb-2">待審核報名</h1>
-    <p class="text-secondary mb-0">
-        共 @Model.Count 筆待審核申請，依申請時間排序。
-    </p>
+@using EnjoySpace.Web.Models
+@model IReadOnlyList<EnjoySpace.Web.Models.Entities.EnrollmentApplication>
+@{ ViewData["Title"] = "報名管理"; }
+<h1 class="h3">報名管理</h1>
+<div class="d-flex flex-wrap gap-2 my-3">
+    <a asp-action="Create" class="btn btn-primary">新增報名</a>
+    <a asp-action="Index" class="btn btn-outline-secondary">待審核</a>
+    <a asp-action="Index" asp-route-all="true" class="btn btn-outline-secondary">全部申請</a>
+</div>
+<p class="text-secondary">@(ViewBag.All == true ? "全部狀態" : "待審核") · 最近 200 筆，先付款再審核。</p>
+<div class="card card-body table-responsive"><table class="table align-middle">
+<thead><tr><th>學生</th><th>學期／課程</th><th>報價</th><th>付款</th><th>審核</th><th></th></tr></thead>
+<tbody>@foreach (var item in Model)
+{
+    <tr><td>@item.Student.User.DisplayName</td><td>@item.Course.Term.Name · @item.Course.Name</td>
+    <td class="text-nowrap">@item.QuotedSessionCount 堂／@item.QuotedAmount.ToString("N2")</td>
+    <td>@WorkflowLabels.Payment(item.Payment?.Status)</td><td>@WorkflowLabels.Application(item.Status)</td>
+    <td><a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">查看</a></td></tr>
+}</tbody></table>
+@if (Model.Count == 0) { <p>目前沒有符合條件的報名。</p> }
 </div>
 
-<div class="card shadow-sm">
-    <div class="card-body">
-        @if (Model.Count == 0)
-        {
-            <p class="text-secondary mb-0">目前沒有待審核的報名申請。</p>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th scope="col">申請編號</th>
-                            <th scope="col">學生</th>
-                            <th scope="col">電話</th>
-                            <th scope="col">Email</th>
-                            <th scope="col">課程</th>
-                            <th scope="col">申請時間（台灣）</th>
-                            <th scope="col">狀態</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var application in Model)
-                        {
-                            <tr>
-                                <td>@application.Id</td>
-                                <td>@application.StudentName</td>
-                                <td>@(application.Phone ?? "未提供")</td>
-                                <td>@(application.Email ?? "未提供")</td>
-                                <td>@application.CourseName</td>
-                                <td>
-                                    @(application.SubmittedAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm"))
-                                </td>
-                                <td>
-                                    <span class="badge text-bg-warning">
-                                        待審核
-                                    </span>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-    </div>
-</div>

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
+[Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 public class ClassSessionsController : Controller
 {
     private readonly ClassSessionService _classSessionService;

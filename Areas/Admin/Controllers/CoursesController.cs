@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
+[Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 public class CoursesController : Controller
 {
     private readonly CourseService _courseService;

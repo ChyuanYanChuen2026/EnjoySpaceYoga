@@ -1,0 +1,16 @@
+@model EnjoySpace.Web.Controllers.AdminLoginModel
+@{ ViewData["Title"] = "管理員登入"; }
+<div class="row justify-content-center py-4">
+    <div class="col-12 col-sm-8 col-lg-5">
+        <h1 class="h3">管理員登入</h1>
+        <form asp-action="Login" method="post" class="card card-body">
+            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+            <input asp-for="ReturnUrl" type="hidden" />
+            <label asp-for="Account" class="form-label">帳號</label>
+            <input asp-for="Account" class="form-control mb-3" autocomplete="username" />
+            <label asp-for="Password" class="form-label">密碼</label>
+            <input asp-for="Password" class="form-control mb-3" autocomplete="current-password" />
+            <button class="btn btn-primary">登入</button>
+        </form>
+    </div>
+</div>

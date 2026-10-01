@@ -1,0 +1,13 @@
+@model EnjoySpace.Web.Areas.Admin.ViewModels.EnrollmentCreateModel
+@{ ViewData["Title"] = "新增報名"; }
+<h1 class="h3">新增整期報名</h1>
+<p class="text-secondary">保存課程當下的期課價格及堂數。先確認付款，再審核加入正式名單。</p>
+<form asp-action="Create" method="post" class="card card-body" style="max-width:48rem">
+    <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+    <label asp-for="StudentId" class="form-label"></label>
+    <select asp-for="StudentId" asp-items="Model.Students" class="form-select mb-3"><option value="">請選擇學生</option></select>
+    <label asp-for="CourseId" class="form-label"></label>
+    <select asp-for="CourseId" asp-items="Model.Courses" class="form-select mb-3"><option value="">請選擇課程</option></select>
+    <div><button class="btn btn-primary">建立報名與應收款</button> <a asp-action="Index" class="btn btn-outline-secondary">返回</a></div>
+</form>
+

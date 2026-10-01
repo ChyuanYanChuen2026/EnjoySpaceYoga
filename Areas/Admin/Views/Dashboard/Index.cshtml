@@ -41,6 +41,13 @@
         </div>
     </div>
 
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-secondary">待確認付款</h2>
+            <p class="display-6 fw-semibold mb-2">@Model.PendingPaymentCount</p>
+            <a asp-controller="Payments" asp-action="Index" class="btn btn-sm btn-outline-primary">查看付款</a>
+        </div></div>
+    </div>
     <div class="card shadow-sm mt-4">
         <div class="card-body">
             <h2 class="h5">課程行事曆</h2>

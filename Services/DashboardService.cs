@@ -41,4 +41,6 @@ public class DashboardService
         return await _db.EnrollmentApplications.CountAsync(application =>
             application.Status == EnrollmentApplicationStatus.Pending);
     }
+    public Task<int> GetPendingPaymentCountAsync() =>
+        _db.Payments.CountAsync(payment => payment.Status == "Pending");
 }
