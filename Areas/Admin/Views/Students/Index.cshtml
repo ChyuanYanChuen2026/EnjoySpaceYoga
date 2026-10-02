@@ -1,0 +1,74 @@
+﻿@model List<EnjoySpace.Web.Areas.Admin.ViewModels.StudentListItemViewModel>
+
+@{
+    ViewData["Title"] = "學生管理";
+}
+
+<h1 class="h3 mb-2">學生管理</h1>
+<p class="text-muted">共 @Model.Count 位學生。</p>
+<div class="mb-3">
+    <a asp-action="Create" class="btn btn-primary">新增學生</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        @if (Model.Count == 0)
+        {
+            <p class="text-muted mb-0">目前沒有學生資料。</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="text-nowrap">學號</th>
+                            <th scope="col" class="text-nowrap">姓名</th>
+                            <th scope="col" class="text-nowrap">電話</th>
+                            <th scope="col">Email</th>
+                            <th scope="col" class="text-nowrap">加入日期</th>
+                            <th scope="col" class="text-nowrap">學生狀態</th>
+                            <th scope="col" class="text-nowrap">登入帳號</th>
+                            <th scope="col" class="text-nowrap">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var student in Model)
+                        {
+                            <tr>
+                                <td class="text-nowrap">
+                                    @(student.StudentNo ?? "未設定")
+                                </td>
+                                <td class="text-nowrap">
+                                    @student.DisplayName
+                                </td>
+                                <td class="text-nowrap">
+                                    @(student.Phone ?? "未提供")
+                                </td>
+                                <td>
+                                    @(student.Email ?? "未提供")
+                                </td>
+                                <td class="text-nowrap">
+                                    @(student.JoinedDate?.ToString("yyyy/MM/dd") ?? "未設定")
+                                </td>
+                                <td>
+                                    <span class="badge @(student.IsActive ? "bg-success" : "bg-secondary")">
+                                        @(student.IsActive ? "啟用" : "停用")
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge @(student.IsUserActive ? "bg-success" : "bg-secondary")">
+                                        @(student.IsUserActive ? "啟用" : "停用")
+                                    </span>
+                                </td>
+                                <td class="text-nowrap">
+                                    <a asp-action="Edit" asp-route-id="@student.StudentId" class="btn btn-sm btn-outline-primary">編輯</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
