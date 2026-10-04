@@ -1,4 +1,5 @@
-﻿using EnjoySpace.Web.Data;
+﻿using EnjoySpace.Web.Areas.Admin.ViewModels;
+using EnjoySpace.Web.Data;
 using EnjoySpace.Web.Models.Entities;
 using EnjoySpace.Web.Models;
 using Microsoft.EntityFrameworkCore;
@@ -13,13 +14,20 @@ public class CourseService
     {
         _db = db;
     }
-
-    private async Task ValidateTermAsync(long termId)
+    private async Task ValidateTermAsync(long termId, bool requiresDraft = false)
     {
         var term = await _db.Terms.AsNoTracking().SingleOrDefaultAsync(item => item.TermId == termId);
+
         if (term is null)
         {
             throw new ArgumentException("所選學期不存在，請重新選擇。");
+        }
+
+        if (requiresDraft &&
+            term.Status != TermStatusOptions.Draft)
+        {
+            throw new ArgumentException(
+                "只有草稿學期可以新增課程，請先將學期改為草稿。");
         }
     }
 
@@ -50,7 +58,7 @@ public class CourseService
             throw new ArgumentException("課程名稱必填且最多 150 個字元。");
         }
 
-        await ValidateTermAsync(termId);
+        await ValidateTermAsync(termId, requiresDraft: true);
         await ValidateClassCategoryAsync(classCategoryId);
         await ValidateDefaultTeacherAsync(defaultTeacherId);
         await ValidateDefaultLocationAsync(defaultLocationId);
@@ -100,7 +108,19 @@ public class CourseService
             return CourseUpdateResult.Conflict;
         }
 
-        await ValidateTermAsync(termId);
+        var currentTerm = await _db.Terms.AsNoTracking().SingleOrDefaultAsync(term => term.TermId == course.TermId);
+
+        if (currentTerm is null)
+        {
+            throw new ArgumentException("此課程的學期資料不存在，無法修改。");
+        }
+
+        if (currentTerm.Status != TermStatusOptions.Draft)
+        {
+            throw new ArgumentException("只有草稿學期的課程可以修改。");
+        }
+
+        await ValidateTermAsync(termId, requiresDraft: true);
         await ValidateClassCategoryAsync(classCategoryId);
         await ValidateDefaultTeacherAsync(defaultTeacherId);
         await ValidateDefaultLocationAsync(defaultLocationId);
@@ -156,6 +176,16 @@ public class CourseService
             .AsNoTracking()
             .Where(category => category.IsActive)
             .OrderBy(category => category.ClassCategoryId)
+            .ToListAsync();
+    }
+
+    public async Task<List<Term>> GetDraftTermOptionsAsync()
+    {
+        return await _db.Terms
+            .AsNoTracking()
+            .Where(term => term.Status == TermStatusOptions.Draft)
+            .OrderByDescending(term => term.StartDate)
+            .ThenBy(term => term.TermId)
             .ToListAsync();
     }
 

@@ -1,0 +1,65 @@
+﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.TermCreateViewModel
+
+@{
+    ViewData["Title"] = "新增學期";
+}
+
+<h1 class="h3 mb-2">新增學期</h1>
+<p class="text-muted">新增學期預設為草稿，報名時間請填寫台灣時間。</p>
+
+<div class="card">
+    <div class="card-body">
+        <form asp-area="Admin" asp-controller="Terms" asp-action="Create" method="post">
+
+            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+
+            <div class="row g-3">
+                <div class="col-12">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="StartDate" class="form-label"></label>
+                    <input asp-for="StartDate" type="date" class="form-control" />
+                    <span asp-validation-for="StartDate" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="EndDate" class="form-label"></label>
+                    <input asp-for="EndDate" type="date" class="form-control" />
+                    <span asp-validation-for="EndDate" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="RegistrationStartAtTaiwan" class="form-label"></label>
+                    <input asp-for="RegistrationStartAtTaiwan" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
+                    <span asp-validation-for="RegistrationStartAtTaiwan" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="RegistrationEndAtTaiwan" class="form-label"></label>
+                    <input asp-for="RegistrationEndAtTaiwan" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
+                    <span asp-validation-for="RegistrationEndAtTaiwan" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <p class="text-muted mb-0">
+                        報名時間可以留空；若兩者皆填寫，
+                        結束時間必須晚於開始時間。
+                    </p>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">儲存</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">返回列表</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

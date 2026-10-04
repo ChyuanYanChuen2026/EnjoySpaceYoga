@@ -33,6 +33,16 @@ public class CoursesController : Controller
         }).ToList();
     }
 
+    private async Task<List<SelectListItem>> GetDraftTermOptionsAsync()
+    {
+        var terms = await _courseService.GetDraftTermOptionsAsync();
+        return terms.Select(term => new SelectListItem
+        {
+            Value = term.TermId.ToString(),
+            Text = $"{term.Name}（{term.StartDate:yyyy/MM/dd}～{term.EndDate:yyyy/MM/dd}）"
+        }).ToList();
+    }
+
     private async Task<List<SelectListItem>> GetClassCategoryOptionsAsync()
     {
         var categories = await _courseService.GetClassCategoryOptionsAsync();
@@ -69,7 +79,7 @@ public class CoursesController : Controller
     {
         var model = new CourseCreateViewModel
         {
-            TermOptions = await GetTermOptionsAsync(),
+            TermOptions = await GetDraftTermOptionsAsync(),
             ClassCategoryOptions = await GetClassCategoryOptionsAsync(),
             TeacherOptions = await GetTeacherOptionsAsync(),
             LocationOptions = await GetLocationOptionsAsync(),
@@ -112,7 +122,7 @@ public class CoursesController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CourseCreateViewModel model)
     {
-        model.TermOptions = await GetTermOptionsAsync();
+        model.TermOptions = await GetDraftTermOptionsAsync();
         model.ClassCategoryOptions = await GetClassCategoryOptionsAsync();
         model.TeacherOptions = await GetTeacherOptionsAsync();
         model.LocationOptions = await GetLocationOptionsAsync();

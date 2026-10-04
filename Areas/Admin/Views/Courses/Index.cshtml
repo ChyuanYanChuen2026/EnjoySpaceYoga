@@ -1,4 +1,5 @@
 ﻿@model IReadOnlyList<EnjoySpace.Web.Models.Entities.Course>
+@using EnjoySpace.Web.Areas.Admin.ViewModels
 
 @{
     ViewData["Title"] = "課程管理";
@@ -40,7 +41,7 @@
                             <th scope="col">期課價格</th>
                             <th scope="col">狀態</th>
                             <th scope="col">學期期間</th>
-                            <th scope="col">操作</th>
+                            <th scope="col">報名狀態</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -53,8 +54,17 @@
                                 <td class="text-nowrap">NT$ @course.TermPrice.ToString("N2")</td>
                                 <td class="text-nowrap">@(course.IsActive ? "啟用" : "停用")／@(course.IsPubliclyVisible ? "公開" : "不公開")</td>
                                 <td class="text-nowrap">@course.Term.StartDate.ToString("yyyy/MM/dd")～@course.Term.EndDate.ToString("yyyy/MM/dd")</td>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Courses"  asp-action="Edit"  asp-route-id="@course.CourseId"  class="btn btn-sm btn-outline-primary">編輯 </a>
+                                <td class="text-nowrap">
+                                    @if (course.Term.Status == TermStatusOptions.Draft)
+                                    {
+                                        <a asp-area="Admin" asp-controller="Courses" asp-action="Edit" asp-route-id="@course.CourseId" class="btn btn-sm btn-outline-primary">
+                                            編輯
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">學期已@(TermStatusOptions.GetText(course.Term.Status))</span>
+                                    }
                                 </td>
                             </tr>
                         }
