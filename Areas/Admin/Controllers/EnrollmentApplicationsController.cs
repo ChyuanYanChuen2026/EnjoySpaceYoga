@@ -68,18 +68,19 @@ public class EnrollmentApplicationsController(AppDbContext db, EnrollmentWorkflo
     {
         if (!ModelState.IsValid) TempData["Error"] = "資料不完整，請填寫必要欄位並重新操作。";
         else try { await action(); TempData["Success"] = success; }
-        catch (InvalidOperationException e) { TempData["Error"] = e.Message; }
-        catch (DbUpdateException) { TempData["Error"] = "資料已由其他人處理或發生衝突，請重新確認。"; }
-        catch (SqlException e) when (e.Number == 1205) { TempData["Error"] = "同時有其他人操作，請重新確認後重試。"; }
+            catch (InvalidOperationException e) { TempData["Error"] = e.Message; }
+            catch (DbUpdateException) { TempData["Error"] = "資料已由其他人處理或發生衝突，請重新確認。"; }
+            catch (SqlException e) when (e.Number == 1205) { TempData["Error"] = "同時有其他人操作，請重新確認後重試。"; }
         return RedirectToAction(nameof(Details), new { id });
     }
     private long ActorId => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     private async Task PopulateAsync(EnrollmentCreateModel model)
     {
         model.Students = await db.Students.Where(x => x.IsActive).OrderBy(x => x.User.DisplayName)
-            .Select(x => new SelectListItem { Value = x.StudentId.ToString(), Text = x.User.DisplayName + " (" + x.User.Account + ")" }).ToListAsync();
-        model.Courses = await db.Courses.Where(x => x.IsActive).OrderByDescending(x => x.Term.StartDate).ThenBy(x => x.Name)
-            .Select(x => new SelectListItem { Value = x.CourseId.ToString(), Text = x.Term.Name + "｜" + x.Name + "｜$" + x.TermPrice }).ToListAsync();
+        .Select(x => new SelectListItem { Value = x.StudentId.ToString(), Text = x.User.DisplayName + " (" + x.User.Account + ")" }).ToListAsync();
+        
+        model.Courses = await db.Courses.Where(x =>x.IsActive && x.Term.Status == TermStatusOptions.Open).OrderByDescending(x => x.Term.StartDate).ThenBy(x => x.Name)
+        .Select(x => new SelectListItem { Value = x.CourseId.ToString(), Text = x.Term.Name + "｜" + x.Name + "｜$" + x.TermPrice}).ToListAsync();
     }
 }
 
