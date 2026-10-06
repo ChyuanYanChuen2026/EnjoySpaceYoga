@@ -244,6 +244,10 @@ namespace EnjoySpace.Web.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<string>("ConfirmedPolicy")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<long>("CourseId")
                         .HasColumnType("bigint");
 
@@ -251,6 +255,12 @@ namespace EnjoySpace.Web.Migrations
                         .HasColumnType("int");
 
                     b.Property<long?>("PaymentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("PolicyConfirmedAtUtc")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<long?>("PolicyConfirmedByUserId")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("QuotedAmount")
@@ -576,6 +586,12 @@ namespace EnjoySpace.Web.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("ScheduleConfirmedAtUtc")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<long?>("ScheduleConfirmedByUserId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");

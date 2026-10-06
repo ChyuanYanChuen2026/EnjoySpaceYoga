@@ -18,6 +18,7 @@ public static class WorkflowLabels
         EnrollmentApplicationStatus.Pending => "待審核",
         EnrollmentApplicationStatus.Approved => "已核准",
         EnrollmentApplicationStatus.Rejected => "已退回",
-        EnrollmentApplicationStatus.Cancelled => "已取消", _ => "未知"
+        EnrollmentApplicationStatus.Cancelled => "已取消", 
+        _ => "未知"
     };
 }

@@ -1,0 +1,39 @@
+@model EnjoySpace.Web.Areas.Admin.ViewModels.CatalogListControls
+@{
+    string PageUrl(int page) => Url.Action("Index", new
+    {
+        page, Model.Filter.Search, Model.Filter.Status, Model.Filter.TermId,
+        Model.Filter.CourseId, Model.Filter.Sort
+    })!;
+}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+    <p class="text-secondary mb-0">共 @Model.TotalCount 筆，每頁 10 筆；第 @Model.Filter.Page / @Model.TotalPages 頁</p>
+    @if (Model.TotalPages > 1)
+    {
+        <nav aria-label="列表分頁">
+            <ul class="pagination flex-wrap mb-0">
+                @if (Model.Filter.Page > 1)
+                {
+                    <li class="page-item"><a class="page-link" href="@PageUrl(1)">第一頁</a></li>
+                    <li class="page-item"><a class="page-link" href="@PageUrl(Model.Filter.Page - 1)">上一頁</a></li>
+                }
+                @for (var page = Math.Max(1, Model.Filter.Page - 2); page <= Math.Min(Model.TotalPages, Model.Filter.Page + 2); page++)
+                {
+                    if (page == Model.Filter.Page)
+                    {
+                        <li class="page-item active"><span class="page-link" aria-current="page">@(page)</span></li>
+                    }
+                    else
+                    {
+                        <li class="page-item"><a class="page-link" href="@PageUrl(page)">@(page)</a></li>
+                    }
+                }
+                @if (Model.Filter.Page < Model.TotalPages)
+                {
+                    <li class="page-item"><a class="page-link" href="@PageUrl(Model.Filter.Page + 1)">下一頁</a></li>
+                    <li class="page-item"><a class="page-link" href="@PageUrl(Model.TotalPages)">最後一頁</a></li>
+                }
+            </ul>
+        </nav>
+    }
+</div>

@@ -39,4 +39,12 @@
     </div>
 </div>
 
+@if (Model.CanDelete)
+{
+    <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">刪除場次</a>
+}
+else
+{
+    <p class="text-secondary">學期已離開草稿或課程已有報名，不能直接刪除場次；請保留紀錄並另行安排取消／調課。</p>
+}
 <a asp-area="Admin" asp-controller="ClassSessions" asp-action="Index" class="btn btn-outline-secondary">返回場次列表</a>

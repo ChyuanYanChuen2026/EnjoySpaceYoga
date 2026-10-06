@@ -42,9 +42,9 @@ public class EnrollmentApplicationsController(AppDbContext db, EnrollmentWorkflo
         {
             try
             {
-                var id = await workflow.CreateAsync(model.StudentId!.Value, model.CourseId!.Value, ActorId);
-                TempData["Success"] = "報名已建立，請先完成付款確認，再審核。";
-                return RedirectToAction(nameof(Details), new { id });
+                var preview = await workflow.PreviewAsync(model.StudentId!.Value, model.CourseId!.Value, ActorId);
+                ModelState.Clear();
+                return View("ConfirmCreate", preview);
             }
             catch (InvalidOperationException e) { ModelState.AddModelError("", e.Message); }
             catch (DbUpdateException) { ModelState.AddModelError("", "資料已變更或重複申請，請重新確認。"); }
@@ -53,16 +53,37 @@ public class EnrollmentApplicationsController(AppDbContext db, EnrollmentWorkflo
         await PopulateAsync(model);
         return View(model);
     }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmCreate(EnrollmentConfirmationModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = "報名確認資料不完整，請重新選擇學生與課程。";
+            return RedirectToAction(nameof(Create));
+        }
+        try
+        {
+            var id = await workflow.CreateAsync(model.StudentId, model.CourseId, ActorId,
+                model.ConfirmationToken, model.ConfirmDetails, model.ConfirmNoRefund);
+            TempData["Success"] = "已完成報名前確認並建立申請，請再次核對收款後再審核。";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        catch (InvalidOperationException e) { TempData["Error"] = e.Message; }
+        catch (DbUpdateException) { TempData["Error"] = "資料已變更或已有重複申請，請重新確認。"; }
+        catch (SqlException e) when (e.Number == 1205) { TempData["Error"] = "其他人正在處理相同課程，請重試。"; }
+        return RedirectToAction(nameof(Create));
+    }
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmPayment(PaymentConfirmModel model) =>
         await ExecuteAsync(model.Id, () => workflow.ConfirmPaymentAsync(model.Id, model.RowVersion,
-            model.ReceivedAmount!.Value, model.Method, model.PaidAtTaiwan!.Value, model.Note, ActorId),
+            model.ReceivedAmount!.Value, model.Method, model.PaidAtTaiwan!.Value, model.Note, ActorId, model.ConfirmStudentAgreement),
             "收款已確認，可以進行報名審核。");
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Review(EnrollmentReviewModel model) =>
         await ExecuteAsync(model.Id, () => workflow.ReviewAsync(model.Id, model.RowVersion,
-            model.Approve, model.Note, ActorId), model.Approve ? "報名已核准，正式名單已建立。" : "報名已退回；已收款項請至付款管理處理退款。");
+            model.Approve, model.Note, ActorId, model.ConfirmFinalReview), model.Approve ? "報名已核准，正式名單已建立。" : "申請未獲核准；若已收款，請至付款管理處理退回款項。");
 
     private async Task<IActionResult> ExecuteAsync(long id, Func<Task> action, string success)
     {
@@ -79,7 +100,7 @@ public class EnrollmentApplicationsController(AppDbContext db, EnrollmentWorkflo
         model.Students = await db.Students.Where(x => x.IsActive).OrderBy(x => x.User.DisplayName)
         .Select(x => new SelectListItem { Value = x.StudentId.ToString(), Text = x.User.DisplayName + " (" + x.User.Account + ")" }).ToListAsync();
         
-        model.Courses = await db.Courses.Where(x =>x.IsActive && x.Term.Status == TermStatusOptions.Open).OrderByDescending(x => x.Term.StartDate).ThenBy(x => x.Name)
+        model.Courses = await db.Courses.Where(x =>x.IsActive && x.Term.Status == TermStatusOptions.Open && x.Term.ScheduleConfirmedAtUtc != null).OrderByDescending(x => x.Term.StartDate).ThenBy(x => x.Name)
         .Select(x => new SelectListItem { Value = x.CourseId.ToString(), Text = x.Term.Name + "｜" + x.Name + "｜$" + x.TermPrice}).ToListAsync();
     }
 }

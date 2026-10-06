@@ -1,29 +1,46 @@
 @using EnjoySpace.Web.Models
 @model IReadOnlyList<EnjoySpace.Web.Models.Entities.EnrollmentApplication>
-@{ ViewData["Title"] = "付款管理"; }
-<h1 class="h3">付款管理</h1>
-<p class="text-secondary">最近 200 筆報名款項；退款按鈕只登記已完成的人工退款。</p>
-<div class="card card-body table-responsive"><table class="table align-middle">
-<thead><tr><th>學生／課程</th><th>金額</th><th>狀態</th><th>操作</th></tr></thead>
-<tbody>
-@foreach (var item in Model)
-{
-    <tr><td>@item.Student.User.DisplayName<br />@item.Course.Term.Name · @item.Course.Name</td>
-    <td class="text-nowrap">@item.Payment!.Amount.ToString("N2")</td><td>@WorkflowLabels.Payment(item.Payment.Status)</td>
-    <td><a asp-controller="EnrollmentApplications" asp-action="Details" asp-route-id="@item.Id">查看報名／確認付款</a>
-    @if (item.Payment.Status == "RefundPending")
-    {
-        <form asp-action="Refund" method="post" class="mt-2">
-            <input type="hidden" name="paymentId" value="@item.Payment.PaymentId" />
-            <label for="refund-@item.Payment.PaymentId" class="form-label">實際退款時間、方式與憑據</label>
-            <input id="refund-@item.Payment.PaymentId" name="note" required maxlength="400" class="form-control mb-2" />
-            <button class="btn btn-sm btn-outline-danger">登記已完成退款</button>
-        </form>
-    }
-    @if (item.Payment.Status == "Refunded") { <p class="small mt-2">@item.Payment.Note</p> }
-    </td></tr>
+@{ 
+    ViewData["Title"] = "付款管理"; 
 }
-</tbody></table>
+
+<h1 class="h3">付款管理</h1>
+
+<p class="text-secondary">最近 200 筆報名款項；退款按鈕只登記已完成的人工退款。</p>
+<p class="text-secondary">此處僅處理未獲核准申請的退回款項，不提供已報名學生自行退課退款。</p>
+
+<div class="card card-body table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th>學生／課程</th>
+                <th>金額</th>
+                <th>狀態</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Student.User.DisplayName<br />@item.Course.Term.Name · @item.Course.Name</td>
+                <td class="text-nowrap">@item.Payment!.Amount.ToString("N2")</td><td>@WorkflowLabels.Payment(item.Payment.Status)</td>
+                <td><a asp-controller="EnrollmentApplications" asp-action="Details" asp-route-id="@item.Id">查看報名／確認付款</a>
+                @if (item.Payment.Status == "RefundPending")
+                {
+                    <form asp-action="Refund" method="post" class="mt-2">
+                        <input type="hidden" name="paymentId" value="@item.Payment.PaymentId" />
+                        <label for="refund-@item.Payment.PaymentId" class="form-label">實際退款時間、方式與憑據</label>
+                        <input id="refund-@item.Payment.PaymentId" name="note" required maxlength="400" class="form-control mb-2" />
+                        <button class="btn btn-sm btn-outline-danger">登記已完成退款</button>
+                    </form>
+                }
+                @if (item.Payment.Status == "Refunded") { <p class="small mt-2">@item.Payment.Note</p> }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
 @if (Model.Count == 0) { <p>目前沒有報名款項。</p> }
 </div>
 

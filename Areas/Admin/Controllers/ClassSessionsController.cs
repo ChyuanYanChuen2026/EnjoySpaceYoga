@@ -2,6 +2,8 @@
 using EnjoySpace.Web.Areas.Admin.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
@@ -16,9 +18,9 @@ public class ClassSessionsController : Controller
         _classSessionService = classSessionService;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] CatalogFilter filter, [FromServices] AdminCatalogService catalog)
     {
-        var sessions = await _classSessionService.GetAllAsync();
+        var sessions = await catalog.GetSessionsAsync(filter);
         return View(sessions);
     }
 
@@ -33,6 +35,33 @@ public class ClassSessionsController : Controller
             return NotFound();
         }
         return View(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var model = await _classSessionService.GetDetailAsync(id);
+        return model is null ? NotFound() : View(model);
+    }
+
+    [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteConfirmed(int id, byte[] rowVersion)
+    {
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = "資料版本無效，請重新開啟刪除確認頁。";
+            return RedirectToAction(nameof(Delete), new { id });
+        }
+        try
+        {
+            await _classSessionService.DeleteAsync(id, rowVersion);
+            TempData["Success"] = "場次已刪除。";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (InvalidOperationException e) { TempData["Error"] = e.Message; }
+        catch (DbUpdateException) { TempData["Error"] = "場次已變更或已有關聯紀錄，未刪除資料。"; }
+        catch (SqlException e) when (e.Number == 1205) { TempData["Error"] = "其他人正在操作課表，請重新確認。"; }
+        return RedirectToAction(nameof(Delete), new { id });
     }
 
     [HttpGet]
@@ -101,12 +130,19 @@ public class ClassSessionsController : Controller
             return View(model);
         }
 
-        var errorMessage = await _classSessionService.CreateAsync(
+        string? errorMessage;
+        try
+        {
+            errorMessage = await _classSessionService.CreateAsync(
             model.CourseId,
             model.TeacherId,
             model.StudioLocationId,
             model.StartsAt!.Value,
             model.EndsAt!.Value);
+        }
+        catch (InvalidOperationException e) { errorMessage = e.Message; }
+        catch (DbUpdateException) { errorMessage = "課程或場次資料已變更，請重新確認。"; }
+        catch (SqlException e) when (e.Number == 1205) { errorMessage = "其他人正在操作課表，請重試。"; }
 
         if (errorMessage is not null)
         {

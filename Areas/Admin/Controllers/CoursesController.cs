@@ -3,6 +3,8 @@ using EnjoySpace.Web.Services;
 using EnjoySpace.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
@@ -17,9 +19,9 @@ public class CoursesController : Controller
         _courseService = courseService;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] CatalogFilter filter, [FromServices] AdminCatalogService catalog)
     {
-        var courses = await _courseService.GetAllAsync();
+        var courses = await catalog.GetCoursesAsync(filter);
         return View(courses);
     }
 
@@ -147,6 +149,9 @@ public class CoursesController : Controller
             ModelState.AddModelError(string.Empty, ex.Message);
             return View(model);
         }
+        catch (InvalidOperationException e) { ModelState.AddModelError("", e.Message); return View(model); }
+        catch (DbUpdateException) { ModelState.AddModelError("", "課程資料已變更，請重新確認。"); return View(model); }
+        catch (SqlException e) when (e.Number == 1205) { ModelState.AddModelError("", "其他人正在修改學期或課表，請重試。"); return View(model); }
         TempData["SuccessMessage"] = "課程新增成功。";
         return RedirectToAction(nameof(Index));
     }
@@ -187,6 +192,8 @@ public class CoursesController : Controller
             ModelState.AddModelError(string.Empty, ex.Message);
             return View(model);
         }
+        catch (DbUpdateException) { ModelState.AddModelError("", "課程資料已變更，請重新確認。"); return View(model); }
+        catch (SqlException e) when (e.Number == 1205) { ModelState.AddModelError("", "其他人正在修改學期或課表，請重試。"); return View(model); }
         if (result == CourseUpdateResult.NotFound)
         {
             return NotFound();

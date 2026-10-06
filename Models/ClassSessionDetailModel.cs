@@ -19,4 +19,8 @@ public class ClassSessionDetailModel
     public int? CapacityOverride { get; set; }
 
     public int EffectiveCapacity => CapacityOverride ?? Capacity;
+    public byte[] RowVersion { get; set; } = [];
+    public string TermStatus { get; set; } = "";
+    public bool HasApplications { get; set; }
+    public bool CanDelete => TermStatus == "Draft" && !HasApplications;
 }

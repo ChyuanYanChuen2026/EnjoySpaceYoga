@@ -8,6 +8,33 @@
 <h1 class="h3 mb-2">編輯學期</h1>
 <p class="text-muted">修改學期日期與報名開放時間。時間請填寫台灣時間。</p>
 
+<div class="card card-body mb-3">
+    <h2 class="h5">整期排課核對</h2>
+    <p>請先完成所有啟用課程的整期場次，再統一開放報名。開放後，即使停止報名，也不能直接增刪場次或修改課程。</p>
+    <p class="text-secondary">若整個學期從未有報名紀錄，可先停止報名，再將學期改回草稿以修正課表；重新開放時須再次確認。已有報名紀錄時不能退回草稿。</p>
+    @if (Model.ScheduleConfirmedAtUtc.HasValue)
+    {
+        <p>最近排課確認：@(new DateTimeOffset(DateTime.SpecifyKind(Model.ScheduleConfirmedAtUtc.Value, DateTimeKind.Utc)).ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm"))（台灣時間）</p>
+    }
+    <div class="table-responsive">
+        <table class="table">
+            <thead><tr><th>課程</th><th>狀態</th><th>場次數</th><th>首堂～末堂（台灣時間）</th><th>核對</th></tr></thead>
+            <tbody>
+                @foreach (var course in Model.Schedule)
+                {
+                    <tr>
+                        <td>@course.Name</td><td>@(course.IsActive ? "啟用" : "停用，不開放報名")</td>
+                        <td>@course.SessionCount</td>
+                        <td>@(course.FirstSessionAt?.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm") ?? "未排課") ～ @(course.LastSessionAt?.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm") ?? "未排課")</td>
+                        <td><a asp-controller="ClassSessions" asp-action="Index" asp-route-TermId="@Model.TermId" asp-route-CourseId="@course.CourseId" target="_blank" rel="noopener">查看完整場次</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.Schedule.Count == 0) { <p class="text-danger">尚未建立課程，無法開放報名。</p> }
+</div>
+
 <div class="card">
     <div class="card-body">
         <form asp-area="Admin" asp-controller="Terms" asp-action="Edit" asp-route-id="@Model.TermId" method="post">
@@ -62,6 +89,11 @@
 
                 <div class="col-12">
                     <p class="text-muted mb-0">報名時間可以留空；若兩者皆填寫，結束時間必須晚於開始時間。</p>
+                </div>
+                <div class="col-12 form-check ms-2">
+                    <input asp-for="ConfirmScheduleComplete" class="form-check-input" />
+                    <label asp-for="ConfirmScheduleComplete" class="form-check-label"></label>
+                    <p class="text-muted">首次開放或重新開放報名時必須勾選。系統會檢查每門啟用課程均有場次；完整堂數仍須由管理員核對。</p>
                 </div>
             </div>
 

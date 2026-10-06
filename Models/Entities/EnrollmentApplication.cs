@@ -16,6 +16,9 @@ public class EnrollmentApplication
     [Column(TypeName = "decimal(10,2)")] public decimal QuotedAmount { get; set; }
     public long? PaymentId { get; set; }
     public long? ReviewedByUserId { get; set; }
+    [Column(TypeName = "datetime2(0)")] public DateTime? PolicyConfirmedAtUtc { get; set; }
+    public long? PolicyConfirmedByUserId { get; set; }
+    [MaxLength(200)] public string? ConfirmedPolicy { get; set; }
     public Payment? Payment { get; set; }
 
     public long StudentId { get; set; }

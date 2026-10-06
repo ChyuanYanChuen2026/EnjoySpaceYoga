@@ -27,6 +27,10 @@ public class Term
     public string Status { get; set; } = "Draft";
 
     [Column(TypeName = "datetime2(0)")]
+    public DateTime? ScheduleConfirmedAtUtc { get; set; }
+    public long? ScheduleConfirmedByUserId { get; set; }
+
+    [Column(TypeName = "datetime2(0)")]
     public DateTime CreatedAtUtc { get; set; }
 
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();

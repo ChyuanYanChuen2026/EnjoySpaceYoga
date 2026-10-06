@@ -1,34 +1,23 @@
-﻿using EnjoySpace.Web.Areas.Admin.ViewModels;
+using System.Security.Claims;
+using Microsoft.Data.SqlClient;
+using EnjoySpace.Web.Areas.Admin.ViewModels;
 using EnjoySpace.Web.Models.Entities;
 using EnjoySpace.Web.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using EnjoySpace.Web.Services;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
 [Authorize(Roles = "Admin")]
-public class TermsController(AppDbContext db) : Controller
+public class TermsController(AppDbContext db, TermScheduleService schedule) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] CatalogFilter filter, [FromServices] AdminCatalogService catalog)
     {
-        var terms = await db.Terms
-            .AsNoTracking()
-            .OrderByDescending(t => t.StartDate)
-            .ThenByDescending(t => t.TermId)
-            .Select(t => new TermListItemViewModel
-            {
-                TermId = t.TermId,
-                Name = t.Name,
-                StartDate = t.StartDate,
-                EndDate = t.EndDate,
-                RegistrationStartAtUtc = t.RegistrationStartAtUtc,
-                RegistrationEndAtUtc = t.RegistrationEndAtUtc,
-                Status = t.Status
-            })
-            .ToListAsync();
+        var terms = await catalog.GetTermsAsync(filter);
 
         return View(terms);
     }
@@ -90,11 +79,13 @@ public class TermsController(AppDbContext db) : Controller
             RegistrationStartAtTaiwan = ToTaiwanTime(t.RegistrationStartAtUtc),
             RegistrationEndAtTaiwan = ToTaiwanTime(t.RegistrationEndAtUtc),
             Status = t.Status,
+            ScheduleConfirmedAtUtc = t.ScheduleConfirmedAtUtc,
             RowVersion = t.RowVersion
         }).SingleOrDefaultAsync();
 
         if (model is null) return NotFound();
 
+        model.Schedule = await schedule.GetSummaryAsync(id);
         return View(model);
     }
 
@@ -110,6 +101,8 @@ public class TermsController(AppDbContext db) : Controller
     public async Task<IActionResult> Edit(long id, TermEditViewModel model)
     {
         if (id != model.TermId) return BadRequest();
+        model.Schedule = await schedule.GetSummaryAsync(id);
+        model.ScheduleConfirmedAtUtc = await db.Terms.Where(x => x.TermId == id).Select(x => x.ScheduleConfirmedAtUtc).SingleOrDefaultAsync();
 
         if (!ModelState.IsValid) return View(model);
 
@@ -132,37 +125,15 @@ public class TermsController(AppDbContext db) : Controller
 
         if (!ModelState.IsValid) return View(model);
 
-        var term = await db.Terms.SingleOrDefaultAsync(t => t.TermId == id);
-
-        if (term is null) return NotFound();
-
-        if (!TermStatusOptions.CanChangeTo(term.Status, model.Status))
-        {
-            ModelState.AddModelError(nameof(model.Status), $"不允許從「{TermStatusOptions.GetText(term.Status)}」" + $"直接變更為「{TermStatusOptions.GetText(model.Status)}」。");
-            return View(model);
-        }
-
-        // 使用開啟表單時的版本，避免覆蓋他人已儲存的修改。
-        db.Entry(term).Property(t => t.RowVersion).OriginalValue = model.RowVersion;
-
-        term.Name = model.Name;
-        term.StartDate = model.StartDate!.Value;
-        term.EndDate = model.EndDate!.Value;
-        term.RegistrationStartAtUtc = ToUtc(model.RegistrationStartAtTaiwan);
-        term.RegistrationEndAtUtc = ToUtc(model.RegistrationEndAtTaiwan);
-        term.Status = model.Status;
-
         try
         {
-            await db.SaveChangesAsync();
+            await schedule.UpdateAsync(model, long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!));
         }
-        catch (DbUpdateConcurrencyException)
-        {
-            ModelState.AddModelError("", "資料已被其他操作修改或刪除，本次修改未儲存。" + "請返回列表，重新開啟編輯後再修改。");
-
-            return View(model);
-        }
-
+        catch (InvalidOperationException e) { ModelState.AddModelError("", e.Message); }
+        catch (DbUpdateException) { ModelState.AddModelError("", "資料已被其他操作修改，請重新開啟編輯頁。"); }
+        catch (SqlException e) when (e.Number == 1205) { ModelState.AddModelError("", "其他人正在修改課表，請重新整理後重試。"); }
+        if (!ModelState.IsValid) return View(model);
+        TempData["Success"] = "學期已更新。";
         return RedirectToAction(nameof(Index));
     }
 }

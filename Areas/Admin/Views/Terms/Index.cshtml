@@ -1,4 +1,4 @@
-﻿@model List<EnjoySpace.Web.Areas.Admin.ViewModels.TermListItemViewModel>
+﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.CatalogListViewModel<EnjoySpace.Web.Areas.Admin.ViewModels.TermListItemViewModel>
 @using EnjoySpace.Web.Areas.Admin.ViewModels
 
 @{
@@ -17,16 +17,17 @@
 }
 
 <h1 class="h3 mb-2">學期管理</h1>
-<p class="text-muted">共 @Model.Count 個學期。報名時間以台灣時間顯示。</p>
+<p class="text-muted">共 @Model.Controls.TotalCount 個符合條件的學期。報名時間以台灣時間顯示。</p>
 <div class="mb-3">
     <a asp-action="Create" class="btn btn-primary">新增學期</a>
 </div>
 
+<partial name="_CatalogFilters" model="Model.Controls" />
 <div class="card">
     <div class="card-body">
-        @if (Model.Count == 0)
+        @if (Model.Items.Count == 0)
         {
-            <p class="text-muted mb-0">目前沒有學期資料。</p>
+            <p class="text-muted mb-0">沒有符合條件的學期資料。</p>
         }
         else
         {
@@ -44,7 +45,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var term in Model)
+                        @foreach (var term in Model.Items)
                         {
                             <tr>
                                 <td class="text-nowrap">@term.Name</td>
@@ -64,3 +65,4 @@
         }
     </div>
 </div>
+<partial name="_CatalogPagination" model="Model.Controls" />

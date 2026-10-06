@@ -1,16 +1,38 @@
 @model IReadOnlyList<EnjoySpace.Web.Models.Entities.CourseEnrollment>
-@{ ViewData["Title"] = "正式報名名單"; }
+
+@{ 
+    ViewData["Title"] = "正式報名名單"; 
+}
 <h1 class="h3">正式報名名單</h1>
+
 <p class="text-secondary">最近 200 筆已確認付款並核准的整期報名。</p>
-<div class="card card-body table-responsive"><table class="table">
-<thead><tr><th>學生</th><th>學期／課程</th><th>狀態</th><th>報名時間（台灣）</th><th></th></tr></thead>
-<tbody>@foreach (var item in Model)
-{
-    <tr><td>@item.Student.User.DisplayName</td><td>@item.Course.Term.Name · @item.Course.Name</td>
-    <td>@(item.Status == "Active" ? "有效" : item.Status)</td>
-    <td>@(DateTime.SpecifyKind(item.EnrolledAtUtc, DateTimeKind.Utc).AddHours(8).ToString("yyyy/MM/dd HH:mm"))</td>
-    <td><a asp-controller="EnrollmentApplications" asp-action="Details" asp-route-id="@item.EnrollmentApplicationId">查看申請</a></td></tr>
-}</tbody></table>
+
+<div class="card card-body table-responsive">
+    
+    <table class="table">
+        <thead>
+            <tr>
+                <th>學生</th>
+                <th>學期／課程</th>
+                <th>狀態</th>
+                <th>報名時間（台灣）</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.Student.User.DisplayName</td>
+                    <td>@item.Course.Term.Name · @item.Course.Name</td>
+                    <td>@(item.Status == "Active" ? "有效" : item.Status)</td>
+                    <td>@(DateTime.SpecifyKind(item.EnrolledAtUtc, DateTimeKind.Utc).AddHours(8).ToString("yyyy/MM/dd HH:mm"))</td>
+                    <td><a asp-controller="EnrollmentApplications" asp-action="Details" asp-route-id="@item.EnrollmentApplicationId">查看申請</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
 @if (Model.Count == 0) { <p>目前沒有正式報名。</p> }
 </div>
 

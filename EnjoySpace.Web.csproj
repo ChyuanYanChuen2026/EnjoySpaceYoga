@@ -13,6 +13,8 @@
 
   <ItemGroup>
     <Compile Remove="Models\Entities\Location.cs" />
+    <Compile Remove="Tests\**\*.cs" />
+    <Content Remove="Tests\**" />
   </ItemGroup>
 
   <ItemGroup>

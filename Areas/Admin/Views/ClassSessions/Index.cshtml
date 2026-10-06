@@ -1,4 +1,4 @@
-﻿@model IReadOnlyList<EnjoySpace.Web.Models.ClassSessionListItem>
+﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.CatalogListViewModel<EnjoySpace.Web.Models.ClassSessionListItem>
 
 @{
     ViewData["Title"] = "場次管理";
@@ -23,11 +23,12 @@
     <a asp-area="Admin"  asp-controller="ClassSessions" asp-action="Create" class="btn btn-primary">新增場次</a>
 </div>
 
+<partial name="_CatalogFilters" model="Model.Controls" />
 <div class="card shadow-sm">
     <div class="card-body">
-        @if (Model.Count == 0)
+        @if (Model.Items.Count == 0)
         {
-            <p class="text-secondary mb-0">目前沒有場次資料。</p>
+            <p class="text-secondary mb-0">沒有符合條件的場次資料。</p>
         }
         else
         {
@@ -45,7 +46,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var session in Model)
+                        @foreach (var session in Model.Items)
                         {
                             <tr>
                                 <td>@session.CourseName</td>
@@ -56,6 +57,10 @@
                                 <td>@session.EffectiveCapacity</td>
                                 <td>
                                     <a asp-area="Admin" asp-controller="ClassSessions" asp-action="Details" asp-route-id="@session.Id" class="btn btn-sm btn-outline-primary">詳細</a>
+                                    @if (session.CanDelete)
+                                    {
+                                        <a asp-action="Delete" asp-route-id="@session.Id" class="btn btn-sm btn-outline-danger">刪除</a>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -65,3 +70,4 @@
         }
     </div>
 </div>
+<partial name="_CatalogPagination" model="Model.Controls" />

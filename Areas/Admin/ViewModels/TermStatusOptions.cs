@@ -31,6 +31,7 @@ public static class TermStatusOptions
             (Open, Closed) => true,
 
             (Closed, Open) => true,
+            (Closed, Draft) => true,
             (Closed, Archived) => true,
 
             _ => false

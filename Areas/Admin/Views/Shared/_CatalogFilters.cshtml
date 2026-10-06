@@ -1,0 +1,56 @@
+@model EnjoySpace.Web.Areas.Admin.ViewModels.CatalogListControls
+<form asp-action="Index" method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-12 col-md-4">
+        <label for="catalog-search" class="form-label">@Model.SearchLabel</label>
+        <input id="catalog-search" name="Search" value="@Model.Filter.Search" class="form-control" />
+    </div>
+    @if (Model.TermOptions is not null)
+    {
+        <div class="col-6 col-md-3">
+            <label for="catalog-term" class="form-label">學期</label>
+            <select id="catalog-term" name="TermId" class="form-select">
+                <option value="">全部學期</option>
+                @foreach (var option in Model.TermOptions)
+                {
+                    <option value="@option.Value" selected="@(option.Value == Model.Filter.TermId?.ToString())">@option.Text</option>
+                }
+            </select>
+        </div>
+    }
+    @if (Model.CourseOptions is not null)
+    {
+        <div class="col-6 col-md-3">
+            <label for="catalog-course" class="form-label">課程</label>
+            <select id="catalog-course" name="CourseId" class="form-select">
+                <option value="">全部課程</option>
+                @foreach (var option in Model.CourseOptions)
+                {
+                    <option value="@option.Value" selected="@(option.Value == Model.Filter.CourseId?.ToString())">@option.Text</option>
+                }
+            </select>
+        </div>
+    }
+    <div class="col-6 col-md-2">
+        <label for="catalog-status" class="form-label">狀態</label>
+        <select id="catalog-status" name="Status" class="form-select">
+            <option value="">全部狀態</option>
+            @foreach (var option in Model.StatusOptions)
+            {
+                <option value="@option.Value" selected="@(option.Value == Model.Filter.Status)">@option.Text</option>
+            }
+        </select>
+    </div>
+    <div class="col-6 col-md-3">
+        <label for="catalog-sort" class="form-label">排序</label>
+        <select id="catalog-sort" name="Sort" class="form-select">
+            @foreach (var option in Model.SortOptions)
+            {
+                <option value="@option.Value" selected="@(option.Value == Model.Filter.Sort)">@option.Text</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary">套用</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">清除</a>
+    </div>
+</form>
