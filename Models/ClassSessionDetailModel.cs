@@ -15,6 +15,7 @@ public class ClassSessionDetailModel
     public DateTimeOffset EndsAt { get; set; }
 
     public int Capacity { get; set; }
+    public bool IsExtraSession { get; set; }
 
     public int? CapacityOverride { get; set; }
 
@@ -22,5 +23,5 @@ public class ClassSessionDetailModel
     public byte[] RowVersion { get; set; } = [];
     public string TermStatus { get; set; } = "";
     public bool HasApplications { get; set; }
-    public bool CanDelete => TermStatus == "Draft" && !HasApplications;
+    public bool CanDelete => !IsExtraSession && TermStatus == "Draft" && !HasApplications;
 }

@@ -131,7 +131,7 @@ public static class DbSeeder
         var termStart = At(2026, 9, 1, 0, 0);
         var termEndExclusive = At(2026, 11, 1, 0, 0);
         var existingSessions = await db.ClassSessions
-            .Where(item => courseIds.Contains(item.CourseId) &&
+            .Where(item => !item.IsExtraSession && courseIds.Contains(item.CourseId) &&
                            item.StartsAt >= termStart &&
                            item.StartsAt < termEndExclusive)
             .OrderBy(item => item.Id)

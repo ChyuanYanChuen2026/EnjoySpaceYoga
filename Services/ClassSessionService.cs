@@ -50,6 +50,7 @@ public class ClassSessionService
                 StartsAt = session.StartsAt,
                 EndsAt = session.EndsAt,
                 Capacity = session.Capacity,
+                IsExtraSession = session.IsExtraSession,
                 CapacityOverride = session.CapacityOverride,
                 RowVersion = session.RowVersion,
                 TermStatus = session.Course.Term.Status,
@@ -200,7 +201,7 @@ public class ClassSessionService
         if (await HasApplicationsAsync(session.CourseId)
             || await _db.EnrollmentApplications.AnyAsync(x => x.FirstSessionId == id))
             throw new InvalidOperationException("此課程已有報名紀錄，不能直接刪除場次；請保留紀錄並另行安排取消／調課。");
-        if (session.Course.Term.Status != TermStatusOptions.Draft)
+        if (session.IsExtraSession || session.Course.Term.Status != TermStatusOptions.Draft)
             throw new InvalidOperationException("只有草稿學期且尚無報名的課程可以直接刪除場次。");
         _db.Entry(session).Property(x => x.RowVersion).OriginalValue = rowVersion;
         await ScheduleVersion.TouchDraftAsync(_db, session.Course.TermId);

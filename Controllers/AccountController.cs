@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using EnjoySpace.Web.Services;
 
 namespace EnjoySpace.Web.Controllers;
 
@@ -24,10 +25,10 @@ public class AccountController(AppDbContext db) : Controller
         var hasher = new PasswordHasher<User>();
         var result = user is null ? PasswordVerificationResult.Failed :
             hasher.VerifyHashedPassword(user, user.PasswordHash, model.Password);
-        if (result == PasswordVerificationResult.Failed || !await db.UserRoles.AnyAsync(x =>
-                x.UserId == user!.UserId && x.Role.RoleCode == "Admin" && x.Role.IsActive))
+        var roles = user is null ? new List<string>() : await StaffAccess.RolesAsync(db, user.UserId);
+        if (result == PasswordVerificationResult.Failed || roles.Count == 0)
         {
-            ModelState.AddModelError("", "帳號或密碼錯誤，或沒有管理員權限。");
+            ModelState.AddModelError("", "帳號或密碼錯誤，或沒有有效的管理員／老師權限。");
             return View(model);
         }
         if (result == PasswordVerificationResult.SuccessRehashNeeded)
@@ -38,11 +39,10 @@ public class AccountController(AppDbContext db) : Controller
         var identity = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, user!.UserId.ToString()),
-            new Claim(ClaimTypes.Name, user.DisplayName),
-            new Claim(ClaimTypes.Role, "Admin")
-        }, CookieAuthenticationDefaults.AuthenticationScheme);
+            new Claim(ClaimTypes.Name, user.DisplayName)
+        }.Concat(roles.Select(role => new Claim(ClaimTypes.Role, role))), CookieAuthenticationDefaults.AuthenticationScheme);
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
-        return LocalRedirect(Url.IsLocalUrl(model.ReturnUrl) ? model.ReturnUrl! : "/Admin/EnrollmentApplications");
+        return LocalRedirect(Url.IsLocalUrl(model.ReturnUrl) ? model.ReturnUrl! : roles.Contains("Admin") ? "/Admin/EnrollmentApplications" : "/TeacherRequests");
     }
 
     [HttpPost, ValidateAntiForgeryToken]

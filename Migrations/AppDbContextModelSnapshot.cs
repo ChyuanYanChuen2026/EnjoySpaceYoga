@@ -124,6 +124,9 @@ namespace EnjoySpace.Web.Migrations
                     b.Property<DateTimeOffset>("EndsAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("IsExtraSession")
+                        .HasColumnType("bit");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -1085,6 +1088,120 @@ namespace EnjoySpace.Web.Migrations
                     b.ToTable("Teachers", "dbo");
                 });
 
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.TeacherRequest", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("CourseId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("CreatedSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("OriginalCapacity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("RequestedCapacity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("ReviewedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<long>("StudioLocationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("SubmissionKey")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("SubmittedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long>("SubmittedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("TargetSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("TargetVersion")
+                        .HasMaxLength(8)
+                        .HasColumnType("varbinary(8)");
+
+                    b.Property<long>("TeacherId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("CreatedSessionId")
+                        .IsUnique()
+                        .HasFilter("[CreatedSessionId] IS NOT NULL");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("StudioLocationId");
+
+                    b.HasIndex("SubmissionKey")
+                        .IsUnique();
+
+                    b.HasIndex("SubmittedByUserId");
+
+                    b.HasIndex("TargetSessionId")
+                        .IsUnique()
+                        .HasFilter("[Kind] = N'Capacity' AND [Status] = N'Pending'");
+
+                    b.HasIndex("TeacherId", "Status");
+
+                    b.ToTable("TeacherRequests", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_TeacherRequests_Capacity", "[RequestedCapacity] BETWEEN 1 AND 32767");
+
+                            t.HasCheckConstraint("CK_TeacherRequests_Kind", "([Kind] = N'ExtraSession' AND [TargetSessionId] IS NULL) OR ([Kind] = N'Capacity' AND [TargetSessionId] IS NOT NULL AND [OriginalCapacity] IS NOT NULL AND [TargetVersion] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_TeacherRequests_Status", "[Status] IN (N'Pending', N'Approved', N'Rejected')");
+
+                            t.HasCheckConstraint("CK_TeacherRequests_Time", "[EndsAt] > [StartsAt]");
+                        });
+                });
+
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Term", b =>
                 {
                     b.Property<long>("TermId")
@@ -1701,6 +1818,58 @@ namespace EnjoySpace.Web.Migrations
                         .HasConstraintName("FK_Teachers_Users");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.TeacherRequest", b =>
+                {
+                    b.HasOne("EnjoySpace.Web.Models.Entities.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.ClassSession", "CreatedSession")
+                        .WithMany()
+                        .HasForeignKey("CreatedSessionId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.StudioLocation", "StudioLocation")
+                        .WithMany()
+                        .HasForeignKey("StudioLocationId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("SubmittedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.ClassSession", "TargetSession")
+                        .WithMany()
+                        .HasForeignKey("TargetSessionId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.Teacher", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+
+                    b.Navigation("CreatedSession");
+
+                    b.Navigation("StudioLocation");
+
+                    b.Navigation("TargetSession");
+
+                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.TrialGuest", b =>

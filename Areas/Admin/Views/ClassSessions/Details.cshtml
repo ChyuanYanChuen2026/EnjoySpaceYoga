@@ -12,6 +12,7 @@
         <dl class="row mb-0">
             <dt class="col-sm-3">課程</dt>
             <dd class="col-sm-9">@Model.CourseName</dd>
+            <dt class="col-sm-3">場次類型</dt><dd class="col-sm-9">@(Model.IsExtraSession ? "額外加開單堂（不含在整期報名）" : "固定期課")</dd>
 
             <dt class="col-sm-3">老師</dt>
             <dd class="col-sm-9">@Model.TeacherName</dd>

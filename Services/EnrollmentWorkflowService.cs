@@ -150,7 +150,7 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
             if (await db.CourseEnrollments.AnyAsync(x => x.CourseId == application.CourseId && x.StudentId == application.StudentId))
                 throw new InvalidOperationException("已有正式報名，不能重複核准。");
             
-            var capacities = await db.ClassSessions.Where(x => x.CourseId == application.CourseId)
+            var capacities = await db.ClassSessions.Where(x => x.CourseId == application.CourseId && !x.IsExtraSession)
                 .Select(x => x.CapacityOverride ?? x.Capacity).ToListAsync();
             
             if (capacities.Count == 0) throw new InvalidOperationException("課程沒有場次。");
@@ -161,7 +161,7 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
                 throw new InvalidOperationException("課程名額已滿，無法核准；已收款可退回並列入待退款。");
 
             // Makeup participants occupy the same seats as regular enrollments.
-            var sessionIds = await db.ClassSessions.Where(x => x.CourseId == application.CourseId).OrderBy(x => x.Id).Select(x => x.Id).ToListAsync();
+            var sessionIds = await db.ClassSessions.Where(x => x.CourseId == application.CourseId && !x.IsExtraSession).OrderBy(x => x.Id).Select(x => x.Id).ToListAsync();
             foreach (var sessionId in sessionIds) await SessionCapacity.RequireSeatAsync(db, sessionId);
             
             var enrollment = new CourseEnrollment
@@ -232,7 +232,7 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
             && (x.Status == EnrollmentApplicationStatus.Pending || x.Status == EnrollmentApplicationStatus.Approved))
             || await db.CourseEnrollments.AnyAsync(x => x.StudentId == studentId && x.CourseId == courseId))
             throw new InvalidOperationException("這位學生已有此課程的申請或正式報名。");
-        var sessions = await db.ClassSessions.AsNoTracking().Where(x => x.CourseId == courseId)
+        var sessions = await db.ClassSessions.AsNoTracking().Where(x => x.CourseId == courseId && !x.IsExtraSession)
             .OrderBy(x => x.StartsAt).ThenBy(x => x.Id).Select(x => new EnrollmentSessionPreview
             {
                 Id = x.Id, StartsAt = x.StartsAt, EndsAt = x.EndsAt, TeacherName = x.Teacher.User.DisplayName,
@@ -257,7 +257,7 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
             throw new InvalidOperationException("學生或課程已停用，請先核對申請。");
         if (application.Course.Term.ScheduleConfirmedAtUtc is null)
             throw new InvalidOperationException("請先在學期管理確認完整課表，再處理收款與核准。");
-        var capacities = await db.ClassSessions.Where(x => x.CourseId == application.CourseId)
+        var capacities = await db.ClassSessions.Where(x => x.CourseId == application.CourseId && !x.IsExtraSession)
             .Select(x => x.CapacityOverride ?? x.Capacity).ToListAsync();
         if (capacities.Count == 0 || capacities.Count != application.QuotedSessionCount)
             throw new InvalidOperationException("此申請的報價堂數與目前課表不同，請先人工核對，不能直接收款或核准。");

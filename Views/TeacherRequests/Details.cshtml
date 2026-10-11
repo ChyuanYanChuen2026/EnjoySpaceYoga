@@ -1,0 +1,21 @@
+@model EnjoySpace.Web.Models.Entities.TeacherRequest
+@{ ViewData["Title"] = "老師申請詳細"; }
+<h1 class="h3">老師申請詳細</h1><dl class="row card-body">
+<dt class="col-sm-3">類型／狀態</dt><dd class="col-sm-9">@(Model.Kind == "ExtraSession" ? "加開課" : "超收") · @(Model.Status == "Pending" ? "待審核" : Model.Status == "Approved" ? "已核准" : "已退回")</dd>
+<dt class="col-sm-3">老師／課程</dt><dd class="col-sm-9">@Model.Teacher.User.DisplayName · @Model.Course.Term.Name · @Model.Course.Name</dd>
+<dt class="col-sm-3">教室</dt><dd class="col-sm-9">@Model.StudioLocation.Name</dd>
+<dt class="col-sm-3">時間（台灣）</dt><dd class="col-sm-9">@Model.StartsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm") ～ @Model.EndsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")</dd>
+<dt class="col-sm-3">申請總名額</dt><dd class="col-sm-9">@Model.RequestedCapacity 人 @if (Model.OriginalCapacity.HasValue) { <span>（申請時 @Model.OriginalCapacity 人）</span> }</dd>
+<dt class="col-sm-3">原因</dt><dd class="col-sm-9">@Model.Reason</dd>
+<dt class="col-sm-3">送出紀錄</dt><dd class="col-sm-9">@Model.SubmittedAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm") · 帳號編號 @Model.SubmittedByUserId</dd>
+@if (Model.ReviewedAt.HasValue) { <dt class="col-sm-3">審核紀錄</dt><dd class="col-sm-9">@Model.ReviewedAt.Value.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm") · 管理員編號 @Model.ReviewedByUserId<br />@Model.ReviewNote</dd> }
+</dl>
+@if (Model.Kind == "ExtraSession") { <p>加開課為額外單堂，不改動整期價格、堂數或原固定班名單。</p> }
+@if (User.IsInRole("Admin") && Model.Status == "Pending") {
+<form asp-action="Review" method="post" class="card card-body mb-3"><input name="Id" type="hidden" value="@Model.Id" /><input name="RowVersion" type="hidden" value="@Convert.ToBase64String(Model.RowVersion)" />
+<label for="Note" class="form-label">審核備註（退回必填）</label><textarea name="Note" id="Note" maxlength="500" class="form-control mb-3"></textarea>
+<div class="form-check mb-3"><input name="ConfirmDetails" id="ConfirmDetails" type="checkbox" value="true" class="form-check-input" required /><label for="ConfirmDetails" class="form-check-label">已核對老師、時段、教室與新總名額，核准後立即生效。</label></div>
+<div><button name="Decision" value="Approve" class="btn btn-primary">核准</button> <button name="Decision" value="Reject" class="btn btn-outline-danger">退回</button></div></form>
+}
+@if (User.IsInRole("Admin") && Model.Status == "Approved") { <a asp-area="Admin" asp-controller="ClassSessions" asp-action="Details" asp-route-id="@(Model.CreatedSessionId ?? Model.TargetSessionId)" class="btn btn-primary">查看課堂與名額</a> }
+<a asp-action="Index" class="btn btn-outline-secondary">返回申請列表</a>

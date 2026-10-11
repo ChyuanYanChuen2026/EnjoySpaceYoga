@@ -22,9 +22,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.Events.OnValidatePrincipal = async context =>
     {
         var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-        if (!long.TryParse(context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ||
-            !await db.UserRoles.AnyAsync(x => x.UserId == id && x.User.IsActive && x.Role.IsActive && x.Role.RoleCode == "Admin"))
-            context.RejectPrincipal();
+        if (!long.TryParse(context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id))
+        { context.RejectPrincipal(); return; }
+        var roles = await StaffAccess.RolesAsync(db, id);
+        if (roles.Count == 0) { context.RejectPrincipal(); return; }
+        var identity = (ClaimsIdentity)context.Principal!.Identity!;
+        foreach (var claim in identity.FindAll(ClaimTypes.Role).ToList()) identity.RemoveClaim(claim);
+        identity.AddClaims(roles.Select(role => new Claim(ClaimTypes.Role, role)));
     };
 });
 builder.Services.AddAuthorization();
@@ -53,6 +57,7 @@ builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<LeaveMakeupService>();
 builder.Services.AddScoped<TrialLessonService>();
+builder.Services.AddScoped<TeacherRequestService>();
 
 var app = builder.Build();
 var adminArgument = Array.IndexOf(args, "--create-admin");

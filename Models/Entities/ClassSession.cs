@@ -24,6 +24,8 @@ public class ClassSession
     [Range(1, int.MaxValue)]
     public int? CapacityOverride { get; set; }
 
+    public bool IsExtraSession { get; set; }
+
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     public Course Course { get; set; } = null!;

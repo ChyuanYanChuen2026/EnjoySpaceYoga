@@ -223,6 +223,7 @@ try
     Assert(!(await Read(db => new AttendanceService(db, afterClass).GetRosterAsync(currentSession.Id)))!.Participants.Single().IsActive, "cancelled enrollment remains visible as inactive");
     await LeaveMakeupChecks.RunAsync(Db, adminId, studentId, courseId, emptyCourseId, Assert);
     await TrialLessonChecks.RunAsync(Db, adminId, studentId, Assert);
+    await TeacherRequestChecks.RunAsync(Db, adminId, studentId, Assert);
     if (args.Contains("--http")) await HttpWorkflowChecks.RunAsync(Db, adminId, studentId, emptyCourseId, Assert);
     Console.WriteLine($"All {checks} workflow checks passed.");
 }

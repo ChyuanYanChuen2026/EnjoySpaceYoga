@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<Course> Courses => Set<Course>();
+    public DbSet<TeacherRequest> TeacherRequests => Set<TeacherRequest>();
     public DbSet<PortalTrialRequest> PortalTrialRequests => Set<PortalTrialRequest>();
     public DbSet<Teacher> Teachers => Set<Teacher>();
     public DbSet<ClassSession> ClassSessions => Set<ClassSession>();
@@ -36,6 +37,7 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        TeacherRequestModelConfiguration.Configure(modelBuilder);
         modelBuilder.Entity<PortalTrialRequest>().HasIndex(x => x.SubmissionKey).IsUnique();
         modelBuilder.Entity<PortalTrialRequest>().HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.NoAction);
         modelBuilder.Entity<PortalTrialRequest>().HasOne(x => x.TrialGuest).WithMany().HasForeignKey(x => x.TrialGuestId).OnDelete(DeleteBehavior.NoAction);

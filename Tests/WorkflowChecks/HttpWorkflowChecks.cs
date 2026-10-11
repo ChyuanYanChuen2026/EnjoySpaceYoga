@@ -151,6 +151,7 @@ internal static class HttpWorkflowChecks
             var paymentPage = await Page("/Admin/Payments");
             assert(paymentPage.Contains("HTTP體驗方案") && paymentPage.Contains("HTTP體驗生"), "HTTP unified payment list includes trial payment");
             await PortalHttpChecks.RunAsync(createDb, client.BaseAddress!, client, targetId, assert);
+            await TeacherRequestHttpChecks.RunAsync(createDb, client.BaseAddress!, client, assert);
         }
         finally
         {

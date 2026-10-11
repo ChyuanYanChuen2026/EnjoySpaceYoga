@@ -1,0 +1,23 @@
+@model TeacherRequestInput
+@{ ViewData["Title"] = Model.Kind == "Capacity" ? "申請超收" : "申請加開課"; }
+<h1 class="h3">@ViewData["Title"]</h1>
+@if (User.IsInRole("Admin")) {
+<form method="get" asp-action="Create" class="d-flex gap-2 mb-3"><input name="kind" value="@Model.Kind" type="hidden" /><label for="selectTeacher" class="form-label">代辦老師</label><select name="teacherId" id="selectTeacher" asp-items="Model.Teachers" class="form-select" required><option value="">請選擇老師</option></select><button class="btn btn-secondary text-nowrap">載入課程</button></form>
+}
+<form method="post" asp-action="Create" class="card card-body">
+<div asp-validation-summary="All" class="text-danger" role="alert"></div>
+<input asp-for="SubmissionKey" type="hidden" /><input asp-for="Kind" type="hidden" /><input asp-for="TeacherId" type="hidden" />
+<p>申請老師：@(Model.Teachers.FirstOrDefault(x => x.Value == Model.TeacherId.ToString())?.Text ?? "請先載入老師")</p>
+@if (Model.Kind == "ExtraSession") {
+<p class="text-secondary">同一期額外單堂，不計入固定期課的價格與堂數，也不自動加入原班學生。</p>
+<label asp-for="CourseId" class="form-label">課程</label><select asp-for="CourseId" asp-items="Model.Courses" class="form-select mb-3" required><option value="">請選擇</option></select>
+<label asp-for="StudioLocationId" class="form-label">教室</label><select asp-for="StudioLocationId" asp-items="Model.Locations" class="form-select mb-3" required><option value="">請選擇</option></select>
+<label asp-for="StartsAtTaiwan" class="form-label">開始時間（台灣）</label><input asp-for="StartsAtTaiwan" type="datetime-local" class="form-control mb-3" required />
+<label asp-for="EndsAtTaiwan" class="form-label">結束時間（台灣）</label><input asp-for="EndsAtTaiwan" type="datetime-local" class="form-control mb-3" required />
+} else {
+<p class="text-secondary">填寫核准後的新總名額，例如原 10 人增為 12 人，請填 12。只影響此堂，不提高整期招生上限。</p>
+<label asp-for="TargetSessionId" class="form-label">授課場次</label><select asp-for="TargetSessionId" asp-items="Model.Sessions" class="form-select mb-3" required><option value="">請選擇</option></select>
+}
+<label asp-for="RequestedCapacity" class="form-label">申請總名額</label><input asp-for="RequestedCapacity" type="number" min="1" max="32767" class="form-control mb-3" required />
+<label asp-for="Reason" class="form-label">申請原因</label><textarea asp-for="Reason" maxlength="500" class="form-control mb-3" required></textarea>
+<div><button type="submit" class="btn btn-primary">送出申請</button> <a asp-action="Index" class="btn btn-outline-secondary">返回</a></div></form>

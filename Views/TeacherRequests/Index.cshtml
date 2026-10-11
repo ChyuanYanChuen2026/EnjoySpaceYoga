@@ -1,0 +1,11 @@
+@model EnjoySpace.Web.Areas.Admin.ViewModels.PagedRecords<EnjoySpace.Web.Models.Entities.TeacherRequest>
+@{ ViewData["Title"] = "老師加開／超收申請"; }
+<h1 class="h3">老師加開／超收申請</h1>
+<p class="text-secondary">@(User.IsInRole("Admin") ? "可代老師送出申請並審核，核准後才會新增場次或提高該堂名額。" : "僅顯示自己的申請，管理員核准後才生效。")</p>
+<div class="d-flex gap-2 mb-3"><a asp-action="Create" asp-route-kind="ExtraSession" class="btn btn-primary">申請加開課</a><a asp-action="Create" asp-route-kind="Capacity" class="btn btn-outline-primary">申請超收</a></div>
+<div class="table-responsive"><table class="table table-striped"><thead><tr><th>老師／課程</th><th>類型</th><th>時間（台灣）</th><th>申請總名額</th><th>狀態</th><th></th></tr></thead><tbody>
+@foreach (var item in Model.Items) { <tr><td>@item.Teacher.User.DisplayName<br />@item.Course.Name</td><td>@(item.Kind == "ExtraSession" ? "加開課" : "超收")</td><td>@item.StartsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")</td><td>@item.RequestedCapacity</td><td>@(item.Status == "Pending" ? "待審核" : item.Status == "Approved" ? "已核准" : "已退回")</td><td><a asp-action="Details" asp-route-id="@item.Id">查看</a></td></tr> }
+@if (Model.Items.Count == 0) { <tr><td colspan="6">尚無申請。</td></tr> }
+</tbody></table></div><p>第 @Model.Page / @Model.PageCount 頁，共 @Model.TotalCount 筆</p>
+@if (Model.Page > 1) { <a asp-action="Index" asp-route-page="@(Model.Page - 1)" class="btn btn-outline-secondary">上一頁</a> }
+@if (Model.Page < Model.PageCount) { <a asp-action="Index" asp-route-page="@(Model.Page + 1)" class="btn btn-outline-secondary">下一頁</a> }

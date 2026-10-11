@@ -12,9 +12,9 @@ public class TermScheduleService(AppDbContext db, EnrollmentWorkflowService work
         .Select(x => new TermCourseScheduleItem
         {
             CourseId = x.CourseId, Name = x.Name, IsActive = x.IsActive,
-            SessionCount = db.ClassSessions.Count(s => s.CourseId == x.CourseId),
-            FirstSessionAt = db.ClassSessions.Where(s => s.CourseId == x.CourseId).Min(s => (DateTimeOffset?)s.StartsAt),
-            LastSessionAt = db.ClassSessions.Where(s => s.CourseId == x.CourseId).Max(s => (DateTimeOffset?)s.EndsAt)
+            SessionCount = db.ClassSessions.Count(s => s.CourseId == x.CourseId && !s.IsExtraSession),
+            FirstSessionAt = db.ClassSessions.Where(s => s.CourseId == x.CourseId && !s.IsExtraSession).Min(s => (DateTimeOffset?)s.StartsAt),
+            LastSessionAt = db.ClassSessions.Where(s => s.CourseId == x.CourseId && !s.IsExtraSession).Max(s => (DateTimeOffset?)s.EndsAt)
         }).ToListAsync();
 
     public async Task UpdateAsync(TermEditViewModel model, long actorId)

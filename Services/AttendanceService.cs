@@ -11,7 +11,7 @@ public class AttendanceService(AppDbContext db, TimeProvider clock)
     // Called inside the enrollment approval transaction; both enrollment and roster commit together.
     public static async Task AddEnrollmentRosterAsync(AppDbContext db, CourseEnrollment enrollment, long actorId)
     {
-        var sessionIds = await db.ClassSessions.Where(x => x.CourseId == enrollment.CourseId)
+        var sessionIds = await db.ClassSessions.Where(x => x.CourseId == enrollment.CourseId && !x.IsExtraSession)
             .Select(x => x.Id).ToListAsync();
         db.ClassSessionParticipants.AddRange(sessionIds.Select(id => new ClassSessionParticipant
         {

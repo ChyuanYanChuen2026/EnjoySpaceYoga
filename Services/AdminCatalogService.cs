@@ -113,7 +113,7 @@ public class AdminCatalogService(AppDbContext db)
             Id = x.Id, CourseName = x.Course.Name, TeacherName = x.Teacher.User.DisplayName,
             LocationName = x.StudioLocation.Name, StartsAt = x.StartsAt, EndsAt = x.EndsAt,
             EffectiveCapacity = x.CapacityOverride ?? x.Capacity,
-            CanDelete = x.Course.Term.Status == TermStatusOptions.Draft
+            CanDelete = !x.IsExtraSession && x.Course.Term.Status == TermStatusOptions.Draft
                 && !db.EnrollmentApplications.Any(a => a.CourseId == x.CourseId || a.FirstSessionId == x.Id)
                 && !db.CourseEnrollments.Any(e => e.CourseId == x.CourseId)
         }), controls);
