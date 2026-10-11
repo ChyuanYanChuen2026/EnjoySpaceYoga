@@ -160,11 +160,13 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
             if (await db.CourseEnrollments.CountAsync(x => x.CourseId == application.CourseId && x.Status == "Active") >= capacity)
                 throw new InvalidOperationException("課程名額已滿，無法核准；已收款可退回並列入待退款。");
             
-            db.CourseEnrollments.Add(new CourseEnrollment
+            var enrollment = new CourseEnrollment
             {
                 CourseId = application.CourseId, StudentId = application.StudentId,
                 EnrollmentApplicationId = application.Id, CreatedByUserId = actorId
-            });
+            };
+            db.CourseEnrollments.Add(enrollment);
+            await AttendanceService.AddEnrollmentRosterAsync(db, enrollment, actorId);
             
             application.Status = EnrollmentApplicationStatus.Approved;
             application.PolicyConfirmedAtUtc ??= DateTime.UtcNow;

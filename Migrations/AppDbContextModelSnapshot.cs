@@ -22,6 +22,57 @@ namespace EnjoySpace.Web.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.AttendanceRecord", b =>
+                {
+                    b.Property<long>("AttendanceRecordId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AttendanceRecordId"));
+
+                    b.Property<string>("CheckInMethod")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long?>("CheckedInByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ManualReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<long>("SessionParticipantId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2(0)");
+
+                    b.HasKey("AttendanceRecordId");
+
+                    b.HasIndex("CheckedInByUserId");
+
+                    b.HasIndex("SessionParticipantId")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("AttendanceRecords", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_AttendanceRecords_Status", "[Status] IN (N'Scheduled', N'Present', N'Late', N'Absent')");
+                        });
+                });
+
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.ClassCategory", b =>
                 {
                     b.Property<int>("ClassCategoryId")
@@ -97,6 +148,66 @@ namespace EnjoySpace.Web.Migrations
                     b.HasIndex("TeacherId");
 
                     b.ToTable("ClassSessions", "dbo");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.ClassSessionParticipant", b =>
+                {
+                    b.Property<long>("SessionParticipantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("SessionParticipantId"));
+
+                    b.Property<DateTime>("AddedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<long>("AddedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("ClassSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("CourseEnrollmentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ParticipationType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long>("StudentId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("SessionParticipantId");
+
+                    b.HasIndex("AddedByUserId");
+
+                    b.HasIndex("CourseEnrollmentId");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("ClassSessionId", "CourseEnrollmentId")
+                        .IsUnique();
+
+                    b.HasIndex("ClassSessionId", "StudentId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ClassSessionParticipants_ActiveStudent")
+                        .HasFilter("[Status] = N'Active'");
+
+                    b.ToTable("ClassSessionParticipants", "dbo");
                 });
 
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Course", b =>
@@ -766,6 +877,24 @@ namespace EnjoySpace.Web.Migrations
                     b.ToTable("UserRoles", "dbo");
                 });
 
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.AttendanceRecord", b =>
+                {
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", "CheckedInByUser")
+                        .WithMany()
+                        .HasForeignKey("CheckedInByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.ClassSessionParticipant", "Participant")
+                        .WithOne("Attendance")
+                        .HasForeignKey("EnjoySpace.Web.Models.Entities.AttendanceRecord", "SessionParticipantId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("CheckedInByUser");
+
+                    b.Navigation("Participant");
+                });
+
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.ClassSession", b =>
                 {
                     b.HasOne("EnjoySpace.Web.Models.Entities.Course", "Course")
@@ -792,6 +921,39 @@ namespace EnjoySpace.Web.Migrations
                     b.Navigation("StudioLocation");
 
                     b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.ClassSessionParticipant", b =>
+                {
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("AddedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.ClassSession", "ClassSession")
+                        .WithMany()
+                        .HasForeignKey("ClassSessionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.CourseEnrollment", "CourseEnrollment")
+                        .WithMany()
+                        .HasForeignKey("CourseEnrollmentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("ClassSession");
+
+                    b.Navigation("CourseEnrollment");
+
+                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.Course", b =>
@@ -995,6 +1157,12 @@ namespace EnjoySpace.Web.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.ClassSessionParticipant", b =>
+                {
+                    b.Navigation("Attendance")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

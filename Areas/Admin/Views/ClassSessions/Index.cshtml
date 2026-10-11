@@ -57,6 +57,7 @@
                                 <td>@session.EffectiveCapacity</td>
                                 <td>
                                     <a asp-area="Admin" asp-controller="ClassSessions" asp-action="Details" asp-route-id="@session.Id" class="btn btn-sm btn-outline-primary">詳細</a>
+                                    <a asp-area="Admin" asp-controller="Attendance" asp-action="Index" asp-route-sessionId="@session.Id" class="btn btn-sm btn-outline-primary">名單／點名</a>
                                     @if (session.CanDelete)
                                     {
                                         <a asp-action="Delete" asp-route-id="@session.Id" class="btn btn-sm btn-outline-danger">刪除</a>

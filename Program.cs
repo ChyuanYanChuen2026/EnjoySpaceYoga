@@ -43,6 +43,8 @@ builder.Services.AddScoped<ClassSessionService>();
 builder.Services.AddScoped<EnrollmentApplicationService>();
 builder.Services.AddScoped<EnrollmentWorkflowService>();
 builder.Services.AddScoped<TermScheduleService>();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddScoped<AttendanceService>();
 
 var app = builder.Build();
 var adminArgument = Array.IndexOf(args, "--create-admin");

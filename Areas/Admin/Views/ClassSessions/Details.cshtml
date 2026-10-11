@@ -39,6 +39,7 @@
     </div>
 </div>
 
+<a asp-area="Admin" asp-controller="Attendance" asp-action="Index" asp-route-sessionId="@Model.Id" class="btn btn-primary">課堂名單與出缺席</a>
 @if (Model.CanDelete)
 {
     <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">刪除場次</a>

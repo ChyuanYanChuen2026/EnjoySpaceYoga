@@ -23,12 +23,15 @@ public class AppDbContext : DbContext
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<TrialGuest> TrialGuests => Set<TrialGuest>();
     public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
+    public DbSet<ClassSessionParticipant> ClassSessionParticipants => Set<ClassSessionParticipant>();
+    public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
         EnrollmentModelConfiguration.Configure(modelBuilder);
+        AttendanceModelConfiguration.Configure(modelBuilder);
 
         modelBuilder.Entity<Course>().Property(course => course.DefaultCapacity)
             .HasDefaultValue((short)10, "DF_Courses_DefaultCapacity");
