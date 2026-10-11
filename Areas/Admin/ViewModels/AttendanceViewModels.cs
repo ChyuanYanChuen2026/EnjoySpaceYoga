@@ -29,6 +29,8 @@ public class AttendanceRowViewModel
     public string? StudentNo { get; set; }
     public string Status { get; set; } = "Scheduled";
     public bool IsActive { get; set; }
+    public string ParticipantStatus { get; set; } = "Active";
+    public string ParticipationType { get; set; } = "Regular";
     public byte[] RowVersion { get; set; } = [];
     public string? ManualReason { get; set; }
     public string? UpdatedBy { get; set; }

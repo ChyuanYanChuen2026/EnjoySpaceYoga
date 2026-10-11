@@ -1,0 +1,14 @@
+@model EnjoySpace.Web.Areas.Admin.ViewModels.LessonPurchaseModel
+@{ ViewData["Title"] = "購買方案"; }
+<h1 class="h3">購買方案</h1>
+<nav class="nav nav-pills mb-3"><a asp-action="Create" asp-route-ownerType="TrialGuest" class="nav-link @(Model.OwnerType == "TrialGuest" ? "active" : "")">體驗生</a><a asp-action="Create" asp-route-ownerType="Student" class="nav-link @(Model.OwnerType == "Student" ? "active" : "")">正式學生</a></nav>
+@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+<form asp-action="Preview" method="post" class="card card-body">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input asp-for="OwnerType" type="hidden" />
+    <label asp-for="OwnerId" class="form-label">購買對象</label><select asp-for="OwnerId" asp-items="Model.Owners" class="form-select mb-3" required><option value="">請選擇</option></select>
+    <label asp-for="PlanId" class="form-label">方案</label><select asp-for="PlanId" asp-items="Model.Plans" class="form-select mb-3" required><option value="">請選擇</option></select>
+    <label asp-for="ValidFromDate" class="form-label">生效日（台灣日期）</label><input asp-for="ValidFromDate" type="date" class="form-control mb-3" required />
+    @if (Model.Plans.Count == 0 || Model.Owners.Count == 0) { <p class="text-secondary">請先建立並啟用購買對象與適用方案。</p> }
+    <div><button type="submit" class="btn btn-primary" disabled="@(Model.Plans.Count == 0 || Model.Owners.Count == 0)">下一步：核對內容</button> <a asp-action="Index" class="btn btn-outline-secondary">返回購買紀錄</a></div>
+</form>

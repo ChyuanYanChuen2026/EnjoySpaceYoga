@@ -19,7 +19,7 @@ Migration：`20261008072606_AddSessionParticipantsAndAttendance`。
 
 新增 `ClassSessionParticipants` 與 `AttendanceRecords`，替既有 Active／Approved 正式報名補建各場次名單，歷史出缺席全部維持未點名。
 
-本階段模型只實作固定期課來源，外鍵依現有 MVC 資料庫的 `ClassSessions.Id`（int）。原始 29 表 SQL 為設計參考，不能直接與現有 EF migrations 混用；Trial、SessionBooking、MakeupRequest 及 GPS 欄位需隨後續功能擴充。
+2026/10/11 已加入補課來源；固定期課與補課共用出缺席流程，請假中及取消的名單不可點名。詳見 [請假與補課規則](LeaveMakeupRules.md)。外鍵依現有 MVC 資料庫的 `ClassSessions.Id`（int）。原始 29 表 SQL 為設計參考，不能直接與現有 EF migrations 混用；Trial、SessionBooking 及 GPS 欄位需隨後續功能擴充。
 
 更新指令：`dotnet ef database update`。回復此 migration 會刪除新增的名單及點名資料，不適合用來回復已有點名的環境。
 

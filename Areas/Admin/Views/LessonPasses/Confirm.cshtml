@@ -1,0 +1,16 @@
+@model EnjoySpace.Web.Areas.Admin.ViewModels.LessonQuoteModel
+@{ ViewData["Title"] = "核對方案購買"; }
+<h1 class="h3">核對方案購買</h1>
+<div class="card card-body mb-3"><dl class="row mb-0">
+    <dt class="col-sm-3">購買對象</dt><dd class="col-sm-9">@Model.OwnerName</dd>
+    <dt class="col-sm-3">方案</dt><dd class="col-sm-9">@Model.PlanName</dd>
+    <dt class="col-sm-3">堂數</dt><dd class="col-sm-9">@Model.Quota 堂</dd>
+    <dt class="col-sm-3">應收金額</dt><dd class="col-sm-9">$@Model.Amount.ToString("N2")</dd>
+    <dt class="col-sm-3">效期</dt><dd class="col-sm-9">@Model.From.ToString("yyyy/MM/dd") ～ @(Model.Until?.ToString("yyyy/MM/dd") ?? "不限期")（含起訖日）</dd>
+</dl></div>
+<form asp-action="Purchase" method="post">
+    <input name="token" type="hidden" value="@Model.Token" />
+    <div class="form-check mb-3"><input id="confirmDetails" name="confirmDetails" type="checkbox" value="true" class="form-check-input" required /><label for="confirmDetails" class="form-check-label">已與購買人核對對象、方案、堂數、金額及效期。</label></div>
+    <p class="text-secondary">此步驟建立待付款紀錄，確認收款後才啟用堂券。此確認頁有效 30 分鐘。</p>
+    <button type="submit" class="btn btn-primary">確認建立待付款訂單</button> <a asp-action="Create" class="btn btn-outline-secondary">重新選擇</a>
+</form>

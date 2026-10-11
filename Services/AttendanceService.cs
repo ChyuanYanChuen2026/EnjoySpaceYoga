@@ -37,6 +37,7 @@ public class AttendanceService(AppDbContext db, TimeProvider clock)
                 ParticipantId = x.SessionParticipantId, StudentName = x.Student.User.DisplayName,
                 StudentNo = x.Student.StudentNo, Status = x.Attendance.Status,
                 IsActive = x.Status == "Active" && x.CourseEnrollment.Status == "Active",
+                ParticipantStatus = x.Status, ParticipationType = x.ParticipationType,
                 RowVersion = x.Attendance.RowVersion, ManualReason = x.Attendance.ManualReason,
                 UpdatedBy = x.Attendance.CheckedInByUser == null ? null : x.Attendance.CheckedInByUser.DisplayName,
                 UpdatedAtUtc = x.Attendance.UpdatedAtUtc

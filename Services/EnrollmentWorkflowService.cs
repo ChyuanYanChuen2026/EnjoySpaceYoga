@@ -159,6 +159,10 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
             
             if (await db.CourseEnrollments.CountAsync(x => x.CourseId == application.CourseId && x.Status == "Active") >= capacity)
                 throw new InvalidOperationException("課程名額已滿，無法核准；已收款可退回並列入待退款。");
+
+            // Makeup participants occupy the same seats as regular enrollments.
+            var sessionIds = await db.ClassSessions.Where(x => x.CourseId == application.CourseId).OrderBy(x => x.Id).Select(x => x.Id).ToListAsync();
+            foreach (var sessionId in sessionIds) await SessionCapacity.RequireSeatAsync(db, sessionId);
             
             var enrollment = new CourseEnrollment
             {

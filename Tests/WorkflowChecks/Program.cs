@@ -6,6 +6,9 @@ using EnjoySpace.Web.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using EnjoySpace.Web.Migrations;
 
 // Always create a new isolated database; never accept an existing database name.
 var database = "EnjoySpace_WorkflowChecks_" + Guid.NewGuid().ToString("N");
@@ -161,6 +164,66 @@ try
         Assert((await catalog.GetTermsAsync(new CatalogFilter { Search = "測試", Status = "Open" })).Items.Count == 1, "semester filters translate to SQL");
         Assert((await catalog.GetCoursesAsync(new CatalogFilter { Sort = "price_desc" })).Items.First().TermPrice == 200, "course price sorting translates to SQL");
     });
+    Assert(await Read(db => db.ClassSessionParticipants.CountAsync()) == 10, "approval creates participants for all ten sessions only");
+    Assert(await Read(db => db.AttendanceRecords.CountAsync(x => x.Status == "Scheduled")) == 10, "new participants start unmarked");
+    // Simulate upgrading the preceding schema with an already-approved enrollment, only in this random isolated DB.
+    await InDb(async db =>
+    {
+        await using var tx = await db.Database.BeginTransactionAsync();
+        var generator = db.GetService<IMigrationsSqlGenerator>();
+        foreach (var command in generator.Generate(new AddLeaveAndMakeupWorkflow().DownOperations))
+            await db.Database.ExecuteSqlRawAsync(command.CommandText);
+        await db.Database.ExecuteSqlRawAsync("DROP TABLE dbo.AttendanceRecords; DROP TABLE dbo.ClassSessionParticipants;");
+        var migration = new AddSessionParticipantsAndAttendance();
+        var commands = db.GetService<IMigrationsSqlGenerator>().Generate(migration.UpOperations);
+        foreach (var command in commands) await db.Database.ExecuteSqlRawAsync(command.CommandText);
+        foreach (var command in generator.Generate(new AddLeaveAndMakeupWorkflow().UpOperations))
+            await db.Database.ExecuteSqlRawAsync(command.CommandText);
+        await tx.CommitAsync();
+    });
+    Assert(await Read(db => db.ClassSessionParticipants.CountAsync()) == 10, "migration backfills approved enrollment and excludes pending applications");
+    Assert(await Read(db => db.AttendanceRecords.AllAsync(x => x.Status == "Scheduled" && x.UpdatedAtUtc == null)), "migration does not infer historical attendance");
+    var afterClass = new AttendanceTestClock(new DateTimeOffset(2030, 4, 1, 0, 0, 0, TimeSpan.Zero));
+    var beforeClass = new AttendanceTestClock(new DateTimeOffset(2029, 12, 1, 0, 0, 0, TimeSpan.Zero));
+    var roster = (await Read(db => new AttendanceService(db, afterClass).GetRosterAsync(currentSession.Id)))!;
+    Assert(roster.Participants.Count == 1 && roster.Participants[0].StudentName == "學生甲", "session roster shows approved student only");
+    Assert((await Read(db => new AttendanceService(db, afterClass).GetRosterAsync(-1))) is null, "unknown session returns no roster");
+    var participant = roster.Participants.Single();
+    var originalVersion = participant.RowVersion;
+    AttendanceEditViewModel Mark(string status, byte[]? version = null, string? reason = null, int? targetSession = null) => new()
+    {
+        SessionId = targetSession ?? currentSession.Id, ParticipantId = participant.ParticipantId,
+        RowVersion = version ?? originalVersion, Status = status, ManualReason = reason
+    };
+    await Reject(() => InDb(db => new AttendanceService(db, afterClass).RecordAsync(Mark("Present"), 0)), "管理員", "non-admin cannot mark attendance");
+    await Reject(() => InDb(db => new AttendanceService(db, beforeClass).RecordAsync(Mark("Present"), adminId)), "尚未開始", "future class cannot be marked");
+    await Reject(() => InDb(db => new AttendanceService(db, afterClass).RecordAsync(Mark("Invalid"), adminId)), "有效", "unknown attendance status rejected");
+    await Reject(() => InDb(db => new AttendanceService(db, afterClass).RecordAsync(Mark("Present", targetSession: -1), adminId)), "名單", "participant cannot be submitted for another session");
+    await Reject(() => InDb(db => new AttendanceService(db, afterClass).RecordAsync(Mark("Present", reason: new string('x', 501)), adminId)), "500", "overlong note rejected");
+    await InDb(db => new AttendanceService(db, afterClass).RecordAsync(Mark("Present"), adminId));
+    Assert(await Read(db => db.AttendanceRecords.AnyAsync(x => x.SessionParticipantId == participant.ParticipantId
+        && x.Status == "Present" && x.CheckedInByUserId == adminId && x.CheckInMethod == "Manual" && x.UpdatedAtUtc == afterClass.GetUtcNow().UtcDateTime)), "present persists with actor and timestamp");
+    await Reject(() => InDb(db => new AttendanceService(db, afterClass).RecordAsync(Mark("Absent", reason: "過期表單"), adminId)), "已被其他人修改", "stale form cannot overwrite attendance");
+    var presentVersion = await Read(db => db.AttendanceRecords.Where(x => x.SessionParticipantId == participant.ParticipantId).Select(x => x.RowVersion).SingleAsync());
+    await Reject(() => InDb(db => new AttendanceService(db, afterClass).RecordAsync(Mark("Late", presentVersion), adminId)), "原因", "correction requires a reason");
+    foreach (var status in new[] { "Late", "Absent", "Scheduled" })
+    {
+        var version = await Read(db => db.AttendanceRecords.Where(x => x.SessionParticipantId == participant.ParticipantId).Select(x => x.RowVersion).SingleAsync());
+        await InDb(db => new AttendanceService(db, afterClass).RecordAsync(Mark(status, version, "核對後更正"), adminId));
+        Assert(await Read(db => db.AttendanceRecords.AnyAsync(x => x.SessionParticipantId == participant.ParticipantId && x.Status == status)), "correction persists " + status);
+    }
+    Assert(await Read(db => db.AttendanceRecords.CountAsync()) == 10, "edits do not duplicate attendance records");
+    await InDb(async db =>
+    {
+        var enrollment = await db.CourseEnrollments.SingleAsync(x => x.EnrollmentApplicationId == applicationId);
+        enrollment.Status = "Cancelled";
+        await db.SaveChangesAsync();
+    });
+    await Reject(() => InDb(db => new AttendanceService(db, afterClass).RecordAsync(Mark("Present"), adminId)), "有效名單", "cancelled enrollment cannot be marked");
+    Assert(!(await Read(db => new AttendanceService(db, afterClass).GetRosterAsync(currentSession.Id)))!.Participants.Single().IsActive, "cancelled enrollment remains visible as inactive");
+    await LeaveMakeupChecks.RunAsync(Db, adminId, studentId, courseId, emptyCourseId, Assert);
+    await TrialLessonChecks.RunAsync(Db, adminId, studentId, Assert);
+    if (args.Contains("--http")) await HttpWorkflowChecks.RunAsync(Db, adminId, studentId, emptyCourseId, Assert);
     Console.WriteLine($"All {checks} workflow checks passed.");
 }
 finally
@@ -171,4 +234,9 @@ finally
         await cleanup.Database.EnsureDeletedAsync();
         Console.WriteLine("Removed isolated test database: " + database);
     }
+}
+
+sealed class AttendanceTestClock(DateTimeOffset now) : TimeProvider
+{
+    public override DateTimeOffset GetUtcNow() => now;
 }

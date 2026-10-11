@@ -5,15 +5,30 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
+using EnjoySpace.Web.Areas.Admin.ViewModels;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
 [Area("Admin"), Authorize(Roles = "Admin")]
 public class PaymentsController(AppDbContext db, EnrollmentWorkflowService workflow) : Controller
 {
-    public async Task<IActionResult> Index() => View(await db.EnrollmentApplications.AsNoTracking()
-        .Include(x => x.Payment).Include(x => x.Student).ThenInclude(x => x.User).Include(x => x.Course).ThenInclude(x => x.Term)
-        .Where(x => x.PaymentId != null).OrderByDescending(x => x.Payment!.CreatedAtUtc).Take(200).ToListAsync());
+    public async Task<IActionResult> Index(int page = 1)
+    {
+        var result = new PaymentListModel { TotalCount = await db.Payments.CountAsync() };
+        result.Page = Math.Clamp(page, 1, result.PageCount);
+        var payments = await db.Payments.AsNoTracking().Include(x => x.Student).ThenInclude(x => x!.User).Include(x => x.TrialGuest)
+            .OrderByDescending(x => x.PaymentId).Skip((result.Page - 1) * 20).Take(20).ToListAsync();
+        var ids = payments.Select(x => x.PaymentId).ToList();
+        var applications = await db.EnrollmentApplications.AsNoTracking().Where(x => x.PaymentId != null && ids.Contains(x.PaymentId.Value))
+            .Select(x => new { PaymentId = x.PaymentId!.Value, x.Id, Description = x.Course.Term.Name + " · " + x.Course.Name }).ToDictionaryAsync(x => x.PaymentId);
+        var passes = await db.LessonPasses.AsNoTracking().Where(x => ids.Contains(x.PaymentId))
+            .Select(x => new { x.PaymentId, x.LessonPassId, x.PlanNameAtPurchase }).ToDictionaryAsync(x => x.PaymentId);
+        result.Items = payments.Select(p => new PaymentListRow { Payment = p,
+            ApplicationId = applications.GetValueOrDefault(p.PaymentId)?.Id,
+            PassId = passes.GetValueOrDefault(p.PaymentId)?.LessonPassId,
+            Description = applications.GetValueOrDefault(p.PaymentId)?.Description ?? passes.GetValueOrDefault(p.PaymentId)?.PlanNameAtPurchase ?? p.PaymentPurpose }).ToList();
+        return View(result);
+    }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Refund(long paymentId, string note)

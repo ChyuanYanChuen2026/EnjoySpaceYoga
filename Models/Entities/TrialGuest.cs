@@ -7,6 +7,7 @@ namespace EnjoySpace.Web.Models.Entities;
 public class TrialGuest
 {
     public long TrialGuestId { get; set; }
+    [Timestamp] public byte[] RowVersion { get; set; } = [];
     [MaxLength(100)] public string Name { get; set; } = "";
     [MaxLength(30)] public string Phone { get; set; } = "";
     [MaxLength(200)] public string Email { get; set; } = "";

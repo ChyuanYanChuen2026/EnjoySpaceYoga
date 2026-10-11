@@ -26,6 +26,8 @@
 
 ## 部署與驗證
 
+2026/10/11 起，正式報名核准也會檢查每堂 Active Participant（含已核准補課）是否尚有空位；不能只按固定期課正式報名人數推定名額。詳見 [請假與補課規則](LeaveMakeupRules.md)。
+
 - 新 migration：`20261006144721_ScheduleConfirmationAndEnrollmentConsent`，只新增 5 個可空欄位，不修改既有報價、付款、場次或狀態。
 - 更新資料庫後重新建置啟動網站。
 - 整合檢查：`dotnet run --project Tests/WorkflowChecks --configuration Rules`。程式使用獨立隨機名稱測試資料庫並於完成後移除。

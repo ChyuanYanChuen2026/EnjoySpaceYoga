@@ -38,8 +38,17 @@
         <div class="card-body">
             <h2 class="h6">@row.StudentName <span class="text-secondary">@(row.StudentNo ?? "未設定學號")</span>
                 <span class="badge bg-secondary">@AttendanceStatuses.Labels.GetValueOrDefault(row.Status, row.Status)</span>
-                @if (!row.IsActive) { <span class="badge bg-warning text-dark">非有效名單</span> }
+                <span class="badge bg-light text-dark">@(row.ParticipationType == "Makeup" ? "補課" : "固定期課")</span>
+                @if (!row.IsActive) { <span class="badge bg-warning text-dark">@(row.ParticipantStatus == "OnLeave" ? "請假中" : "非有效名單")</span> }
             </h2>
+            @if (!Model.HasStarted && row.IsActive && row.ParticipationType == "Regular")
+            {
+                <a asp-controller="LeaveMakeup" asp-action="Leave" asp-route-participantId="@row.ParticipantId" class="btn btn-sm btn-outline-primary mb-2">登記請假</a>
+            }
+            @if (row.ParticipantStatus == "OnLeave" || row.ParticipationType == "Makeup")
+            {
+                <a asp-controller="LeaveMakeup" asp-action="Index" asp-route-tab="@(row.ParticipationType == "Makeup" ? "requests" : "leaves")" class="btn btn-sm btn-outline-secondary mb-2">管理請假／補課</a>
+            }
             <form asp-area="Admin" asp-controller="Attendance" asp-action="Record" method="post">
                 <input type="hidden" name="SessionId" value="@Model.SessionId" />
                 <input type="hidden" name="ParticipantId" value="@row.ParticipantId" />

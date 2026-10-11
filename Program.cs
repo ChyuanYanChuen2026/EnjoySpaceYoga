@@ -4,11 +4,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
+builder.Services.AddAuthentication().AddCookie(PortalAuthentication.Scheme, PortalAuthentication.Configure);
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
 {
     options.LoginPath = "/Account/Login";
@@ -28,6 +31,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;
+    options.AddPolicy("portal-trial", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
@@ -45,6 +51,8 @@ builder.Services.AddScoped<EnrollmentWorkflowService>();
 builder.Services.AddScoped<TermScheduleService>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddScoped<AttendanceService>();
+builder.Services.AddScoped<LeaveMakeupService>();
+builder.Services.AddScoped<TrialLessonService>();
 
 var app = builder.Build();
 var adminArgument = Array.IndexOf(args, "--create-admin");
@@ -85,6 +93,16 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
+// The portal has a separate cookie and cannot inherit an Admin MVC session.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api/portal"))
+    {
+        var result = await context.AuthenticateAsync(PortalAuthentication.Scheme);
+        context.User = result.Principal ?? new ClaimsPrincipal(new ClaimsIdentity());
+    }
+    await next();
+});
 
 app.UseAuthorization();
 

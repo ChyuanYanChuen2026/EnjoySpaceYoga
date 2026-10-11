@@ -14,7 +14,8 @@ internal static class AttendanceModelConfiguration
         participant.HasOne<User>().WithMany().HasForeignKey(x => x.AddedByUserId).OnDelete(DeleteBehavior.NoAction);
         participant.HasIndex(x => new { x.ClassSessionId, x.StudentId }).IsUnique()
             .HasFilter("[Status] = N'Active'").HasDatabaseName("UX_ClassSessionParticipants_ActiveStudent");
-        participant.HasIndex(x => new { x.ClassSessionId, x.CourseEnrollmentId }).IsUnique();
+        participant.HasIndex(x => new { x.ClassSessionId, x.CourseEnrollmentId }).IsUnique()
+            .HasFilter("[ParticipationType] = N'Regular'");
         participant.Property(x => x.AddedAtUtc).HasDefaultValueSql("SYSUTCDATETIME()");
         var attendance = model.Entity<AttendanceRecord>();
         attendance.HasOne(x => x.Participant).WithOne(x => x.Attendance)

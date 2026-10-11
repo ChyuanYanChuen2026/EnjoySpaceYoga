@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<Course> Courses => Set<Course>();
+    public DbSet<PortalTrialRequest> PortalTrialRequests => Set<PortalTrialRequest>();
     public DbSet<Teacher> Teachers => Set<Teacher>();
     public DbSet<ClassSession> ClassSessions => Set<ClassSession>();
     public DbSet<Student> Students => Set<Student>();
@@ -25,13 +26,25 @@ public class AppDbContext : DbContext
     public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
     public DbSet<ClassSessionParticipant> ClassSessionParticipants => Set<ClassSessionParticipant>();
     public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
+    public DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
+    public DbSet<MakeupEntitlement> MakeupEntitlements => Set<MakeupEntitlement>();
+    public DbSet<MakeupRequest> MakeupRequests => Set<MakeupRequest>();
+    public DbSet<LessonPlan> LessonPlans => Set<LessonPlan>();
+    public DbSet<LessonPass> LessonPasses => Set<LessonPass>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<PortalTrialRequest>().HasIndex(x => x.SubmissionKey).IsUnique();
+        modelBuilder.Entity<PortalTrialRequest>().HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<PortalTrialRequest>().HasOne(x => x.TrialGuest).WithMany().HasForeignKey(x => x.TrialGuestId).OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<PortalTrialRequest>().HasOne(x => x.ClassSession).WithMany().HasForeignKey(x => x.ClassSessionId).OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<PortalTrialRequest>().HasOne(x => x.LessonPlan).WithMany().HasForeignKey(x => x.LessonPlanId).OnDelete(DeleteBehavior.NoAction);
         EnrollmentModelConfiguration.Configure(modelBuilder);
         AttendanceModelConfiguration.Configure(modelBuilder);
+        LeaveMakeupModelConfiguration.Configure(modelBuilder);
+        LessonPlanModelConfiguration.Configure(modelBuilder);
 
         modelBuilder.Entity<Course>().Property(course => course.DefaultCapacity)
             .HasDefaultValue((short)10, "DF_Courses_DefaultCapacity");

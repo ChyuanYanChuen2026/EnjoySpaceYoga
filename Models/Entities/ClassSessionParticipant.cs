@@ -11,6 +11,8 @@ public class ClassSessionParticipant
     public int ClassSessionId { get; set; }
     public long StudentId { get; set; }
     public long CourseEnrollmentId { get; set; }
+    public long? MakeupRequestId { get; set; }
+    public MakeupRequest? MakeupRequest { get; set; }
     [MaxLength(30)] public string ParticipationType { get; set; } = "Regular";
     [MaxLength(30)] public string Status { get; set; } = "Active";
     public long AddedByUserId { get; set; }
