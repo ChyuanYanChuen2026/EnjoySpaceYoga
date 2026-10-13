@@ -1,5 +1,5 @@
 @model EnjoySpace.Web.Areas.Admin.ViewModels.CatalogListControls
-<form asp-action="Index" method="get" class="row g-2 align-items-end mb-3">
+<form asp-action="Index" method="get" class="catalog-filters row g-2 align-items-end mb-3">
     <div class="col-12 col-md-4">
         <label for="catalog-search" class="form-label">@Model.SearchLabel</label>
         <input id="catalog-search" name="Search" value="@Model.Filter.Search" class="form-control" />

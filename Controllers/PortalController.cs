@@ -36,6 +36,9 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         var roles = user is null ? [] : await db.UserRoles.Where(x => x.UserId == user.UserId && x.Role.IsActive).Select(x => x.Role.RoleCode).ToListAsync();
         if (result == PasswordVerificationResult.Failed || roles.Contains("Admin") || !roles.Intersect(PortalAuthentication.Roles).Any())
             return Unauthorized(new { message = "帳號或密碼錯誤，或此帳號無官網使用權限。" });
+        if ((roles.Contains("Teacher") && !await db.Teachers.AnyAsync(x => x.UserId == user!.UserId && x.IsActive)) ||
+            (roles.Contains("Student") && !await db.Students.AnyAsync(x => x.UserId == user!.UserId && x.IsActive)))
+            return Unauthorized(new { message = "此帳號的學生或老師資格已停用，請聯繫工作室。" });
         if (result == PasswordVerificationResult.SuccessRehashNeeded)
         { user!.PasswordHash = hasher.HashPassword(user, input.Password); await db.SaveChangesAsync(); }
         var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, user!.UserId.ToString()), new(ClaimTypes.Name, user.DisplayName) };
@@ -78,12 +81,15 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
     });
 
     [HttpGet("sessions")]
-    public async Task<IActionResult> Sessions(DateTimeOffset? from, DateTimeOffset? until)
+    public async Task<IActionResult> Sessions(DateTimeOffset? from, DateTimeOffset? until, int? sessionId)
     {
+        if (sessionId is <= 0) return BadRequest(new { message = "場次識別碼無效。" });
         var start = from ?? clock.GetUtcNow();
         var end = until ?? start.AddDays(60);
         if (end <= start || end - start > TimeSpan.FromDays(93)) return BadRequest(new { message = "查詢日期範圍須在 93 天內。" });
-        return Ok(await PublicSessions.Where(x => x.StartsAt >= start && x.StartsAt < end).OrderBy(x => x.StartsAt).Select(x => new
+        var query = sessionId.HasValue ? PublicSessions.Where(x => x.Id == sessionId && x.StartsAt > clock.GetUtcNow())
+            : PublicSessions.Where(x => x.StartsAt >= start && x.StartsAt < end);
+        return Ok(await query.OrderBy(x => x.StartsAt).Select(x => new
         {
             x.Id, x.CourseId, name = x.Course.Name, category = x.Course.ClassCategory.Name, teacher = x.Teacher.User.DisplayName,
             location = x.StudioLocation.Name, address = x.StudioLocation.Address, x.StartsAt, x.EndsAt,
@@ -119,7 +125,7 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         if (session is null || plan is null) return BadRequest(new { message = "課程或方案已變更，請重新選擇。" });
         if (await db.ClassSessionParticipants.CountAsync(x => x.ClassSessionId == session.Id && x.Status == "Active") >= (session.CapacityOverride ?? session.Capacity))
             return Conflict(new { message = "此場次已額滿，請選擇其他場次。" });
-        if (await db.PortalTrialRequests.AnyAsync(x => x.UserId == Actor && x.ClassSessionId == session.Id && x.Status == "Pending"))
+        if (await db.PortalTrialRequests.AnyAsync(x => x.UserId == Actor && x.ClassSessionId == session.Id && (x.Status == "Pending" || x.Status == "Contacted")))
             return Conflict(new { message = "您已申請此場次，請至會員專區查看。" });
         var guest = new TrialGuest { Name = input.Name.Trim(), Phone = input.Phone.Trim(), Email = input.Email.Trim(), LineId = input.LineId?.Trim() ?? "",
             SourceType = "Direct", CreatedAtUtc = clock.GetUtcNow().UtcDateTime,

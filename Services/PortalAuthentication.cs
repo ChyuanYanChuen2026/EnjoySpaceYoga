@@ -27,7 +27,9 @@ public static class PortalAuthentication
                 .Select(x => x.Role.RoleCode).ToListAsync();
             var claimed = context.Principal!.FindAll(ClaimTypes.Role).Select(x => x.Value).Order().ToArray();
             if (roles.Contains("Admin") || !roles.Intersect(Roles).Any() ||
-                !claimed.SequenceEqual(roles.Intersect(Roles).Order())) context.RejectPrincipal();
+                !claimed.SequenceEqual(roles.Intersect(Roles).Order()) ||
+                (roles.Contains("Teacher") && !await db.Teachers.AnyAsync(x => x.UserId == id && x.IsActive)) ||
+                (roles.Contains("Student") && !await db.Students.AnyAsync(x => x.UserId == id && x.IsActive))) context.RejectPrincipal();
         };
     }
 }

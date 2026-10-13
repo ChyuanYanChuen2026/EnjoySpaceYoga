@@ -1,60 +1,66 @@
-﻿<!DOCTYPE html>
+@{
+    var current = ViewContext.RouteData.Values["controller"]?.ToString();
+    if (current == "Attendance") current = "ClassSessions";
+    var groups = new[] {
+        (Title: "總覽", Items: new[] { ("Dashboard", "儀表板", "home", "Admin") }),
+        (Title: "課程與教學", Items: new[] { ("Terms", "學期管理", "calendar", "Admin"), ("Courses", "課程管理", "book", "Admin"), ("ClassSessions", "場次管理", "calendar", "Admin"), ("LeaveMakeup", "請假與補課", "clock", "Admin"), ("TeacherRequests", "老師加開／超收申請", "file", "") }),
+        (Title: "報名與款項", Items: new[] { ("EnrollmentApplications", "待審核報名", "check", "Admin"), ("CourseEnrollments", "正式報名名單", "people", "Admin"), ("Payments", "付款管理", "wallet", "Admin"), ("LessonPlans", "方案管理", "book", "Admin"), ("LessonPasses", "方案購買紀錄", "file", "Admin") }),
+        (Title: "學員與老師", Items: new[] { ("Students", "學生管理", "people", "Admin"), ("Teachers", "老師管理", "user", "Admin"), ("TrialGuests", "體驗生管理", "user", "Admin"), ("PortalTrials", "官網體驗申請", "check", "Admin") })
+    };
+}
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewData["Title"]｜Enjoy Space 後台</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/workspace.css" asp-append-version="true" />
 </head>
-<body class="bg-light">
-    <header>
-        <nav class="navbar navbar-dark bg-dark" aria-label="後台導覽">
-            <div class="container-fluid px-4">
-                <a class="navbar-brand" asp-area="Admin"  asp-controller="Dashboard" asp-action="Index"> Enjoy Space 米亞工作室 </a>
-                <div class="d-flex gap-2 align-items-center">
-                    <span class="navbar-text">@User.Identity?.Name</span>
-                    @if (User.Identity?.IsAuthenticated == true)
-                    {
-                        <form asp-area="" asp-controller="Account" asp-action="Logout" method="post"><button class="btn btn-sm btn-outline-light">登出</button></form>
-                    }
-                    else { <a asp-area="" asp-controller="Account" asp-action="Login" class="btn btn-sm btn-outline-light">管理員登入</a> }
-                </div>
-            </div>
-        </nav>
-    </header>
-
-    <div class="container-fluid px-4 py-4">
-        <div class="row g-4">
-            <aside class="col-12 col-md-3 col-lg-2">
-                <nav class="list-group" aria-label="後台功能">
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="Dashboard" asp-action="Index"> 儀表板</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="ClassSessions" asp-action="Index">場次管理</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="LeaveMakeup" asp-action="Index">請假與補課</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="TrialGuests" asp-action="Index">體驗生管理</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="PortalTrials" asp-action="Index">官網體驗申請</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="LessonPlans" asp-action="Index">方案管理</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="LessonPasses" asp-action="Index">方案購買紀錄</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="Courses" asp-action="Index"> 課程管理</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="Terms" asp-action="Index">學期管理</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="EnrollmentApplications" asp-action="Index">待審核報名</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="Payments" asp-action="Index">付款管理</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="CourseEnrollments" asp-action="Index">正式報名名單</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="Students" asp-action="Index">學生管理</a>
-                    <a class="list-group-item list-group-item-action" asp-area="Admin" asp-controller="Teachers" asp-action="Index">老師管理</a>
-                    <a class="list-group-item list-group-item-action" asp-area="" asp-controller="TeacherRequests" asp-action="Index">老師加開／超收申請</a>
-                </nav>
-            </aside>
-
-            <main class="col-12 col-md-9 col-lg-10">
-                @if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
-                @if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
-                @RenderBody()
-            </main>
+<body class="admin-app">
+    <a href="#main-content" class="skip-link">跳至主要內容</a>
+    <aside class="admin-sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="adminNavigation" aria-labelledby="navigationTitle">
+        <div class="sidebar-brand"><a class="es-brand" asp-area="Admin" asp-controller="Dashboard" asp-action="Index"><partial name="_BrandMark" /><span><strong>Enjoy Space</strong><small>米亞工作室</small></span></a></div>
+        <div class="offcanvas-header"><h2 class="h6 mb-0" id="navigationTitle">後台功能選單</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#adminNavigation" aria-label="關閉選單"></button></div>
+        <div class="offcanvas-body">
+            <nav aria-label="後台功能">
+                @foreach (var group in groups)
+                {
+                    <div class="sidebar-group">
+                        <p class="sidebar-heading">@group.Title</p>
+                        @foreach (var item in group.Items)
+                        {
+                            var active = current == item.Item1;
+                            <a class="admin-nav-link @(active ? "active" : "")" asp-area="@item.Item4" asp-controller="@item.Item1" asp-action="Index" aria-current="@(active ? "page" : null)"><partial name="_UiIcon" model="item.Item3" /><span>@item.Item2</span></a>
+                        }
+                    </div>
+                }
+            </nav>
+            <div class="sidebar-caption">Enjoy Space · 後台管理系統</div>
         </div>
+    </aside>
+    <div class="admin-shell">
+        <header class="admin-topbar">
+            <a class="es-brand mobile-brand" asp-area="Admin" asp-controller="Dashboard" asp-action="Index"><partial name="_BrandMark" /><span><strong>Enjoy Space</strong><small>米亞工作室</small></span></a>
+            <div class="topbar-label">後台管理<span>/</span>@ViewData["Title"]</div>
+            <div class="topbar-account">
+                <span class="account-name"><partial name="_UiIcon" model='"user"' />@User.Identity?.Name</span>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <form asp-area="" asp-controller="Account" asp-action="Logout" method="post"><button class="btn btn-sm btn-outline-secondary" type="submit">登出</button></form>
+                }
+                else { <a asp-area="" asp-controller="Account" asp-action="Login" class="btn btn-sm btn-outline-secondary">管理員登入</a> }
+                <button class="btn btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminNavigation" aria-controls="adminNavigation" aria-label="開啟後台選單"><partial name="_UiIcon" model='"menu"' /></button>
+            </div>
+        </header>
+        <main id="main-content" class="admin-main" tabindex="-1">
+            @if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+            @if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+            @RenderBody()
+        </main>
+        <footer class="admin-footer"><span>Enjoy Space 米亞工作室 · 後台管理系統</span><a asp-area="" asp-controller="Home" asp-action="Index">返回入口首頁</a></footer>
     </div>
-
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
-
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
