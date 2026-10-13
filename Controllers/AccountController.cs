@@ -55,7 +55,7 @@ public class AccountController(AppDbContext db) : Controller
 
 public class AdminLoginModel
 {
-    [Required, StringLength(100)] public string Account { get; set; } = "";
-    [Required, DataType(DataType.Password)] public string Password { get; set; } = "";
+    [Required(ErrorMessage = "請輸入帳號。"), StringLength(100, ErrorMessage = "帳號長度不可超過 100 字。")] public string Account { get; set; } = "";
+    [Required(ErrorMessage = "請輸入密碼。"), DataType(DataType.Password)] public string Password { get; set; } = "";
     public string? ReturnUrl { get; set; }
 }

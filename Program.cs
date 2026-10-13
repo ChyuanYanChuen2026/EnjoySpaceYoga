@@ -48,6 +48,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<AppDbContext>(options =>options.UseSqlServer(connectionString));
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<CourseService>();
+builder.Services.AddScoped<PortalCatalogService>();
 builder.Services.AddScoped<AdminCatalogService>();
 builder.Services.AddScoped<ClassSessionService>();
 builder.Services.AddScoped<EnrollmentApplicationService>();

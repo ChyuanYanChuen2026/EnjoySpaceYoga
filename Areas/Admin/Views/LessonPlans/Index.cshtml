@@ -7,8 +7,8 @@
 <div class="table-responsive card card-body"><table class="table align-middle">
     <thead><tr><th>方案</th><th>對象</th><th>堂數／價格</th><th>效期</th><th>狀態</th><th>操作</th></tr></thead>
     <tbody>@foreach (var p in Model.Items) {
-        <tr><td>@p.PlanName<br /><small>@p.PlanCode</small></td><td>@(p.PlanType == "Trial" ? "體驗生" : "正式學生")</td>
-            <td>@p.SessionQuota 堂／$@p.Price.ToString("N2")</td><td>@(p.ValidityUnit == "Days" ? $"{p.ValidityValue} 天（含生效日）" : "不限期")</td>
+        <tr><td>@p.PlanName<br /><small>@p.PlanCode</small></td><td>@EnjoySpace.Web.Models.LessonPlanLabels.Audience(p.AudienceType)</td>
+            <td>@p.SessionQuota 堂／$@p.Price.ToString("N2")</td><td>@EnjoySpace.Web.Models.LessonPlanLabels.Validity(p.ValidityUnit, p.ValidityValue)</td>
             <td>@(p.IsActive ? "啟用" : "停用")</td><td><a asp-action="Edit" asp-route-id="@p.LessonPlanId">編輯</a></td></tr>
     }</tbody></table>@if (Model.TotalCount == 0) { <p>尚無方案，請先新增。</p> }</div>
 <p class="mt-3">共 @Model.TotalCount 筆，第 @Model.Page / @Model.PageCount 頁</p>

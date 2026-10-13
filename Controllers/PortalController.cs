@@ -4,6 +4,7 @@ using System.Security.Claims;
 using EnjoySpace.Web.Data;
 using EnjoySpace.Web.Models.Entities;
 using EnjoySpace.Web.Services;
+using EnjoySpace.Web.Models;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -16,13 +17,10 @@ namespace EnjoySpace.Web.Controllers;
 
 [ApiController, Route("api/portal"), AutoValidateAntiforgeryToken]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimeProvider clock) : ControllerBase
+public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimeProvider clock, PortalCatalogService catalog) : ControllerBase
 {
     private long Actor => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-    private IQueryable<Course> PublicCourses => db.Courses.AsNoTracking().Where(x => x.IsActive && x.IsPubliclyVisible &&
-        (x.Term.Status == "Open" || x.Term.Status == "Closed") && x.DefaultTeacher.IsActive && x.DefaultTeacher.User.IsActive && x.DefaultLocation.IsActive);
-    private IQueryable<ClassSession> PublicSessions => db.ClassSessions.AsNoTracking().Where(x => PublicCourses.Select(c => c.CourseId).Contains(x.CourseId)
-        && x.Teacher.IsActive && x.Teacher.User.IsActive && x.StudioLocation.IsActive);
+    private IQueryable<ClassSession> PublicSessions => catalog.Sessions.AsNoTracking();
 
     [HttpGet("csrf")]
     public IActionResult Csrf() => Ok(new { token = antiforgery.GetAndStoreTokens(HttpContext).RequestToken });
@@ -73,15 +71,27 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
     [HttpGet("catalog")]
     public async Task<IActionResult> Catalog() => Ok(new
     {
-        courses = await PublicCourses.OrderBy(x => x.Name).Select(x => new { id = x.CourseId, x.Name, category = x.ClassCategory.Name,
-            teacher = x.DefaultTeacher.User.DisplayName, location = x.DefaultLocation.Name, x.TermPrice, capacity = x.DefaultCapacity }).ToListAsync(),
+        courses = await catalog.CourseData.OrderByDescending(x => x.TermStartDate).ThenBy(x => x.Id).ToListAsync(),
+        terms = await catalog.Courses.Select(x => new { id = x.TermId, x.Term.Name, x.Term.Status, x.Term.StartDate, x.Term.EndDate })
+            .Distinct().OrderByDescending(x => x.StartDate).ToListAsync(),
         plans = await db.LessonPlans.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Price)
-            .Select(x => new { id = x.LessonPlanId, name = x.PlanName, x.PlanType, x.AudienceType, x.Price, x.SessionQuota, x.ValidityUnit, x.ValidityValue }).ToListAsync(),
+            .Select(x => new { id = x.LessonPlanId, name = x.PlanName, x.PlanCode, x.PlanType, x.AudienceType, x.Price, x.SessionQuota, x.ValidityUnit, x.ValidityValue,
+                audienceText = LessonPlanLabels.Audience(x.AudienceType), validityText = LessonPlanLabels.Validity(x.ValidityUnit, x.ValidityValue) }).ToListAsync(),
         locations = await db.StudioLocations.AsNoTracking().Where(x => x.IsActive).Select(x => new { id = x.StudioLocationId, x.Name, x.Address }).ToListAsync()
     });
 
+    [HttpGet("courses/{id:long}")]
+    public async Task<IActionResult> Course(long id)
+    {
+        var course = await catalog.CourseData.SingleOrDefaultAsync(x => x.Id == id);
+        if (course is null) return NotFound(new { message = "此課程不存在或已停止公開。" });
+        var sessions = await catalog.SessionData(PublicSessions.Where(x => x.CourseId == id && x.StartsAt > clock.GetUtcNow()))
+            .OrderBy(x => x.StartsAt).ThenBy(x => x.Id).ToListAsync();
+        return Ok(new { course, sessions });
+    }
+
     [HttpGet("sessions")]
-    public async Task<IActionResult> Sessions(DateTimeOffset? from, DateTimeOffset? until, int? sessionId)
+    public async Task<IActionResult> Sessions(DateTimeOffset? from, DateTimeOffset? until, int? sessionId, long? courseId, long? termId)
     {
         if (sessionId is <= 0) return BadRequest(new { message = "場次識別碼無效。" });
         var start = from ?? clock.GetUtcNow();
@@ -89,13 +99,9 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         if (end <= start || end - start > TimeSpan.FromDays(93)) return BadRequest(new { message = "查詢日期範圍須在 93 天內。" });
         var query = sessionId.HasValue ? PublicSessions.Where(x => x.Id == sessionId && x.StartsAt > clock.GetUtcNow())
             : PublicSessions.Where(x => x.StartsAt >= start && x.StartsAt < end);
-        return Ok(await query.OrderBy(x => x.StartsAt).Select(x => new
-        {
-            x.Id, x.CourseId, name = x.Course.Name, category = x.Course.ClassCategory.Name, teacher = x.Teacher.User.DisplayName,
-            location = x.StudioLocation.Name, address = x.StudioLocation.Address, x.StartsAt, x.EndsAt,
-            capacity = x.CapacityOverride ?? x.Capacity,
-            enrolled = db.ClassSessionParticipants.Count(p => p.ClassSessionId == x.Id && p.Status == "Active")
-        }).ToListAsync());
+        if (courseId.HasValue) query = query.Where(x => x.CourseId == courseId);
+        if (termId.HasValue) query = query.Where(x => x.Course.TermId == termId);
+        return Ok(await catalog.SessionData(query).OrderBy(x => x.StartsAt).ThenBy(x => x.Id).ToListAsync());
     }
 
     [HttpGet("dashboard"), Authorize(AuthenticationSchemes = PortalAuthentication.Scheme)]
@@ -104,12 +110,20 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         var now = clock.GetUtcNow();
         var sessions = db.ClassSessions.AsNoTracking().Where(x => x.StartsAt >= now &&
             ((User.IsInRole("Teacher") && x.Teacher.UserId == Actor && x.Teacher.IsActive) ||
-            db.ClassSessionParticipants.Any(p => p.ClassSessionId == x.Id && p.Student.UserId == Actor && p.Student.IsActive && p.Status == "Active")));
+            catalog.Participants.Any(p => p.ClassSessionId == x.Id && p.Student.UserId == Actor && p.Student.IsActive)));
         return Ok(new
         {
             sessions = await sessions.OrderBy(x => x.StartsAt).Take(100).Select(x => new { x.Id, name = x.Course.Name, x.StartsAt, x.EndsAt, location = x.StudioLocation.Name }).ToListAsync(),
             requests = await db.PortalTrialRequests.AsNoTracking().Where(x => x.UserId == Actor).OrderByDescending(x => x.CreatedAtUtc).Take(100)
-                .Select(x => new { x.Id, name = x.ClassSession.Course.Name, x.ClassSession.StartsAt, x.PlanName, x.QuotedPrice, x.Status, x.CreatedAtUtc }).ToListAsync()
+                .Select(x => new { x.Id, name = x.ClassSession.Course.Name, x.ClassSession.StartsAt, x.PlanName, x.QuotedPrice, x.Status, x.CreatedAtUtc }).ToListAsync(),
+            passes = await db.LessonPasses.AsNoTracking().Where(x =>
+                (x.Student != null && x.Student.UserId == Actor) ||
+                (x.TrialGuestId != null && db.PortalTrialRequests.Any(r => r.UserId == Actor && r.TrialGuestId == x.TrialGuestId)))
+                .OrderByDescending(x => x.PurchasedAtUtc).Take(100).Select(x => new
+                {
+                    id = x.LessonPassId, name = x.PlanNameAtPurchase, price = x.AmountAtPurchase, quota = x.SessionQuotaAtPurchase,
+                    x.ValidFromDate, x.ValidUntilDate, x.Status, paymentStatus = WorkflowLabels.Payment(x.Payment.Status)
+                }).ToListAsync()
         });
     }
 
@@ -123,7 +137,7 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         var session = await PublicSessions.SingleOrDefaultAsync(x => x.Id == input.SessionId && x.StartsAt > clock.GetUtcNow());
         var plan = await db.LessonPlans.SingleOrDefaultAsync(x => x.LessonPlanId == input.PlanId && x.IsActive && x.PlanType == "Trial" && x.AudienceType == "TrialGuest");
         if (session is null || plan is null) return BadRequest(new { message = "課程或方案已變更，請重新選擇。" });
-        if (await db.ClassSessionParticipants.CountAsync(x => x.ClassSessionId == session.Id && x.Status == "Active") >= (session.CapacityOverride ?? session.Capacity))
+        if (await catalog.Participants.CountAsync(x => x.ClassSessionId == session.Id) >= (session.CapacityOverride ?? session.Capacity))
             return Conflict(new { message = "此場次已額滿，請選擇其他場次。" });
         if (await db.PortalTrialRequests.AnyAsync(x => x.UserId == Actor && x.ClassSessionId == session.Id && (x.Status == "Pending" || x.Status == "Contacted")))
             return Conflict(new { message = "您已申請此場次，請至會員專區查看。" });

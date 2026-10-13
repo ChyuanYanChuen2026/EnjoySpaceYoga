@@ -169,3 +169,31 @@
  .entry-footer { flex-wrap:wrap; }
 }
 @media (prefers-reduced-motion:reduce) { .entry-option { transition:none; } }
+
+/* Staff login shares the entry page brand and the admin form controls. */
+.login-main { width:100%; flex:1; display:grid; place-items:center; padding:42px 24px 64px; }
+.login-page .login-card { width:100%; max-width:450px; padding:36px; box-shadow:0 4px 20px #273e3105; }
+.login-symbol { display:grid; place-items:center; width:46px; height:46px; margin-bottom:24px; color:var(--es-green); background:var(--es-soft); border-radius:8px; }
+.login-symbol .ui-icon { width:25px; height:25px; }
+.login-card .entry-eyebrow { margin-bottom:10px; }
+.login-card h1 { font-size:26px; font-weight:600; line-height:1.4; margin-bottom:10px; }
+.login-intro { color:var(--es-muted); font-size:14px; line-height:1.8; margin-bottom:27px; }
+.login-field { margin-bottom:20px; }
+.login-page .form-control { min-height:46px; }
+.login-page .login-submit { display:flex; justify-content:center; align-items:center; gap:12px; width:100%; min-height:46px; margin-top:8px; }
+.login-note { border-top:1px solid var(--es-border); padding-top:20px; margin:26px 0 0; color:var(--es-muted); font-size:12px; }
+.login-home-link { font-size:13px; text-decoration:none; }
+.login-page .es-brand { color:var(--es-ink); }
+.login-page .entry-footer a { color:var(--es-muted); }
+.login-validation.validation-summary-valid { display:none; }
+.login-validation.validation-summary-errors { padding:12px 14px; margin-bottom:20px; background:#fdf0ef; border:1px solid #efcfcb; border-radius:5px; color:#923d34; font-size:13px; overflow-wrap:anywhere; }
+.login-validation ul { padding-left:18px; margin:0; }
+.login-page .input-validation-error { border-color:#b86359; }
+@media (max-width:575.98px) {
+ .login-main { padding:20px 20px 40px; }
+ .login-page .login-card { padding:27px 23px; }
+ .login-card h1 { font-size:23px; }
+ .login-home-link { font-size:12px; }
+ .login-page .entry-header { gap:16px; flex-wrap:wrap; }
+ .login-page .form-control { font-size:16px; }
+}
