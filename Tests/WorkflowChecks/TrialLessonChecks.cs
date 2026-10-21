@@ -70,6 +70,15 @@ internal static class TrialLessonChecks
         var purchase = new LessonPurchaseModel { PlanId = planId, OwnerType = "TrialGuest", OwnerId = guestId, ValidFromDate = today };
         var preview = await Read(db => Service(db).PreviewAsync(purchase, admin));
         assert(preview.Until == today.AddDays(29) && preview.Amount == 300 && preview.Quota == 1, "quote computes inclusive validity and server price");
+        var monthlyId = await Read(db => Service(db).SavePlanAsync(new LessonPlanEditModel
+        { PlanCode = "TRIAL-MONTHS", PlanName = "三堂體驗", Price = 1000, SessionQuota = 3, ValidityUnit = "Months", ValidityValue = 2 }, admin));
+        var monthlyQuote = await Read(db => Service(db).PreviewAsync(new LessonPurchaseModel
+        { PlanId = monthlyId, OwnerType = "TrialGuest", OwnerId = guestId, ValidFromDate = new DateOnly(2030, 1, 31) }, admin));
+        assert(monthlyQuote.Until == new DateOnly(2030, 3, 30) && monthlyQuote.Amount == 1000 && monthlyQuote.Quota == 3,
+            "three-class trial expires by two calendar months inclusive rather than sixty days");
+        var leapQuote = await Read(db => Service(db).PreviewAsync(new LessonPurchaseModel
+        { PlanId = monthlyId, OwnerType = "TrialGuest", OwnerId = guestId, ValidFromDate = new DateOnly(2031, 12, 31) }, admin));
+        assert(leapQuote.Until == new DateOnly(2032, 2, 28), "monthly expiry handles leap-year end of month");
         await Reject(() => Do(db => Service(db).PurchaseAsync(preview.Token, false, admin)), "勾選", "purchase requires explicit confirmation");
         await Reject(() => Do(db => Service(db).PurchaseAsync("tampered", true, admin)), "失效", "purchase token tampering rejected");
         var expiredToken = protection.CreateProtector("EnjoySpace.LessonPurchase.v1").ToTimeLimitedDataProtector().Protect("{}", TimeSpan.FromMilliseconds(1));

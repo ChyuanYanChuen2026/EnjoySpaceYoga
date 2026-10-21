@@ -13,10 +13,22 @@
 
   <ItemGroup>
     <Compile Remove="Models\Entities\Location.cs" />
+    <Compile Remove="artifacts\**" />
+    <Compile Remove="docs\**" />
     <Compile Remove="Tests\**" />
+    <Content Remove="artifacts\**" />
+    <Content Remove="docs\**" />
     <Content Remove="Tests\**" />
+    <EmbeddedResource Remove="artifacts\**" />
+    <EmbeddedResource Remove="docs\**" />
     <EmbeddedResource Remove="Tests\**" />
+    <None Remove="artifacts\**" />
+    <None Remove="docs\**" />
     <None Remove="Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="EnjoySpace.Web.csproj.Backup.tmp" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,6 +37,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.*" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
   </ItemGroup>
 
 </Project>

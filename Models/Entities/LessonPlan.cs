@@ -16,6 +16,7 @@ public class LessonPlan
     [MaxLength(20)] public string ValidityUnit { get; set; } = "Days";
     public short? ValidityValue { get; set; } = 30;
     public bool IsActive { get; set; } = true;
+    public bool RequiresReferrer { get; set; }
     [Column(TypeName = "datetime2(0)")] public DateTime CreatedAtUtc { get; set; }
     [Timestamp] public byte[] RowVersion { get; set; } = [];
 }

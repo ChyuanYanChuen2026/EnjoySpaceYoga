@@ -10,7 +10,7 @@ namespace EnjoySpace.Web.Areas.Admin.Controllers;
 [Area("Admin"), Authorize(Roles = "Admin")]
 public class TrialGuestsController(AppDbContext db, TrialLessonService service) : TrialLessonControllerBase
 {
-    [HttpGet] public async Task<IActionResult> Index(int page = 1) => View(await TrialLessonService.PageAsync(db.TrialGuests.AsNoTracking().OrderByDescending(x => x.TrialGuestId), page));
+    [HttpGet] public async Task<IActionResult> Index(int page = 1, string? sort = null) => View(await TrialLessonService.PageAsync(EnjoySpace.Web.Models.AdminTableSorts.Guests.Apply(db.TrialGuests.AsNoTracking(), sort), page));
     [HttpGet] public async Task<IActionResult> Edit(long id = 0)
     {
         var model = id == 0 ? new TrialGuestEditModel() : await service.GuestAsync(id);

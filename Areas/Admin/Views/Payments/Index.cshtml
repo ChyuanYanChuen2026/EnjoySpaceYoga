@@ -11,12 +11,12 @@
 @if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
 
 <div class="card card-body table-responsive">
-    <table class="table align-middle">
+    <table sort-set="payments" class="table align-middle">
         <thead>
             <tr>
-                <th>學生／課程</th>
-                <th>金額</th>
-                <th>狀態</th>
+                <th sort-key="name">學生／課程</th>
+                <th sort-key="amount">金額</th>
+                <th sort-key="status">狀態</th>
                 <th>操作</th>
             </tr>
         </thead>
@@ -47,6 +47,6 @@
 @if (Model.TotalCount == 0) { <p>目前沒有款項。</p> }
 </div>
 <p class="mt-3">共 @Model.TotalCount 筆，第 @Model.Page / @Model.PageCount 頁</p>
-@if (Model.Page > 1) { <a asp-action="Index" asp-route-page="@(Model.Page - 1)" class="btn btn-outline-secondary">上一頁</a> }
-@if (Model.Page < Model.PageCount) { <a asp-action="Index" asp-route-page="@(Model.Page + 1)" class="btn btn-outline-secondary">下一頁</a> }
+@if (Model.Page > 1) { <a asp-action="Index" asp-route-sort="@Context.Request.Query["Sort"]" asp-route-page="@(Model.Page - 1)" class="btn btn-outline-secondary">上一頁</a> }
+@if (Model.Page < Model.PageCount) { <a asp-action="Index" asp-route-sort="@Context.Request.Query["Sort"]" asp-route-page="@(Model.Page + 1)" class="btn btn-outline-secondary">下一頁</a> }
 

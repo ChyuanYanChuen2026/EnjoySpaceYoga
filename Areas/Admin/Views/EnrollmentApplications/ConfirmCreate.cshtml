@@ -10,13 +10,13 @@
     <p><strong>學期／課程：</strong>@Model.TermName · @Model.CourseName</p>
     <p><strong>整期堂數：</strong>@Model.Sessions.Count 堂　<strong>整期金額：</strong>NT$ @Model.Amount.ToString("N2")</p>
     <div class="table-responsive">
-        <table class="table">
-            <thead><tr><th>開始時間（台灣）</th><th>結束時間（台灣）</th><th>老師</th><th>地點</th></tr></thead>
+        <table class="table" data-sort-local>
+            <thead><tr><th data-sort-type="number">開始時間（台灣）</th><th data-sort-type="number">結束時間（台灣）</th><th data-sort-type="text">老師</th><th data-sort-type="text">地點</th></tr></thead>
             <tbody>
                 @foreach (var session in Model.Sessions)
                 {
-                    <tr><td>@session.StartsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")</td>
-                        <td>@session.EndsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")</td>
+                    <tr><td data-sort-value="@session.StartsAt.ToUnixTimeMilliseconds()">@session.StartsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")</td>
+                        <td data-sort-value="@session.EndsAt.ToUnixTimeMilliseconds()">@session.EndsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")</td>
                         <td>@session.TeacherName</td><td>@session.LocationName</td></tr>
                 }
             </tbody>

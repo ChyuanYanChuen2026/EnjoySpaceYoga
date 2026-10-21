@@ -32,6 +32,7 @@ public class LessonPlanEditModel
     [Required] public string ValidityUnit { get; set; } = "Days";
     [Range(1, short.MaxValue)] public short? ValidityValue { get; set; } = 30;
     public bool IsActive { get; set; } = true;
+    public bool RequiresReferrer { get; set; }
 }
 
 public class LessonPurchaseModel

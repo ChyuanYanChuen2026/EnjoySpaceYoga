@@ -23,6 +23,8 @@ public static class PortalAuthentication
             var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
             if (!long.TryParse(context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id))
             { context.RejectPrincipal(); return; }
+            if (!await PasswordSession.IsCurrentAsync(db, context.Principal, id))
+            { context.RejectPrincipal(); return; }
             var roles = await db.UserRoles.Where(x => x.UserId == id && x.User.IsActive && x.Role.IsActive)
                 .Select(x => x.Role.RoleCode).ToListAsync();
             var claimed = context.Principal!.FindAll(ClaimTypes.Role).Select(x => x.Value).Order().ToArray();

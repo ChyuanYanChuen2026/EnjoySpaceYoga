@@ -14,7 +14,7 @@ internal static class LessonPlanModelConfiguration
             t.HasCheckConstraint("CK_LessonPlans_Quota", "[SessionQuota] > 0");
             t.HasCheckConstraint("CK_LessonPlans_Price", "[Price] >= 0");
             t.HasCheckConstraint("CK_LessonPlans_Audience", "([PlanType] = N'Trial' AND [AudienceType] = N'TrialGuest') OR ([PlanType] = N'Flexible' AND [AudienceType] = N'Student')");
-            t.HasCheckConstraint("CK_LessonPlans_Validity", "([ValidityUnit] = N'Unlimited' AND [ValidityValue] IS NULL) OR ([ValidityUnit] = N'Days' AND [ValidityValue] IS NOT NULL AND [ValidityValue] > 0)");
+            t.HasCheckConstraint("CK_LessonPlans_Validity", "([ValidityUnit] = N'Unlimited' AND [ValidityValue] IS NULL) OR ([ValidityUnit] IN (N'Days', N'Months') AND [ValidityValue] IS NOT NULL AND [ValidityValue] > 0)");
         });
         var pass = model.Entity<LessonPass>();
         pass.HasOne(x => x.LessonPlan).WithMany().HasForeignKey(x => x.LessonPlanId).OnDelete(DeleteBehavior.NoAction);

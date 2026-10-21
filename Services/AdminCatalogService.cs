@@ -17,20 +17,14 @@ public class AdminCatalogService(AppDbContext db)
             Filter = filter,
             SearchLabel = "學期名稱",
             StatusOptions = TermStatusOptions.Items.Select(x => new SelectListItem(x.Text, x.Value)).ToList(),
-            SortOptions = Options(("date_desc", "開始日期：新到舊"), ("date_asc", "開始日期：舊到新"),
-                ("name_asc", "學期名稱：升冪"), ("name_desc", "學期名稱：降冪"))
+            SortOptions = AdminTableSorts.Terms.Options()
         };
+        filter.Sort = AdminTableSorts.Terms.Normalize(filter.Sort);
         Normalize(controls);
         var query = db.Terms.AsNoTracking().AsQueryable();
         if (filter.Search is { } search) query = query.Where(x => x.Name.Contains(search));
         if (filter.Status is { } status) query = query.Where(x => x.Status == status);
-        var ordered = filter.Sort switch
-        {
-            "date_asc" => query.OrderBy(x => x.StartDate),
-            "name_asc" => query.OrderBy(x => x.Name),
-            "name_desc" => query.OrderByDescending(x => x.Name),
-            _ => query.OrderByDescending(x => x.StartDate)
-        };
+        var ordered = AdminTableSorts.Terms.Apply(query, filter.Sort);
         return await PageAsync(ordered.ThenBy(x => x.TermId).Select(x => new TermListItemViewModel
         {
             TermId = x.TermId, Name = x.Name, StartDate = x.StartDate, EndDate = x.EndDate,
@@ -47,24 +41,15 @@ public class AdminCatalogService(AppDbContext db)
             SearchLabel = "課程名稱",
             TermOptions = await TermOptionsAsync(),
             StatusOptions = Options(("Active", "啟用"), ("Inactive", "停用")),
-            SortOptions = Options(("date_desc", "學期開始：新到舊"), ("date_asc", "學期開始：舊到新"),
-                ("name_asc", "課程名稱：升冪"), ("name_desc", "課程名稱：降冪"),
-                ("price_asc", "期課價格：低到高"), ("price_desc", "期課價格：高到低"))
+            SortOptions = AdminTableSorts.Courses.Options()
         };
+        filter.Sort = AdminTableSorts.Courses.Normalize(filter.Sort);
         Normalize(controls);
         var query = db.Courses.AsNoTracking().Include(x => x.Term).AsQueryable();
         if (filter.Search is { } search) query = query.Where(x => x.Name.Contains(search));
         if (filter.TermId is { } termId) query = query.Where(x => x.TermId == termId);
         if (filter.Status is { } status) query = query.Where(x => x.IsActive == (status == "Active"));
-        var ordered = filter.Sort switch
-        {
-            "date_asc" => query.OrderBy(x => x.Term.StartDate),
-            "name_asc" => query.OrderBy(x => x.Name),
-            "name_desc" => query.OrderByDescending(x => x.Name),
-            "price_asc" => query.OrderBy(x => x.TermPrice),
-            "price_desc" => query.OrderByDescending(x => x.TermPrice),
-            _ => query.OrderByDescending(x => x.Term.StartDate)
-        };
+        var ordered = AdminTableSorts.Courses.Apply(query, filter.Sort);
         return await PageAsync(ordered.ThenBy(x => x.CourseId), controls);
     }
 
@@ -76,9 +61,9 @@ public class AdminCatalogService(AppDbContext db)
             SearchLabel = "課程／老師／地點",
             TermOptions = await TermOptionsAsync(),
             StatusOptions = Options(("Upcoming", "尚未開始"), ("Ongoing", "上課中"), ("Ended", "已結束")),
-            SortOptions = Options(("date_asc", "上課時間：早到晚"), ("date_desc", "上課時間：晚到早"),
-                ("name_asc", "課程名稱：升冪"), ("name_desc", "課程名稱：降冪"))
+            SortOptions = AdminTableSorts.Sessions.Options()
         };
+        filter.Sort = AdminTableSorts.Sessions.Normalize(filter.Sort);
         Normalize(controls);
         controls.CourseOptions = await db.Courses.AsNoTracking()
             .Where(x => !filter.TermId.HasValue || x.TermId == filter.TermId.Value)
@@ -101,13 +86,7 @@ public class AdminCatalogService(AppDbContext db)
             "Ended" => query.Where(x => x.EndsAt <= now),
             _ => query
         };
-        var ordered = filter.Sort switch
-        {
-            "date_desc" => query.OrderByDescending(x => x.StartsAt),
-            "name_asc" => query.OrderBy(x => x.Course.Name),
-            "name_desc" => query.OrderByDescending(x => x.Course.Name),
-            _ => query.OrderBy(x => x.StartsAt)
-        };
+        var ordered = AdminTableSorts.Sessions.Apply(query, filter.Sort);
         return await PageAsync(ordered.ThenBy(x => x.Id).Select(x => new ClassSessionListItem
         {
             Id = x.Id, CourseName = x.Course.Name, TeacherName = x.Teacher.User.DisplayName,

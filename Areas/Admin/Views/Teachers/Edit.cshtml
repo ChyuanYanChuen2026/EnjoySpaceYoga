@@ -17,6 +17,17 @@
             <div asp-validation-summary="All" class="text-danger" role="alert"></div>
 
             <div class="row g-3">
+                <div class="col-12">
+                    <div class="alert alert-light border">
+                        <strong>老師登入帳號</strong>
+                        <div class="text-break mt-1">@Model.Account</div>
+                        <p class="small text-muted mb-2 mt-2">填妥 Email，並啟用老師身分與登入帳號後，將此帳號提供給老師。老師可到登入頁的「忘記密碼／首次設定密碼」，使用帳號及登記的 Email 收取驗證信。</p>
+                        <div class="form-check">
+                            <input asp-for="IsUserActive" class="form-check-input" />
+                            <label asp-for="IsUserActive" class="form-check-label"></label>
+                        </div>
+                    </div>
+                </div>
                 <div class="col-12 col-md-6">
                     <label asp-for="DisplayName" class="form-label"></label>
                     <input asp-for="DisplayName" class="form-control" />

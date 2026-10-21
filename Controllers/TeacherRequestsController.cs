@@ -9,7 +9,7 @@ namespace EnjoySpace.Web.Controllers;
 [Authorize(Roles = "Admin,Teacher")]
 public class TeacherRequestsController(TeacherRequestService service) : TrialLessonControllerBase
 {
-    public async Task<IActionResult> Index(int page = 1) => View(await service.ListAsync(ActorId, page));
+    public async Task<IActionResult> Index(int page = 1, string? sort = null) => View(await service.ListAsync(ActorId, page, sort));
     [HttpGet] public async Task<IActionResult> Create(string kind = "ExtraSession", long teacherId = 0)
     {
         var model = new TeacherRequestInput { Kind = kind == "Capacity" ? "Capacity" : "ExtraSession", TeacherId = teacherId };

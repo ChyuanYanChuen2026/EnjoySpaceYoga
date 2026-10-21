@@ -20,5 +20,6 @@ public class PortalTrialRequest
     [Column(TypeName = "decimal(10,2)")] public decimal QuotedPrice { get; set; }
     [MaxLength(30)] public string Status { get; set; } = "Pending";
     [MaxLength(300)] public string? Note { get; set; }
+    [MaxLength(100)] public string? ReferrerName { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 }

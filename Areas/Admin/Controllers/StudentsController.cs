@@ -1,4 +1,4 @@
-﻿using EnjoySpace.Web.Models.Entities;
+using EnjoySpace.Web.Models.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 using System.Security.Claims;
@@ -16,12 +16,9 @@ namespace EnjoySpace.Web.Areas.Admin.Controllers;
 public class StudentsController(AppDbContext db) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? sort = null)
     {
-        var students = await db.Students
-            .AsNoTracking()
-            .OrderBy(s => s.StudentNo)
-            .ThenBy(s => s.StudentId)
+        var students = await EnjoySpace.Web.Models.AdminTableSorts.Students.Apply(db.Students.AsNoTracking(), sort)
             .Select(s => new StudentListItemViewModel
             {
                 StudentId = s.StudentId,

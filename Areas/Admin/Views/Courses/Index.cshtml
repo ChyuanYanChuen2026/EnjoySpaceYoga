@@ -1,4 +1,4 @@
-﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.CatalogListViewModel<EnjoySpace.Web.Models.Entities.Course>
+@model EnjoySpace.Web.Areas.Admin.ViewModels.CatalogListViewModel<EnjoySpace.Web.Models.Entities.Course>
 @using EnjoySpace.Web.Areas.Admin.ViewModels
 
 @{
@@ -33,15 +33,15 @@
         else
         {
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table sort-set="courses" class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>
-                            <th scope="col">學期名稱</th>
-                            <th scope="col">課程名稱</th>
-                            <th scope="col">預設名額</th>
-                            <th scope="col">期課價格</th>
-                            <th scope="col">狀態</th>
-                            <th scope="col">學期期間</th>
+                            <th sort-key="term" scope="col">學期名稱</th>
+                            <th sort-key="name" scope="col">課程名稱</th>
+                            <th sort-key="capacity" scope="col">預設名額</th>
+                            <th sort-key="price" scope="col">期課價格</th>
+                            <th sort-key="status" scope="col">狀態</th>
+                            <th sort-key="date" scope="col">學期期間</th>
                             <th scope="col">操作</th>
                         </tr>
                     </thead>

@@ -8,8 +8,8 @@
     <a asp-action="Index" asp-route-all="true" class="btn btn-outline-secondary">全部申請</a>
 </div>
 <p class="text-secondary">@(ViewBag.All == true ? "全部狀態" : "待審核") · 最近 200 筆，先付款再審核。</p>
-<div class="card card-body table-responsive"><table class="table align-middle">
-<thead><tr><th>學生</th><th>學期／課程</th><th>報價</th><th>付款</th><th>審核</th><th></th></tr></thead>
+<div class="card card-body table-responsive"><table sort-set="applications" class="table align-middle">
+<thead><tr><th sort-key="name">學生</th><th sort-key="course">學期／課程</th><th sort-key="price">報價</th><th sort-key="payment">付款</th><th sort-key="status">審核</th><th></th></tr></thead>
 <tbody>@foreach (var item in Model)
 {
     <tr><td>@item.Student.User.DisplayName</td><td>@item.Course.Term.Name · @item.Course.Name</td>

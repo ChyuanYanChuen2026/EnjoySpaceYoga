@@ -1,4 +1,4 @@
-﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.CatalogListViewModel<EnjoySpace.Web.Models.ClassSessionListItem>
+@model EnjoySpace.Web.Areas.Admin.ViewModels.CatalogListViewModel<EnjoySpace.Web.Models.ClassSessionListItem>
 
 @{
     ViewData["Title"] = "場次管理";
@@ -33,15 +33,15 @@
         else
         {
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table sort-set="sessions" class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>
-                            <th scope="col">課程</th>
-                            <th scope="col">老師</th>
-                            <th scope="col">地點</th>
-                            <th scope="col">開始時間</th>
-                            <th scope="col">結束時間</th>
-                            <th scope="col">名額上限</th>
+                            <th sort-key="name" scope="col">課程</th>
+                            <th sort-key="teacher" scope="col">老師</th>
+                            <th sort-key="location" scope="col">地點</th>
+                            <th sort-key="date" scope="col">開始時間</th>
+                            <th sort-key="end" scope="col">結束時間</th>
+                            <th sort-key="capacity" scope="col">名額上限</th>
                             <th scope="col">操作</th>
                         </tr>
                     </thead>

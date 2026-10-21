@@ -10,8 +10,8 @@ namespace EnjoySpace.Web.Areas.Admin.Controllers;
 [Area("Admin"), Authorize(Roles = "Admin")]
 public class LessonPassesController(AppDbContext db, TrialLessonService service) : TrialLessonControllerBase
 {
-    [HttpGet] public async Task<IActionResult> Index(int page = 1) => View(await TrialLessonService.PageAsync(db.LessonPasses.AsNoTracking()
-        .Include(x => x.Payment).Include(x => x.TrialGuest).Include(x => x.Student).ThenInclude(x => x!.User).OrderByDescending(x => x.LessonPassId), page));
+    [HttpGet] public async Task<IActionResult> Index(int page = 1, string? sort = null) => View(await TrialLessonService.PageAsync(EnjoySpace.Web.Models.AdminTableSorts.Passes.Apply(db.LessonPasses.AsNoTracking()
+        .Include(x => x.Payment).Include(x => x.TrialGuest).Include(x => x.Student).ThenInclude(x => x!.User), sort), page));
     [HttpGet] public async Task<IActionResult> Create(string ownerType = "TrialGuest", long ownerId = 0)
     {
         var model = new LessonPurchaseModel { OwnerType = ownerType, OwnerId = ownerId, ValidFromDate = service.Today };

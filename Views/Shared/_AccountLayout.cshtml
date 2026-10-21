@@ -1,0 +1,28 @@
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>@ViewData["Title"]｜Enjoy Space 後台</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/workspace.css" asp-append-version="true" />
+</head>
+<body class="entry-page admin-app login-page">
+    <a href="#main-content" class="skip-link">跳至主要內容</a>
+    <header class="entry-header">
+        <a class="es-brand" asp-area="" asp-controller="Home" asp-action="Index"><partial name="_BrandMark" /><span><strong>Enjoy Space</strong><small>米亞工作室</small></span></a>
+        <a class="login-home-link" asp-area="" asp-controller="Home" asp-action="Index">返回入口首頁</a>
+    </header>
+    <main class="login-main" id="main-content" tabindex="-1">
+        <section class="card login-card" aria-labelledby="login-title">
+            <div class="login-symbol"><partial name="_UiIcon" model='"user"' /></div>
+            <p class="entry-eyebrow">ENJOY SPACE</p>
+            @RenderBody()
+        </section>
+    </main>
+    <footer class="entry-footer"><span>© @DateTime.Now.Year Enjoy Space 米亞工作室</span><a asp-area="" asp-controller="Home" asp-action="Privacy">隱私權政策</a></footer>
+</body>
+</html>

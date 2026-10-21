@@ -17,7 +17,7 @@ namespace EnjoySpace.Web.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -639,6 +639,9 @@ namespace EnjoySpace.Web.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<bool>("RequiresReferrer")
+                        .HasColumnType("bit");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -669,7 +672,7 @@ namespace EnjoySpace.Web.Migrations
 
                             t.HasCheckConstraint("CK_LessonPlans_Quota", "[SessionQuota] > 0");
 
-                            t.HasCheckConstraint("CK_LessonPlans_Validity", "([ValidityUnit] = N'Unlimited' AND [ValidityValue] IS NULL) OR ([ValidityUnit] = N'Days' AND [ValidityValue] IS NOT NULL AND [ValidityValue] > 0)");
+                            t.HasCheckConstraint("CK_LessonPlans_Validity", "([ValidityUnit] = N'Unlimited' AND [ValidityValue] IS NULL) OR ([ValidityUnit] IN (N'Days', N'Months') AND [ValidityValue] IS NOT NULL AND [ValidityValue] > 0)");
                         });
                 });
 
@@ -895,6 +898,10 @@ namespace EnjoySpace.Web.Migrations
 
                     b.Property<decimal>("QuotedPrice")
                         .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("ReferrerName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Status")
                         .IsRequired()

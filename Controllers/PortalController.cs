@@ -40,6 +40,7 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         if (result == PasswordVerificationResult.SuccessRehashNeeded)
         { user!.PasswordHash = hasher.HashPassword(user, input.Password); await db.SaveChangesAsync(); }
         var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, user!.UserId.ToString()), new(ClaimTypes.Name, user.DisplayName) };
+        claims.Add(new Claim(PasswordSession.ClaimType, PasswordSession.Version(user.PasswordHash)));
         claims.AddRange(roles.Intersect(PortalAuthentication.Roles).Select(x => new Claim(ClaimTypes.Role, x)));
         await HttpContext.SignInAsync(PortalAuthentication.Scheme, new ClaimsPrincipal(new ClaimsIdentity(claims, PortalAuthentication.Scheme)));
         return Ok(new { user.DisplayName, roles = roles.Intersect(PortalAuthentication.Roles) });
@@ -49,16 +50,24 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
     public async Task<IActionResult> Register(RegisterInput input)
     {
         if (input.Password.Length < 10 || input.Password != input.ConfirmPassword) return BadRequest(new { message = "密碼須至少 10 字，且兩次輸入相同。" });
-        var role = await db.Roles.SingleOrDefaultAsync(x => x.RoleCode == "TrialGuest" && x.IsActive);
-        if (role is null) return Problem("體驗生註冊尚未啟用，請聯繫工作室。", statusCode: 503);
+        var role = await db.Roles.SingleOrDefaultAsync(x => x.RoleCode == "Student" && x.IsActive);
+        if (role is null) return Problem("學生註冊尚未啟用，請聯繫工作室。", statusCode: 503);
         var account = input.Account.Trim();
         if (await db.Users.AnyAsync(x => x.Account == account)) return Conflict(new { message = "此帳號已使用，請登入或改用其他帳號。" });
         var user = new User { Account = account, DisplayName = input.Name.Trim(), Email = input.Email.Trim(), Phone = input.Phone.Trim(), CreatedAtUtc = clock.GetUtcNow().UtcDateTime };
         user.PasswordHash = new PasswordHasher<User>().HashPassword(user, input.Password);
+        // Registration creates a student account; a trial guest is created only on trial application.
+        db.Students.Add(new Student
+        {
+            User = user,
+            IsActive = true,
+            JoinedDate = DateOnly.FromDateTime(clock.GetUtcNow().ToOffset(TimeSpan.FromHours(8)).DateTime),
+            CreatedAtUtc = clock.GetUtcNow().UtcDateTime
+        });
         db.UserRoles.Add(new UserRole { User = user, Role = role, AssignedAtUtc = clock.GetUtcNow().UtcDateTime });
         try { await db.SaveChangesAsync(); }
         catch (DbUpdateException) { return Conflict(new { message = "帳號無法建立，請確認帳號是否已使用。" }); }
-        return Ok(new { message = "帳號已建立，請登入。" });
+        return Ok(new { message = "學生帳號已建立，請登入。" });
     }
 
     [HttpPost("logout")]
@@ -75,7 +84,7 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         terms = await catalog.Courses.Select(x => new { id = x.TermId, x.Term.Name, x.Term.Status, x.Term.StartDate, x.Term.EndDate })
             .Distinct().OrderByDescending(x => x.StartDate).ToListAsync(),
         plans = await db.LessonPlans.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Price)
-            .Select(x => new { id = x.LessonPlanId, name = x.PlanName, x.PlanCode, x.PlanType, x.AudienceType, x.Price, x.SessionQuota, x.ValidityUnit, x.ValidityValue,
+            .Select(x => new { id = x.LessonPlanId, name = x.PlanName, x.PlanCode, x.PlanType, x.AudienceType, x.Price, x.SessionQuota, x.ValidityUnit, x.ValidityValue, x.RequiresReferrer,
                 audienceText = LessonPlanLabels.Audience(x.AudienceType), validityText = LessonPlanLabels.Validity(x.ValidityUnit, x.ValidityValue) }).ToListAsync(),
         locations = await db.StudioLocations.AsNoTracking().Where(x => x.IsActive).Select(x => new { id = x.StudioLocationId, x.Name, x.Address }).ToListAsync()
     });
@@ -115,7 +124,7 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         {
             sessions = await sessions.OrderBy(x => x.StartsAt).Take(100).Select(x => new { x.Id, name = x.Course.Name, x.StartsAt, x.EndsAt, location = x.StudioLocation.Name }).ToListAsync(),
             requests = await db.PortalTrialRequests.AsNoTracking().Where(x => x.UserId == Actor).OrderByDescending(x => x.CreatedAtUtc).Take(100)
-                .Select(x => new { x.Id, name = x.ClassSession.Course.Name, x.ClassSession.StartsAt, x.PlanName, x.QuotedPrice, x.Status, x.CreatedAtUtc }).ToListAsync(),
+                .Select(x => new { x.Id, name = x.ClassSession.Course.Name, x.ClassSession.StartsAt, x.PlanName, x.QuotedPrice, x.Status, x.CreatedAtUtc, x.ReferrerName }).ToListAsync(),
             passes = await db.LessonPasses.AsNoTracking().Where(x =>
                 (x.Student != null && x.Student.UserId == Actor) ||
                 (x.TrialGuestId != null && db.PortalTrialRequests.Any(r => r.UserId == Actor && r.TrialGuestId == x.TrialGuestId)))
@@ -137,18 +146,22 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         var session = await PublicSessions.SingleOrDefaultAsync(x => x.Id == input.SessionId && x.StartsAt > clock.GetUtcNow());
         var plan = await db.LessonPlans.SingleOrDefaultAsync(x => x.LessonPlanId == input.PlanId && x.IsActive && x.PlanType == "Trial" && x.AudienceType == "TrialGuest");
         if (session is null || plan is null) return BadRequest(new { message = "課程或方案已變更，請重新選擇。" });
+        var referrerName = plan.RequiresReferrer ? input.ReferrerName?.Trim() : null;
+        if (plan.RequiresReferrer && string.IsNullOrWhiteSpace(referrerName))
+            return BadRequest(new { message = "此體驗方案須填寫介紹人姓名，工作室將人工核對資格。" });
         if (await catalog.Participants.CountAsync(x => x.ClassSessionId == session.Id) >= (session.CapacityOverride ?? session.Capacity))
             return Conflict(new { message = "此場次已額滿，請選擇其他場次。" });
         if (await db.PortalTrialRequests.AnyAsync(x => x.UserId == Actor && x.ClassSessionId == session.Id && (x.Status == "Pending" || x.Status == "Contacted")))
             return Conflict(new { message = "您已申請此場次，請至會員專區查看。" });
         var guest = new TrialGuest { Name = input.Name.Trim(), Phone = input.Phone.Trim(), Email = input.Email.Trim(), LineId = input.LineId?.Trim() ?? "",
-            SourceType = "Direct", CreatedAtUtc = clock.GetUtcNow().UtcDateTime,
-            Note = $"官網體驗申請；場次 #{session.Id}；方案 {plan.PlanName}；待聯繫。" };
+            SourceType = plan.RequiresReferrer ? "Other" : "Direct", CreatedAtUtc = clock.GetUtcNow().UtcDateTime,
+            Note = $"官網體驗申請；場次 #{session.Id}；方案 {plan.PlanName}；待人工審核安排。" +
+                (referrerName is null ? "" : $"介紹人：{referrerName}（待核對，尚未建立介紹學生關聯）。") };
         // Reuse only a guest already linked by a previous authenticated request, never by unverified email or phone.
         var guestId = await db.PortalTrialRequests.Where(x => x.UserId == Actor && x.TrialGuest.Status == "Active" && x.TrialGuest.ConvertedStudentId == null)
             .Select(x => (long?)x.TrialGuestId).FirstOrDefaultAsync();
         var request = new PortalTrialRequest { SubmissionKey = input.SubmissionKey, UserId = Actor, ClassSessionId = session.Id,
-            LessonPlanId = plan.LessonPlanId, PlanName = plan.PlanName, QuotedPrice = plan.Price, Note = input.Note?.Trim(), CreatedAtUtc = clock.GetUtcNow().UtcDateTime };
+            LessonPlanId = plan.LessonPlanId, PlanName = plan.PlanName, QuotedPrice = plan.Price, Note = input.Note?.Trim(), ReferrerName = referrerName, CreatedAtUtc = clock.GetUtcNow().UtcDateTime };
         if (guestId.HasValue)
         {
             var ownedGuest = await db.TrialGuests.SingleAsync(x => x.TrialGuestId == guestId.Value);
@@ -159,7 +172,7 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         else request.TrialGuest = guest;
         db.PortalTrialRequests.Add(request);
         await db.SaveChangesAsync(); await tx.CommitAsync();
-        return Ok(new { request.Id, message = "體驗申請已送出，工作室將與您聯繫確認；此申請尚未保留名額。" });
+        return Ok(new { request.Id, message = "體驗申請已送出，待工作室人工審核並安排登記上課；此申請尚未保留名額。" });
     }
 }
 
@@ -185,4 +198,5 @@ public class TrialInput
     [Required, EmailAddress, StringLength(200)] public string Email { get; set; } = "";
     [StringLength(100)] public string? LineId { get; set; }
     [StringLength(300)] public string? Note { get; set; }
+    [StringLength(100)] public string? ReferrerName { get; set; }
 }

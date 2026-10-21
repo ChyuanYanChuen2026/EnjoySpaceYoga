@@ -17,15 +17,15 @@
         <p>最近排課確認：@(new DateTimeOffset(DateTime.SpecifyKind(Model.ScheduleConfirmedAtUtc.Value, DateTimeKind.Utc)).ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm"))（台灣時間）</p>
     }
     <div class="table-responsive">
-        <table class="table">
-            <thead><tr><th>課程</th><th>狀態</th><th>場次數</th><th>首堂～末堂（台灣時間）</th><th>核對</th></tr></thead>
+        <table class="table" data-sort-local>
+            <thead><tr><th data-sort-type="text">課程</th><th data-sort-type="text">狀態</th><th data-sort-type="number">場次數</th><th data-sort-type="number">首堂～末堂（台灣時間）</th><th>核對</th></tr></thead>
             <tbody>
                 @foreach (var course in Model.Schedule)
                 {
                     <tr>
                         <td>@course.Name</td><td>@(course.IsActive ? "啟用" : "停用，不開放報名")</td>
                         <td>@course.SessionCount</td>
-                        <td>@(course.FirstSessionAt?.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm") ?? "未排課") ～ @(course.LastSessionAt?.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm") ?? "未排課")</td>
+                        <td data-sort-value="@(course.FirstSessionAt?.ToUnixTimeMilliseconds().ToString() ?? "")">@(course.FirstSessionAt?.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm") ?? "未排課") ～ @(course.LastSessionAt?.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm") ?? "未排課")</td>
                         <td><a asp-controller="ClassSessions" asp-action="Index" asp-route-TermId="@Model.TermId" asp-route-CourseId="@course.CourseId" target="_blank" rel="noopener">查看完整場次</a></td>
                     </tr>
                 }

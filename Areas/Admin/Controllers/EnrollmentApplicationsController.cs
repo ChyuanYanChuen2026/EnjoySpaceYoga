@@ -14,13 +14,13 @@ namespace EnjoySpace.Web.Areas.Admin.Controllers;
 [Area("Admin"), Authorize(Roles = "Admin")]
 public class EnrollmentApplicationsController(AppDbContext db, EnrollmentWorkflowService workflow) : Controller
 {
-    public async Task<IActionResult> Index(bool all = false)
+    public async Task<IActionResult> Index(bool all = false, string? sort = null)
     {
         var query = db.EnrollmentApplications.AsNoTracking().Include(x => x.Student).ThenInclude(x => x.User)
             .Include(x => x.Course).ThenInclude(x => x.Term).Include(x => x.Payment).AsQueryable();
         if (!all) query = query.Where(x => x.Status == EnrollmentApplicationStatus.Pending);
         ViewBag.All = all;
-        return View(await query.OrderByDescending(x => x.SubmittedAt).Take(200).ToListAsync());
+        return View(await EnjoySpace.Web.Models.AdminTableSorts.Applications.Apply(query.OrderByDescending(x => x.SubmittedAt).ThenBy(x => x.Id).Take(200), sort).ToListAsync());
     }
     public async Task<IActionResult> Details(long id)
     {

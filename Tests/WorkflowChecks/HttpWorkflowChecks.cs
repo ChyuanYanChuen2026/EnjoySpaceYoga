@@ -34,6 +34,9 @@ internal static class HttpWorkflowChecks
         start.ArgumentList.Add("--environment"); start.ArgumentList.Add("Development");
         start.Environment["ConnectionStrings__DefaultConnection"] = connection;
         start.Environment["Seed__SyncAutumn2026Schedule"] = "false";
+        // Never use a developer's real mail service from automated checks.
+        start.Environment["PasswordRecovery__Host"] = "";
+        start.Environment["PasswordRecovery__PublicBaseUrl"] = "";
         var address = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var process = new Process { StartInfo = start };
         process.OutputDataReceived += (_, line) =>
@@ -67,8 +70,29 @@ internal static class HttpWorkflowChecks
             using (var anonymous = await client.GetAsync("/Admin/LeaveMakeup"))
                 assert(anonymous.StatusCode == HttpStatusCode.Redirect && anonymous.Headers.Location!.ToString().Contains("/Account/Login"), "HTTP leave management requires login");
             var login = await Page("/Account/Login");
+            assert(login.Contains("/Account/ForgotPassword"), "HTTP login offers password recovery");
+            var forgot = await Page("/Account/ForgotPassword");
+            await Post("/Account/ForgotPassword", new() { ["Account"] = "missing", ["Email"] = "nobody@example.test" }, HttpStatusCode.BadRequest);
+            assert(true, "HTTP password recovery requires antiforgery token");
+            await Post("/Account/ForgotPassword", new() { ["Account"] = "missing", ["Email"] = "nobody@example.test",
+                ["__RequestVerificationToken"] = Hidden(forgot, "__RequestVerificationToken") }, HttpStatusCode.ServiceUnavailable);
+            assert(true, "HTTP unconfigured SMTP clearly reports unavailable service");
+            assert((await Page("/Account/ResetPassword?token=invalid")).Contains("驗證連結已失效"), "HTTP invalid reset link shows recovery screen");
+            await Post("/Account/ResetPassword", new() { ["Token"] = "invalid", ["Password"] = "New-password_2030!", ["ConfirmPassword"] = "New-password_2030!" }, HttpStatusCode.BadRequest);
+            assert(true, "HTTP password reset requires antiforgery token");
             await Post("/Account/Login", new() { ["Account"] = "admin-check", ["Password"] = password,
                 ["__RequestVerificationToken"] = Hidden(login, "__RequestVerificationToken") }, HttpStatusCode.Redirect);
+            foreach (var path in new[] { "Terms", "Courses", "ClassSessions", "Students", "Teachers", "LessonPlans", "LessonPasses", "TrialGuests", "Payments", "PortalTrials", "EnrollmentApplications", "CourseEnrollments" })
+            {
+                var html = await Page("/Admin/" + path);
+                assert(html.Contains("table-sort-link") && !html.Contains("sort-key="), "HTTP renders sortable headers for " + path);
+            }
+            var sorted = await Page("/Admin/Courses?Sort=price_asc&Page=2&Status=Active&extra=a%26b");
+            var nextSort = Regex.Match(sorted, "href=\"([^\"]*Sort=price_desc[^\"]*)\"").Groups[1].Value;
+            assert(sorted.Contains("aria-sort=\"ascending\"") && nextSort.Contains("Page=1") && nextSort.Contains("Status=Active") && nextSort.Contains("extra=a%26b"),
+                "header toggle resets page and preserves encoded filter parameters");
+            assert((await Page(nextSort)).Contains("aria-sort=\"descending\""), "following header link toggles descending aria state");
+            assert((await Page("/Admin/Courses?Sort=invalid")).Contains("aria-sort=\"descending\""), "invalid sort renders default active header");
             foreach (var tab in new[] { "leaves", "entitlements", "requests" })
                 assert((await Page("/Admin/LeaveMakeup?tab=" + tab)).Contains("請假與補課"), "HTTP renders management tab " + tab);
             var leavePage = await Page("/Admin/LeaveMakeup/Leave?participantId=" + participantId);

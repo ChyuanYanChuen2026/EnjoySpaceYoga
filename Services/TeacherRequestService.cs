@@ -29,10 +29,10 @@ public class TeacherRequestService(AppDbContext db, TimeProvider clock)
     }
     private IQueryable<TeacherRequest> Requests() => db.TeacherRequests.AsNoTracking().Include(x => x.Teacher).ThenInclude(x => x.User)
         .Include(x => x.Course).ThenInclude(x => x.Term).Include(x => x.StudioLocation);
-    public async Task<PagedRecords<TeacherRequest>> ListAsync(long actor, int page)
+    public async Task<PagedRecords<TeacherRequest>> ListAsync(long actor, int page, string? sort = null)
     {
         var admin = await IsAdmin(actor);
-        return await TrialLessonService.PageAsync(Requests().Where(x => admin || x.Teacher.UserId == actor).OrderByDescending(x => x.Id), page);
+        return await TrialLessonService.PageAsync(AdminTableSorts.TeacherRequests.Apply(Requests().Where(x => admin || x.Teacher.UserId == actor), sort), page);
     }
     public async Task<TeacherRequest?> DetailAsync(long id, long actor)
     {

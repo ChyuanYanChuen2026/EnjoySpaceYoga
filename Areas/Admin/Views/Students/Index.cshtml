@@ -1,4 +1,4 @@
-﻿@model List<EnjoySpace.Web.Areas.Admin.ViewModels.StudentListItemViewModel>
+@model List<EnjoySpace.Web.Areas.Admin.ViewModels.StudentListItemViewModel>
 
 @{
     ViewData["Title"] = "學生管理";
@@ -19,16 +19,16 @@
         else
         {
             <div class="table-responsive">
-                <table class="table align-middle mb-0">
+                <table sort-set="students" class="table align-middle mb-0">
                     <thead>
                         <tr>
-                            <th scope="col" class="text-nowrap">學號</th>
-                            <th scope="col" class="text-nowrap">姓名</th>
-                            <th scope="col" class="text-nowrap">電話</th>
-                            <th scope="col">Email</th>
-                            <th scope="col" class="text-nowrap">加入日期</th>
-                            <th scope="col" class="text-nowrap">學生狀態</th>
-                            <th scope="col" class="text-nowrap">登入帳號</th>
+                            <th sort-key="number" scope="col" class="text-nowrap">學號</th>
+                            <th sort-key="name" scope="col" class="text-nowrap">姓名</th>
+                            <th sort-key="phone" scope="col" class="text-nowrap">電話</th>
+                            <th sort-key="email" scope="col">Email</th>
+                            <th sort-key="date" scope="col" class="text-nowrap">加入日期</th>
+                            <th sort-key="status" scope="col" class="text-nowrap">學生狀態</th>
+                            <th sort-key="account" scope="col" class="text-nowrap">登入帳號</th>
                             <th scope="col" class="text-nowrap">操作</th>
                         </tr>
                     </thead>

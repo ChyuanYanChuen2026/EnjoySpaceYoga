@@ -1,4 +1,4 @@
-﻿using EnjoySpace.Web.Areas.Admin.ViewModels;
+using EnjoySpace.Web.Areas.Admin.ViewModels;
 using EnjoySpace.Web.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,12 +16,9 @@ namespace EnjoySpace.Web.Areas.Admin.Controllers;
 public class TeachersController(AppDbContext db) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? sort = null)
     {
-        var teachers = await db.Teachers
-            .AsNoTracking()
-            .OrderBy(t => t.TeacherNo)
-            .ThenBy(t => t.TeacherId)
+        var teachers = await EnjoySpace.Web.Models.AdminTableSorts.Teachers.Apply(db.Teachers.AsNoTracking(), sort)
             .Select(t => new TeacherListItemViewModel
             {
                 TeacherId = t.TeacherId,
@@ -151,6 +148,8 @@ public class TeachersController(AppDbContext db) : Controller
                 Email = t.User.Email,
                 IsActive = t.IsActive,
                 Note = t.Note,
+                Account = t.User.Account,
+                IsUserActive = t.User.IsActive,
                 RowVersion = t.User.RowVersion
             })
             .SingleOrDefaultAsync();
@@ -165,6 +164,12 @@ public class TeachersController(AppDbContext db) : Controller
     public async Task<IActionResult> Edit(long id, TeacherEditViewModel model)
     {
         if (id != model.TeacherId)  return BadRequest();
+
+        var teacher = await db.Teachers.Include(t => t.User).SingleOrDefaultAsync(t => t.TeacherId == id);
+        if (teacher is null) return NotFound();
+        model.Account = teacher.User.Account;
+        if (model.IsUserActive && string.IsNullOrWhiteSpace(model.Email))
+            ModelState.AddModelError(nameof(model.Email), "啟用登入帳號前，請填寫老師可收信的 Email。");
 
         if (!ModelState.IsValid)   return View(model);
 
@@ -191,10 +196,6 @@ public class TeachersController(AppDbContext db) : Controller
 
         if (!ModelState.IsValid) return View(model);
 
-        var teacher = await db.Teachers.Include(t => t.User).SingleOrDefaultAsync(t => t.TeacherId == id);
-
-        if (teacher is null) return NotFound();
-
         var user = teacher.User;
 
         // 使用開啟表單時的版本檢查修改衝突。
@@ -207,6 +208,7 @@ public class TeachersController(AppDbContext db) : Controller
         user.DisplayName = model.DisplayName;
         user.Phone = model.Phone;
         user.Email = model.Email;
+        user.IsActive = model.IsUserActive;
         user.UpdatedAtUtc = DateTime.UtcNow;
 
         // 即使只修改 Teacher，也更新 User，觸發版本檢查。

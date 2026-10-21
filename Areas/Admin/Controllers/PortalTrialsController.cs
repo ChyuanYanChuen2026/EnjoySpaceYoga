@@ -8,13 +8,13 @@ namespace EnjoySpace.Web.Areas.Admin.Controllers;
 [Area("Admin"), Authorize(Roles = "Admin")]
 public class PortalTrialsController(AppDbContext db) : Controller
 {
-    public async Task<IActionResult> Index(int page = 1)
+    public async Task<IActionResult> Index(int page = 1, string? sort = null)
     {
         page = Math.Max(1, page);
         ViewBag.Page = page;
         ViewBag.Total = await db.PortalTrialRequests.CountAsync();
-        return View(await db.PortalTrialRequests.AsNoTracking().Include(x => x.TrialGuest).Include(x => x.ClassSession).ThenInclude(x => x.Course)
-            .OrderByDescending(x => x.Id).Skip((page - 1) * 30).Take(30).ToListAsync());
+        return View(await EnjoySpace.Web.Models.AdminTableSorts.PortalTrials.Apply(db.PortalTrialRequests.AsNoTracking().Include(x => x.TrialGuest).Include(x => x.ClassSession).ThenInclude(x => x.Course)
+            , sort).Skip((page - 1) * 30).Take(30).ToListAsync());
     }
 
     [HttpPost, ValidateAntiForgeryToken]

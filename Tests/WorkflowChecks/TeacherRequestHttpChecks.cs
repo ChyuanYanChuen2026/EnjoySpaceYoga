@@ -15,6 +15,7 @@ internal static class TeacherRequestHttpChecks
         {
             var teacher = await db.Teachers.Include(x => x.User).SingleAsync(x => x.User.Account == "teacher-requests");
             teacher.User.PasswordHash = new PasswordHasher<User>().HashPassword(teacher.User, password);
+            teacher.User.IsActive = false;
             await db.SaveChangesAsync(); teacherId = teacher.TeacherId;
             var session = await db.ClassSessions.Where(x => x.TeacherId == teacherId && !x.IsExtraSession).OrderBy(x => x.StartsAt).FirstAsync();
             courseId = session.CourseId; locationId = session.StudioLocationId; sessionId = session.Id;
@@ -33,9 +34,22 @@ internal static class TeacherRequestHttpChecks
             if (response.StatusCode != expected) throw new Exception($"{path}: expected {expected}, got {response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         }
         using (var anon = await teacherClient.GetAsync("/TeacherRequests")) assert(anon.StatusCode == HttpStatusCode.Redirect, "HTTP anonymous cannot access teacher requests");
+        var edit = await Page(admin, "/Admin/Teachers/Edit/" + teacherId);
+        assert(edit.Contains("teacher-requests") && edit.Contains("啟用登入帳號"), "HTTP teacher edit exposes account and activation control");
+        var activation = new Dictionary<string, string> { ["TeacherId"] = teacherId.ToString(), ["DisplayName"] = "申請測試老師",
+            ["RowVersion"] = Hidden(edit, "RowVersion"), ["IsActive"] = "true", ["IsUserActive"] = "true",
+            ["__RequestVerificationToken"] = Hidden(edit, "__RequestVerificationToken") };
+        await Post(admin, "/Admin/Teachers/Edit/" + teacherId, activation, HttpStatusCode.OK);
+        await using (var db = createDb()) assert(!await db.Teachers.AnyAsync(x => x.TeacherId == teacherId && x.User.IsActive), "HTTP activation requires teacher email");
+        activation["Email"] = "teacher-requests@example.test";
+        await Post(admin, "/Admin/Teachers/Edit/" + teacherId, activation, HttpStatusCode.Redirect);
+        await using (var db = createDb()) assert(await db.Teachers.AnyAsync(x => x.TeacherId == teacherId && x.User.IsActive), "HTTP admin can enable teacher account");
         var login = await Page(teacherClient, "/Account/Login");
-        await Post(teacherClient, "/Account/Login", new() { ["Account"] = "teacher-requests", ["Password"] = password,
-            ["__RequestVerificationToken"] = Hidden(login, "__RequestVerificationToken") }, HttpStatusCode.Redirect);
+        using (var signedIn = await teacherClient.PostAsync("/Account/Login", new FormUrlEncodedContent(new Dictionary<string, string>
+        { ["Account"] = "teacher-requests", ["Password"] = password, ["ReturnUrl"] = "/Admin",
+            ["__RequestVerificationToken"] = Hidden(login, "__RequestVerificationToken") })))
+            assert(signedIn.StatusCode == HttpStatusCode.Redirect && signedIn.Headers.Location?.ToString() == "/TeacherRequests",
+                "HTTP teacher login redirects to teacher workspace even from Admin entry");
         assert((await Page(teacherClient, "/TeacherRequests")).Contains("申請加開課"), "HTTP teacher can login and see own requests");
         using (var denied = await teacherClient.GetAsync("/Admin/Payments")) assert(denied.StatusCode == HttpStatusCode.Redirect, "HTTP teacher cannot access admin payments");
         var form = await Page(teacherClient, "/TeacherRequests/Create");
@@ -70,5 +84,14 @@ internal static class TeacherRequestHttpChecks
         assert((await Page(admin, "/Admin/ClassSessions/Details/" + sessionId)).Contains("15"), "HTTP admin proxy request and capacity approval update session detail");
         await using (var db = createDb()) { var t = await db.Teachers.FindAsync(teacherId); t!.IsActive = false; await db.SaveChangesAsync(); }
         using (var disabled = await teacherClient.GetAsync("/TeacherRequests")) assert(disabled.StatusCode == HttpStatusCode.Redirect, "HTTP disabled teacher loses access with existing cookie");
+        await using (var db = createDb())
+        {
+            var teacher = await db.Teachers.Include(x => x.User).SingleAsync(x => x.TeacherId == teacherId);
+            teacher.IsActive = true;
+            teacher.User.PasswordHash = new PasswordHasher<User>().HashPassword(teacher.User, "Updated-password_2032!");
+            await db.SaveChangesAsync();
+        }
+        using (var expired = await teacherClient.GetAsync("/TeacherRequests")) assert(expired.StatusCode == HttpStatusCode.Redirect,
+            "HTTP password change revokes old teacher login cookie");
     }
 }

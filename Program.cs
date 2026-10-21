@@ -24,6 +24,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
         if (!long.TryParse(context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id))
         { context.RejectPrincipal(); return; }
+        if (!await PasswordSession.IsCurrentAsync(db, context.Principal, id))
+        { context.RejectPrincipal(); return; }
         var roles = await StaffAccess.RolesAsync(db, id);
         if (roles.Count == 0) { context.RejectPrincipal(); return; }
         var identity = (ClaimsIdentity)context.Principal!.Identity!;
@@ -35,6 +37,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;
+    options.AddPolicy("password-recovery", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.AddPolicy("portal-trial", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
@@ -59,6 +64,9 @@ builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<LeaveMakeupService>();
 builder.Services.AddScoped<TrialLessonService>();
 builder.Services.AddScoped<TeacherRequestService>();
+builder.Services.Configure<PasswordRecoveryOptions>(builder.Configuration.GetSection("PasswordRecovery"));
+builder.Services.AddScoped<IPasswordResetEmailSender, SmtpPasswordResetEmailSender>();
+builder.Services.AddScoped<PasswordRecoveryService>();
 
 var app = builder.Build();
 var adminArgument = Array.IndexOf(args, "--create-admin");

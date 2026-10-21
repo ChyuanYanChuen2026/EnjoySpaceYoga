@@ -68,13 +68,14 @@ public class TrialLessonService(AppDbContext db, IDataProtectionProvider protect
 
     public async Task<LessonPlanEditModel?> PlanAsync(long id) => await db.LessonPlans.AsNoTracking().Where(x => x.LessonPlanId == id)
         .Select(x => new LessonPlanEditModel { Id = x.LessonPlanId, RowVersion = x.RowVersion, PlanCode = x.PlanCode, PlanName = x.PlanName,
-            PlanType = x.PlanType, SessionQuota = x.SessionQuota, Price = x.Price, ValidityUnit = x.ValidityUnit, ValidityValue = x.ValidityValue, IsActive = x.IsActive }).SingleOrDefaultAsync();
+            PlanType = x.PlanType, SessionQuota = x.SessionQuota, Price = x.Price, ValidityUnit = x.ValidityUnit, ValidityValue = x.ValidityValue, IsActive = x.IsActive, RequiresReferrer = x.RequiresReferrer }).SingleOrDefaultAsync();
     public async Task<long> SavePlanAsync(LessonPlanEditModel input, long actor)
     {
         await Admin(actor); Validate(input);
         if (input.Id < 0 || input.PlanType is not ("Trial" or "Flexible")) throw new InvalidOperationException("請選擇有效的方案類型。");
-        if (input.ValidityUnit is not ("Days" or "Unlimited") || (input.ValidityUnit == "Days" && input.ValidityValue is not > 0))
-            throw new InvalidOperationException("有限效期請填寫有效天數。");
+        if (input.RequiresReferrer && input.PlanType != "Trial") throw new InvalidOperationException("介紹人條件僅適用於體驗方案。");
+        if (input.ValidityUnit is not ("Days" or "Months" or "Unlimited") || (input.ValidityUnit != "Unlimited" && input.ValidityValue is not > 0))
+            throw new InvalidOperationException("有限效期請填寫有效天數或月數。");
         if (decimal.Round(input.Price, 2) != input.Price) throw new InvalidOperationException("金額最多小數點後兩位。");
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var code = input.PlanCode.Trim().ToUpperInvariant();
@@ -85,7 +86,8 @@ public class TrialLessonService(AppDbContext db, IDataProtectionProvider protect
         plan.PlanCode = code; plan.PlanName = input.PlanName.Trim(); plan.PlanType = input.PlanType;
         plan.AudienceType = input.PlanType == "Trial" ? "TrialGuest" : "Student";
         plan.SessionQuota = input.SessionQuota; plan.Price = input.Price; plan.ValidityUnit = input.ValidityUnit;
-        plan.ValidityValue = input.ValidityUnit == "Days" ? input.ValidityValue : null; plan.IsActive = input.IsActive;
+        plan.ValidityValue = input.ValidityUnit == "Unlimited" ? null : input.ValidityValue; plan.IsActive = input.IsActive;
+        plan.RequiresReferrer = input.RequiresReferrer;
         if (input.Id == 0) db.LessonPlans.Add(plan);
         await db.SaveChangesAsync(); await tx.CommitAsync(); return plan.LessonPlanId;
     }
@@ -115,7 +117,15 @@ public class TrialLessonService(AppDbContext db, IDataProtectionProvider protect
             ?? throw new InvalidOperationException("方案已停用或不適用此購買對象。");
         if (input.ValidFromDate < Today) throw new InvalidOperationException("生效日不得早於今天。");
         DateOnly? until;
-        try { until = plan.ValidityUnit == "Days" ? input.ValidFromDate.AddDays(plan.ValidityValue!.Value - 1) : null; }
+        try
+        {
+            until = plan.ValidityUnit switch
+            {
+                "Days" => input.ValidFromDate.AddDays(plan.ValidityValue!.Value - 1),
+                "Months" => input.ValidFromDate.AddMonths(plan.ValidityValue!.Value).AddDays(-1),
+                _ => null
+            };
+        }
         catch (ArgumentOutOfRangeException) { throw new InvalidOperationException("生效日加上效期超出有效日期範圍。"); }
         return (plan, new LessonQuoteModel { OwnerName = owner, PlanName = plan.PlanName, Quota = plan.SessionQuota, Amount = plan.Price, From = input.ValidFromDate, Until = until });
     }

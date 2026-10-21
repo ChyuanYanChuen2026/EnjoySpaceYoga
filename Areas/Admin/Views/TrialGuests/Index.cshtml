@@ -3,8 +3,8 @@
 <h1 class="h3">體驗生管理</h1>
 <a asp-action="Edit" class="btn btn-primary mb-3">新增體驗生</a>
 @if (TempData["Success"] is string success) { <div class="alert alert-success">@success</div> }
-<div class="table-responsive card card-body"><table class="table align-middle">
-    <thead><tr><th>姓名</th><th>聯絡方式</th><th>來源</th><th>狀態</th><th>操作</th></tr></thead>
+<div class="table-responsive card card-body"><table sort-set="guests" class="table align-middle">
+    <thead><tr><th sort-key="name">姓名</th><th sort-key="phone">聯絡方式</th><th sort-key="source">來源</th><th sort-key="status">狀態</th><th>操作</th></tr></thead>
     <tbody>@foreach (var g in Model.Items) {
         <tr><td>@g.Name</td><td>@g.Phone<br />@g.Email<br />@g.LineId</td>
             <td>@(g.SourceType == "Referral" ? "學生介紹" : g.SourceType == "Direct" ? "自行詢問" : "其他")</td>
@@ -16,5 +16,5 @@
     @if (Model.TotalCount == 0) { <p>尚無體驗生。</p> }
 </div>
 <p class="mt-3">共 @Model.TotalCount 筆，第 @Model.Page / @Model.PageCount 頁</p>
-@if (Model.Page > 1) { <a asp-action="Index" asp-route-page="@(Model.Page - 1)" class="btn btn-outline-secondary">上一頁</a> }
-@if (Model.Page < Model.PageCount) { <a asp-action="Index" asp-route-page="@(Model.Page + 1)" class="btn btn-outline-secondary">下一頁</a> }
+@if (Model.Page > 1) { <a asp-action="Index" asp-route-sort="@Context.Request.Query["Sort"]" asp-route-page="@(Model.Page - 1)" class="btn btn-outline-secondary">上一頁</a> }
+@if (Model.Page < Model.PageCount) { <a asp-action="Index" asp-route-sort="@Context.Request.Query["Sort"]" asp-route-page="@(Model.Page + 1)" class="btn btn-outline-secondary">下一頁</a> }

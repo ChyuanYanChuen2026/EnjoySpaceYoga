@@ -1,4 +1,4 @@
-﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.CatalogListViewModel<EnjoySpace.Web.Areas.Admin.ViewModels.TermListItemViewModel>
+@model EnjoySpace.Web.Areas.Admin.ViewModels.CatalogListViewModel<EnjoySpace.Web.Areas.Admin.ViewModels.TermListItemViewModel>
 @using EnjoySpace.Web.Areas.Admin.ViewModels
 
 @{
@@ -32,15 +32,15 @@
         else
         {
             <div class="table-responsive">
-                <table class="table align-middle mb-0">
+                <table sort-set="terms" class="table align-middle mb-0">
                     <thead>
                         <tr>
-                            <th scope="col" class="text-nowrap">學期名稱</th>
-                            <th scope="col" class="text-nowrap">開始日期</th>
-                            <th scope="col" class="text-nowrap">結束日期</th>
-                            <th scope="col" class="text-nowrap">報名開始時間</th>
-                            <th scope="col" class="text-nowrap">報名結束時間</th>
-                            <th scope="col" class="text-nowrap">狀態</th>
+                            <th sort-key="name" scope="col" class="text-nowrap">學期名稱</th>
+                            <th sort-key="date" scope="col" class="text-nowrap">開始日期</th>
+                            <th sort-key="end" scope="col" class="text-nowrap">結束日期</th>
+                            <th sort-key="registrationStart" scope="col" class="text-nowrap">報名開始時間</th>
+                            <th sort-key="registrationEnd" scope="col" class="text-nowrap">報名結束時間</th>
+                            <th sort-key="status" scope="col" class="text-nowrap">狀態</th>
                             <th scope="col" class="text-nowrap">操作</th>
                         </tr>
                     </thead>
