@@ -21,24 +21,54 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
             throw new InvalidOperationException("請使用有效的管理員帳號登入。");
     }
 
-    public async Task<EnrollmentPreviewModel> PreviewAsync(long studentId, long courseId, long actorId)
+    public async Task<long> RequireStudentAsync(long actorId)
     {
-        await RequireAdminAsync(actorId);
-        var preview = await LoadPreviewAsync(studentId, courseId);
+        if (!await db.UserRoles.AnyAsync(x => x.UserId == actorId && x.User.IsActive && x.Role.IsActive && x.Role.RoleCode == "Student"))
+            throw new InvalidOperationException("請使用有效的學生帳號登入後報名。");
+        return await db.Students.Where(x => x.UserId == actorId && x.IsActive).Select(x => (long?)x.StudentId).SingleOrDefaultAsync()
+            ?? throw new InvalidOperationException("找不到有效的學生資料，請聯繫工作室。");
+    }
+    private async Task RequireActorAsync(long studentId, long actorId, bool studentAction)
+    {
+        if (studentAction)
+        {
+            if (await RequireStudentAsync(actorId) != studentId) throw new InvalidOperationException("只能為本人申請報名。");
+        }
+        else await RequireAdminAsync(actorId);
+    }
+    public async Task<EnrollmentPreviewModel> PreviewAsync(long studentId, long courseId, long actorId, bool studentAction = false)
+    {
+        await RequireActorAsync(studentId, actorId, studentAction);
+        var preview = await LoadPreviewAsync(studentId, courseId, studentAction);
         preview.ConfirmationToken = confirmationProtector.Protect(
             JsonSerializer.Serialize(new ConfirmationTicket(actorId, Fingerprint(preview))), TimeSpan.FromMinutes(30));
         return preview;
     }
 
     public async Task<long> CreateAsync(long studentId, long courseId, long actorId,
-        string confirmationToken, bool confirmDetails, bool confirmNoRefund)
+        string confirmationToken, bool confirmDetails, bool confirmNoRefund, bool studentAction = false, string? requestedPaymentMethod = null)
     {
-        await RequireAdminAsync(actorId);
+        await RequireActorAsync(studentId, actorId, studentAction);
+        if (studentAction && requestedPaymentMethod is not ("Cash" or "Transfer"))
+            throw new InvalidOperationException("請選擇現場現金或銀行轉帳。");
         if (!confirmDetails || !confirmNoRefund)
-            throw new InvalidOperationException("請先與學生核對完整報名內容，並確認不提供退課退款。");
+            throw new InvalidOperationException(studentAction ? "請先核對完整課表與金額，並勾選確認報名須知。" : "請先與學生核對完整報名內容，並確認不提供退課退款。");
 
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-        var preview = await LoadPreviewAsync(studentId, courseId);
+        // Retrying after a lost response must not create a second application/payment.
+        if (studentAction)
+        {
+            var existing = await db.EnrollmentApplications.Include(x => x.Payment).FirstOrDefaultAsync(x =>
+                x.StudentId == studentId && x.CourseId == courseId &&
+                (x.Status == EnrollmentApplicationStatus.Pending || x.Status == EnrollmentApplicationStatus.Approved));
+            if (existing != null)
+            {
+                if (existing.Payment?.PaymentMethod != requestedPaymentMethod)
+                    throw new InvalidOperationException("您已有此課程的報名申請，請至報名進度確認；變更付款方式請聯繫工作室。");
+                return existing.Id;
+            }
+        }
+        var preview = await LoadPreviewAsync(studentId, courseId, studentAction);
         ConfirmationTicket? ticket;
         try
         {
@@ -51,7 +81,7 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
         if (ticket is null || ticket.ActorId != actorId || ticket.Fingerprint != Fingerprint(preview))
             throw new InvalidOperationException("學生或課程資料已變更，請重新核對報名內容後再送出。");
         
-        // 本階段由後台代辦整期報名；報價固定保存，不接受瀏覽器傳入金額。
+        // Shared server quote; selecting a payment method never confirms payment.
         var application = new EnrollmentApplication
         {
             StudentId = studentId, 
@@ -65,7 +95,8 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
             Payment = new Payment { 
                 StudentId = studentId, 
                 Amount = preview.Amount,
-                PaymentPurpose = "CourseEnrollment" 
+                PaymentPurpose = "CourseEnrollment",
+                PaymentMethod = studentAction ? requestedPaymentMethod : null
             }
         };
         
@@ -218,20 +249,30 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
         return application;
     }
 
-    private async Task<EnrollmentPreviewModel> LoadPreviewAsync(long studentId, long courseId)
+    private async Task<EnrollmentPreviewModel> LoadPreviewAsync(long studentId, long courseId, bool studentAction = false)
     {
         var student = await db.Students.AsNoTracking().Include(x => x.User)
             .SingleOrDefaultAsync(x => x.StudentId == studentId && x.IsActive)
-            ?? throw new InvalidOperationException("找不到啟用中的學生。");
+            ?? throw new InvalidOperationException(studentAction ? "您的學生資料目前無法使用，請聯繫工作室。" : "找不到啟用中的學生。");
         var course = await db.Courses.AsNoTracking().Include(x => x.Term)
             .SingleOrDefaultAsync(x => x.CourseId == courseId && x.IsActive)
             ?? throw new InvalidOperationException("找不到啟用中的課程。");
         if (course.Term.Status != TermStatusOptions.Open || course.Term.ScheduleConfirmedAtUtc is null)
-            throw new InvalidOperationException("此學期尚未確認整期排課完成並開放報名。");
+            throw new InvalidOperationException(studentAction ? "這門課程尚未開放報名，請稍後再查看或聯繫工作室。" : "此學期尚未確認整期排課完成並開放報名。");
+        if (studentAction)
+        {
+            if (!await new PortalCatalogService(db).Courses.AnyAsync(x => x.CourseId == courseId))
+                throw new InvalidOperationException("此課程目前不開放官網報名，請聯繫工作室。");
+            if (await db.ClassSessions.AnyAsync(x => x.CourseId == courseId && !x.IsExtraSession && x.StartsAt <= DateTimeOffset.UtcNow))
+                throw new InvalidOperationException("此班級已開課，中途報名請聯繫工作室辦理。");
+            if (await db.ClassSessions.AnyAsync(x => x.CourseId == courseId && !x.IsExtraSession &&
+                (x.IsCancelled || !x.Teacher.IsActive || !x.StudioLocation.IsActive)))
+                throw new InvalidOperationException("整期課表尚有停課或未開放場次，請聯繫工作室確認。");
+        }
         if (await db.EnrollmentApplications.AnyAsync(x => x.StudentId == studentId && x.CourseId == courseId
             && (x.Status == EnrollmentApplicationStatus.Pending || x.Status == EnrollmentApplicationStatus.Approved))
             || await db.CourseEnrollments.AnyAsync(x => x.StudentId == studentId && x.CourseId == courseId))
-            throw new InvalidOperationException("這位學生已有此課程的申請或正式報名。");
+            throw new InvalidOperationException(studentAction ? "您已有這門課程的報名紀錄，請查看報名進度或我的課程。" : "這位學生已有此課程的申請或正式報名。");
         var sessions = await db.ClassSessions.AsNoTracking().Where(x => x.CourseId == courseId && !x.IsExtraSession)
             .OrderBy(x => x.StartsAt).ThenBy(x => x.Id).Select(x => new EnrollmentSessionPreview
             {
@@ -242,7 +283,9 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
             throw new InvalidOperationException("課程尚無有效的整期場次。");
         var capacity = Math.Min(course.DefaultCapacity, sessions.Min(x => x.Capacity));
         if (await db.CourseEnrollments.CountAsync(x => x.CourseId == courseId && x.Status == "Active") >= capacity)
-            throw new InvalidOperationException("課程已額滿，不能建立報名與應收款。");
+            throw new InvalidOperationException(studentAction ? "這門課程已額滿，請選擇其他課程或聯繫工作室。" : "課程已額滿，不能建立報名與應收款。");
+        if (studentAction)
+            foreach (var session in sessions) await SessionCapacity.RequireSeatAsync(db, session.Id);
         return new EnrollmentPreviewModel
         {
             StudentId = studentId, CourseId = courseId, StudentName = student.User.DisplayName,

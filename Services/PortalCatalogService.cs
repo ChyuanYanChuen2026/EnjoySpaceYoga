@@ -14,7 +14,8 @@ public class PortalCatalogService(AppDbContext db)
     // Imported teachers may have disabled login accounts while remaining available for teaching.
     // Account activation is enforced by authentication, not by public course visibility.
     // Same effective membership rule as the admin attendance roster.
-    public IQueryable<ClassSessionParticipant> Participants => db.ClassSessionParticipants.Where(x => x.Status == "Active" && x.CourseEnrollment.Status == "Active");
+    public IQueryable<ClassSessionParticipant> Participants => db.ClassSessionParticipants.Where(x => x.Status == "Active"
+        && (x.CourseEnrollmentId == null || x.CourseEnrollment!.Status == "Active"));
 
     public IQueryable<PortalCourseData> CourseData => Courses.Select(x => new PortalCourseData
     {
@@ -25,7 +26,12 @@ public class PortalCatalogService(AppDbContext db)
         LocationId = x.DefaultLocationId, Location = x.DefaultLocation.Name, Address = x.DefaultLocation.Address,
         TermPrice = x.TermPrice, Capacity = x.DefaultCapacity,
         AllowsFlexibleBooking = x.AllowsFlexibleBooking, AllowsMakeup = x.AllowsMakeup,
-        SessionCount = db.ClassSessions.Count(s => s.CourseId == x.CourseId && !s.IsExtraSession)
+        SessionCount = db.ClassSessions.Count(s => s.CourseId == x.CourseId && !s.IsExtraSession),
+        ScheduleConfirmed = x.Term.ScheduleConfirmedAtUtc != null,
+        FirstSessionAt = db.ClassSessions.Where(s => s.CourseId == x.CourseId && !s.IsExtraSession).Min(s => (DateTimeOffset?)s.StartsAt),
+        HasEnrollmentCapacity = db.CourseEnrollments.Count(e => e.CourseId == x.CourseId && e.Status == "Active") < x.DefaultCapacity &&
+            !db.ClassSessions.Any(s => s.CourseId == x.CourseId && !s.IsExtraSession && Participants.Count(p => p.ClassSessionId == s.Id) >= (s.CapacityOverride ?? s.Capacity)),
+        HasUnavailableSessions = db.ClassSessions.Any(s => s.CourseId == x.CourseId && !s.IsExtraSession && (s.IsCancelled || !s.Teacher.IsActive || !s.StudioLocation.IsActive))
     });
 
     public IQueryable<PortalSessionData> SessionData(IQueryable<ClassSession> query) => query.Select(x => new PortalSessionData
@@ -62,6 +68,14 @@ public class PortalCourseData
     public bool AllowsFlexibleBooking { get; set; }
     public bool AllowsMakeup { get; set; }
     public int SessionCount { get; set; }
+    public bool ScheduleConfirmed { get; set; }
+    public DateTimeOffset? FirstSessionAt { get; set; }
+    public bool HasEnrollmentCapacity { get; set; }
+    public bool HasUnavailableSessions { get; set; }
+    public string? EnrollmentUnavailableReason => FirstSessionAt <= DateTimeOffset.UtcNow ? "此班級已開課，中途報名請聯繫工作室。" :
+        TermStatus != "Open" || !ScheduleConfirmed || FirstSessionAt == null ? "此課程尚未開放整期報名。" :
+        HasUnavailableSessions ? "課表尚有未開放場次，請聯繫工作室。" : !HasEnrollmentCapacity ? "整期班級已額滿，請聯繫工作室。" : null;
+    public bool CanEnroll => EnrollmentUnavailableReason == null;
 }
 
 public class PortalSessionData

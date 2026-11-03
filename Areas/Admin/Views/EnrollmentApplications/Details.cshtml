@@ -6,12 +6,16 @@
 <div class="alert alert-warning">@EnjoySpace.Web.Services.EnrollmentWorkflowService.NoRefundPolicy</div>
 <div class="card card-body mb-3">
     <h2 class="h5">@Model.Student.User.DisplayName｜@Model.Course.Term.Name · @Model.Course.Name</h2>
-    <p>@Model.QuotedSessionCount 堂｜應收 NT$ @Model.QuotedAmount.ToString("N2")</p>
+    <p>@Model.QuotedSessionCount 堂｜應收 NT$ @Model.QuotedAmount.ToString("N0")</p>
     <p class="mb-0">@WorkflowLabels.Application(Model.Status) · @WorkflowLabels.Payment(Model.Payment?.Status)</p>
+    @if (!string.IsNullOrEmpty(Model.Payment?.PaymentMethod))
+    {
+        <p class="mt-2 mb-0">@(Model.Payment.Status == "Pending" ? "預計付款方式（尚未確認收款）" : "付款方式")：@(Model.Payment.PaymentMethod switch { "Cash" => "現場現金", "Transfer" => "銀行轉帳", "LinePay" => "Line Pay", _ => Model.Payment.PaymentMethod })</p>
+    }
     @if (!string.IsNullOrWhiteSpace(Model.ReviewNote)) { <p class="mt-2 mb-0">審核備註：@Model.ReviewNote</p> }
     @if (Model.PolicyConfirmedAtUtc.HasValue)
     {
-        <p class="mt-2 mb-0">管理員 #@Model.PolicyConfirmedByUserId 已於 @(new DateTimeOffset(DateTime.SpecifyKind(Model.PolicyConfirmedAtUtc.Value, DateTimeKind.Utc)).ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")) 記錄學生確認：@Model.ConfirmedPolicy</p>
+        <p class="mt-2 mb-0">確認者（帳號 ID：@Model.PolicyConfirmedByUserId）已於 @(new DateTimeOffset(DateTime.SpecifyKind(Model.PolicyConfirmedAtUtc.Value, DateTimeKind.Utc)).ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")) 記錄學生確認：@Model.ConfirmedPolicy</p>
     }
     <a asp-controller="ClassSessions" asp-action="Index" asp-route-CourseId="@Model.CourseId" class="mt-2" target="_blank" rel="noopener">核對課程場次</a>
 </div>
@@ -75,4 +79,5 @@
     </form>
 }
 <a asp-action="Index">返回報名列表</a>
+
 

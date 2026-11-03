@@ -25,7 +25,7 @@
         {
             <tr>
                 <td>@(item.Payment.Student?.User.DisplayName ?? item.Payment.TrialGuest?.Name)<br />@item.Description</td>
-                <td class="text-nowrap">@item.Payment!.Amount.ToString("N2")</td><td>@WorkflowLabels.Payment(item.Payment.Status)</td>
+                <td class="text-nowrap">@item.Payment!.Amount.ToString("N0")</td><td>@WorkflowLabels.Payment(item.Payment.Status)</td>
                 <td>
                 @if (item.ApplicationId.HasValue) { <a asp-controller="EnrollmentApplications" asp-action="Details" asp-route-id="@item.ApplicationId">查看報名／確認付款</a> }
                 @if (item.PassId.HasValue) { <a asp-controller="LessonPasses" asp-action="Details" asp-route-id="@item.PassId">查看方案／確認付款</a> }

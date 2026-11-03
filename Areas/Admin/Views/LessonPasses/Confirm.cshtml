@@ -5,7 +5,7 @@
     <dt class="col-sm-3">購買對象</dt><dd class="col-sm-9">@Model.OwnerName</dd>
     <dt class="col-sm-3">方案</dt><dd class="col-sm-9">@Model.PlanName</dd>
     <dt class="col-sm-3">堂數</dt><dd class="col-sm-9">@Model.Quota 堂</dd>
-    <dt class="col-sm-3">應收金額</dt><dd class="col-sm-9">$@Model.Amount.ToString("N2")</dd>
+    <dt class="col-sm-3">應收金額</dt><dd class="col-sm-9">$@Model.Amount.ToString("N0")</dd>
     <dt class="col-sm-3">效期</dt><dd class="col-sm-9">@Model.From.ToString("yyyy/MM/dd") ～ @(Model.Until?.ToString("yyyy/MM/dd") ?? "不限期")（含起訖日）</dd>
 </dl></div>
 <form asp-action="Purchase" method="post">

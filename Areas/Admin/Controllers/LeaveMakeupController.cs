@@ -15,18 +15,24 @@ public class LeaveMakeupController(LeaveMakeupService workflow) : Controller
     public async Task<IActionResult> Index(string? tab, int page = 1) => View(await workflow.GetListAsync(tab, page));
 
     [HttpGet]
-    public async Task<IActionResult> Leave(long participantId)
+    public async Task<IActionResult> Leave(long participantId, bool returnToSession = false)
     {
+        ViewData["ReturnToSession"] = returnToSession;
         var model = await workflow.GetLeaveFormAsync(participantId);
         return model is null ? NotFound() : View(model);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Leave(LeaveCreateModel model)
+    public async Task<IActionResult> Leave(LeaveCreateModel model, bool returnToSession = false)
     {
+        ViewData["ReturnToSession"] = returnToSession;
+        // Resolve the return destination from the participant, never from a submitted session ID.
+        var returnSessionId = returnToSession ? (await workflow.GetLeaveFormAsync(model.ParticipantId))?.SessionId : null;
         if (ModelState.IsValid && await TryAsync(async () => { await workflow.CreateLeaveAsync(model, ActorId); }))
         {
-            TempData["Success"] = "請假已登記，已建立一筆同一期補課資格。";
+            TempData["Success"] = "請假已登記，已建立一筆原學期日期範圍內的補課資格。";
+            if (returnSessionId.HasValue)
+                return RedirectToAction("Details", "ClassSessions", new { area = "Admin", id = returnSessionId.Value }, "attendance");
             return RedirectToAction(nameof(Index));
         }
         var fresh = await workflow.GetLeaveFormAsync(model.ParticipantId);
@@ -60,6 +66,7 @@ public class LeaveMakeupController(LeaveMakeupService workflow) : Controller
             var fresh = await workflow.GetMakeupFormAsync(model.EntitlementId);
             if (fresh is null) return NotFound();
             model.StudentName = fresh.StudentName; model.SourceDescription = fresh.SourceDescription; model.Targets = fresh.Targets;
+            model.PeriodStart = fresh.PeriodStart; model.PeriodEnd = fresh.PeriodEnd;
             return View(model);
         }
         catch (InvalidOperationException e) { TempData["Error"] = e.Message; return RedirectToAction(nameof(Index), new { tab = "entitlements" }); }

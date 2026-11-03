@@ -25,7 +25,7 @@ public class TermsController(AppDbContext db, TermScheduleService schedule) : Co
     [HttpGet]
     public IActionResult Create()
     {
-        return View(new TermCreateViewModel());
+        return RedirectToAction("Index", "ScheduleSetup");
     }
 
     [HttpPost]

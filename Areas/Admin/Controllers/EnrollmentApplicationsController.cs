@@ -100,8 +100,9 @@ public class EnrollmentApplicationsController(AppDbContext db, EnrollmentWorkflo
         model.Students = await db.Students.Where(x => x.IsActive).OrderBy(x => x.User.DisplayName)
         .Select(x => new SelectListItem { Value = x.StudentId.ToString(), Text = x.User.DisplayName + " (" + x.User.Account + ")" }).ToListAsync();
         
-        model.Courses = await db.Courses.Where(x =>x.IsActive && x.Term.Status == TermStatusOptions.Open && x.Term.ScheduleConfirmedAtUtc != null).OrderByDescending(x => x.Term.StartDate).ThenBy(x => x.Name)
-        .Select(x => new SelectListItem { Value = x.CourseId.ToString(), Text = x.Term.Name + "｜" + x.Name + "｜$" + x.TermPrice}).ToListAsync();
+        var options = await db.Courses.Where(x =>x.IsActive && x.Term.Status == TermStatusOptions.Open && x.Term.ScheduleConfirmedAtUtc != null).OrderByDescending(x => x.Term.StartDate).ThenBy(x => x.Name)
+        .Select(x => new { x.CourseId, TermName = x.Term.Name, x.Name, x.TermPrice }).ToListAsync();
+        model.Courses = options.Select(x => new SelectListItem { Value = x.CourseId.ToString(), Text = $"{x.TermName}｜{x.Name}｜${x.TermPrice:N0}" }).ToList();
     }
 }
 

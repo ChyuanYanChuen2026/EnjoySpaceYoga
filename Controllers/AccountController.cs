@@ -44,7 +44,7 @@ public class AccountController(AppDbContext db, PasswordRecoveryService recovery
             new Claim(PasswordSession.ClaimType, PasswordSession.Version(user.PasswordHash))
         }.Concat(roles.Select(role => new Claim(ClaimTypes.Role, role))), CookieAuthenticationDefaults.AuthenticationScheme);
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
-        if (!roles.Contains("Admin")) return LocalRedirect("/TeacherRequests");
+        if (!roles.Contains("Admin")) return LocalRedirect("/TeacherDashboard");
         return LocalRedirect(Url.IsLocalUrl(model.ReturnUrl) ? model.ReturnUrl! : "/Admin/EnrollmentApplications");
     }
 

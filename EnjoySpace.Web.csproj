@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <None Remove="EnjoySpace.Web.csproj.Backup.tmp" />
+    <EmbeddedResource Include="Migrations/Sql/ReconcileRecoveredSchema.sql" LogicalName="EnjoySpace.Recovery.compatible-up.sql" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,6 +38,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.*" />
+    <PackageReference Include="QRCoder" Version="1.7.0" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
   </ItemGroup>
 

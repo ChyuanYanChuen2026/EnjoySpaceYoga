@@ -1,6 +1,3 @@
 <Solution>
-  <Folder Name="/Tests/">
-    <Project Path="Tests/WorkflowChecks/WorkflowChecks.csproj" />
-  </Folder>
   <Project Path="EnjoySpace.Web.csproj" />
 </Solution>

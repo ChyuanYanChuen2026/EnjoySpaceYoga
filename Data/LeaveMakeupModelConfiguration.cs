@@ -17,6 +17,11 @@ internal static class LeaveMakeupModelConfiguration
         entitlement.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.NoAction);
         entitlement.HasOne(x => x.SourceTerm).WithMany().HasForeignKey(x => x.SourceTermId).OnDelete(DeleteBehavior.NoAction);
         entitlement.HasOne(x => x.SourceLeave).WithOne(x => x.Entitlement).HasForeignKey<MakeupEntitlement>(x => x.SourceLeaveRequestId).OnDelete(DeleteBehavior.NoAction);
+        entitlement.HasOne(x => x.SourceCancellationParticipant).WithOne().HasForeignKey<MakeupEntitlement>(x => x.SourceCancellationParticipantId).OnDelete(DeleteBehavior.NoAction);
+        entitlement.HasIndex(x => x.SourceCancellationParticipantId).IsUnique().HasFilter("[SourceCancellationParticipantId] IS NOT NULL");
+        entitlement.HasIndex(x => x.SourceLeaveRequestId).IsUnique().HasFilter("[SourceLeaveRequestId] IS NOT NULL");
+        entitlement.ToTable("MakeupEntitlements", "dbo", t => t.HasCheckConstraint("CK_MakeupEntitlements_Source",
+            "([SourceType]=N'Leave' AND [SourceLeaveRequestId] IS NOT NULL AND [SourceCancellationParticipantId] IS NULL OR [SourceType]=N'Cancellation' AND [SourceLeaveRequestId] IS NULL AND [SourceCancellationParticipantId] IS NOT NULL)"));
         entitlement.ToTable("MakeupEntitlements", "dbo", t => t.HasCheckConstraint("CK_MakeupEntitlements_Status",
             "[Status] IN (N'Available', N'Reserved', N'Consumed', N'Revoked')"));
         var request = model.Entity<MakeupRequest>();

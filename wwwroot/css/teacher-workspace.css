@@ -1,0 +1,14 @@
+.teacher-today-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-top: 1px solid var(--es-border); }
+.teacher-today-item:first-child { border-top: 0; }
+.teacher-month-grid { width: 100%; min-width: 680px; table-layout: fixed; border-collapse: collapse; }
+.teacher-month-grid th { padding: 10px; text-align: center; background: var(--es-soft); font-size: 13px; }
+.teacher-month-grid td { height: 120px; vertical-align: top; border: 1px solid var(--es-border); padding: 8px; }
+.teacher-month-grid time { font-size: 13px; color: var(--es-muted); }
+.teacher-month-grid .outside-month { background: #f8faf8; }
+.teacher-month-grid .outside-month time { opacity: .5; }
+.teacher-month-grid .is-today { background: #f2f6ed; }
+.teacher-month-grid .is-today time { font-weight: 700; color: var(--es-green-dark); }
+.teacher-calendar-event { display: flex; flex-direction: column; gap: 2px; padding: 7px; margin-top: 7px; border-radius: 5px; background: var(--es-soft); color: var(--es-green-dark); text-decoration: none; overflow-wrap: anywhere; font-size: 12px; border-left: 3px solid var(--es-green); }
+.teacher-calendar-event:hover, .teacher-calendar-event:focus-visible { background: #dae8df; color: var(--es-green-dark); outline: 2px solid var(--es-green); outline-offset: 1px; }
+.teacher-calendar-event.cancelled { background: #f1f2f1; border-color: #88938d; color: #59675f; }
+@media (max-width: 575.98px) { .teacher-today-item { flex-wrap: wrap; } .teacher-today-item > div:first-child { flex-basis: 100%; } .teacher-today-item .btn { min-height: 40px; display: inline-flex; align-items: center; } }

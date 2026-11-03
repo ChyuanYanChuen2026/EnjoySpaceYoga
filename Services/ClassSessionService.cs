@@ -50,6 +50,8 @@ public class ClassSessionService
                 StartsAt = session.StartsAt,
                 EndsAt = session.EndsAt,
                 Capacity = session.Capacity,
+                RegisteredCount = _db.ClassSessionParticipants.Count(participant =>
+                    participant.ClassSessionId == session.Id && participant.Status == "Active"),
                 IsExtraSession = session.IsExtraSession,
                 CapacityOverride = session.CapacityOverride,
                 RowVersion = session.RowVersion,
@@ -119,7 +121,8 @@ public class ClassSessionService
             .ToListAsync();
     }
 
-    public async Task<string?> CreateAsync(long courseId, long teacherId, long studioLocationId, DateTime startsAt, DateTime endsAt)
+    public async Task<string?> CreateAsync(long courseId, long teacherId, long studioLocationId, DateTime startsAt, DateTime endsAt,
+        long? expectedTermId = null, byte[]? expectedTermVersion = null)
     {
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         if (endsAt <= startsAt)
@@ -137,6 +140,19 @@ public class ClassSessionService
 
         if (!course.IsActive || course.Term.Status != TermStatusOptions.Draft)
             return "只有草稿學期的啟用課程可以新增場次；開放報名後請走取消／調課流程。";
+        if (expectedTermId.HasValue)
+        {
+            if (course.TermId != expectedTermId || expectedTermVersion is null)
+                return "課程不屬於目前的學期，請重新開啟設定。";
+            await ScheduleVersion.RequireCurrentAsync(_db, course.TermId, expectedTermVersion);
+            if (!await _db.Teachers.AnyAsync(x => x.TeacherId == teacherId && x.IsActive))
+                return "所選老師不存在或已停用。";
+            var start = new DateTimeOffset(DateTime.SpecifyKind(startsAt, DateTimeKind.Unspecified), TimeSpan.FromHours(8));
+            var end = new DateTimeOffset(DateTime.SpecifyKind(endsAt, DateTimeKind.Unspecified), TimeSpan.FromHours(8));
+            if (await _db.ClassSessions.AnyAsync(x => x.Course.IsActive && x.StartsAt < end && x.EndsAt > start &&
+                (x.CourseId == courseId || x.TeacherId == teacherId || x.StudioLocationId == studioLocationId)))
+                return "此時段與現有課程、老師或教室場次衝突，請調整時間。";
+        }
         if (await HasApplicationsAsync(courseId))
             return "此課程已有報名紀錄，不能直接新增場次。";
 
@@ -178,7 +194,7 @@ public class ClassSessionService
             EndsAt = new DateTimeOffset(
                 DateTime.SpecifyKind(endsAt, DateTimeKind.Unspecified),
                 taiwanOffset),
-            Capacity = 10,
+            Capacity = expectedTermId.HasValue ? course.DefaultCapacity : (short)10,
             CapacityOverride = null
         };
 

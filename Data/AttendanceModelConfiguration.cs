@@ -11,6 +11,12 @@ internal static class AttendanceModelConfiguration
         participant.HasOne(x => x.ClassSession).WithMany().HasForeignKey(x => x.ClassSessionId).OnDelete(DeleteBehavior.NoAction);
         participant.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.NoAction);
         participant.HasOne(x => x.CourseEnrollment).WithMany().HasForeignKey(x => x.CourseEnrollmentId).OnDelete(DeleteBehavior.NoAction);
+        participant.HasOne(x => x.LessonPass).WithMany().HasForeignKey(x => x.LessonPassId).OnDelete(DeleteBehavior.NoAction);
+        participant.HasOne(x => x.TrialRequest).WithMany().HasForeignKey(x => x.TrialRequestId).OnDelete(DeleteBehavior.NoAction);
+        participant.HasIndex(x => x.TrialRequestId);
+        participant.HasIndex(x => x.BookingKey).IsUnique().HasFilter("[BookingKey] IS NOT NULL");
+        participant.ToTable("ClassSessionParticipants", "dbo", t => t.HasCheckConstraint("CK_ClassSessionParticipants_Source",
+            "([ParticipationType]=N'Regular' AND [CourseEnrollmentId] IS NOT NULL AND [LessonPassId] IS NULL OR [ParticipationType]=N'Makeup' AND [MakeupRequestId] IS NOT NULL AND [LessonPassId] IS NULL OR [ParticipationType]=N'Trial' AND [CourseEnrollmentId] IS NULL AND [LessonPassId] IS NOT NULL AND [TrialRequestId] IS NOT NULL OR [ParticipationType]=N'Flexible' AND [CourseEnrollmentId] IS NULL AND [LessonPassId] IS NOT NULL AND [BookingKey] IS NOT NULL)"));
         participant.HasOne<User>().WithMany().HasForeignKey(x => x.AddedByUserId).OnDelete(DeleteBehavior.NoAction);
         participant.HasIndex(x => new { x.ClassSessionId, x.StudentId }).IsUnique()
             .HasFilter("[Status] = N'Active'").HasDatabaseName("UX_ClassSessionParticipants_ActiveStudent");

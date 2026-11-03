@@ -37,6 +37,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;
+    options.AddPolicy("check-in", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 200, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.AddPolicy("password-recovery", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
@@ -61,14 +63,28 @@ builder.Services.AddScoped<EnrollmentWorkflowService>();
 builder.Services.AddScoped<TermScheduleService>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddScoped<AttendanceService>();
+builder.Services.AddScoped<CheckInService>();
+builder.Services.AddScoped<TrialBookingService>();
+builder.Services.AddScoped<TrialReviewSummaryService>();
 builder.Services.AddScoped<LeaveMakeupService>();
 builder.Services.AddScoped<TrialLessonService>();
 builder.Services.AddScoped<TeacherRequestService>();
+builder.Services.AddScoped<TeacherDashboardService>();
 builder.Services.Configure<PasswordRecoveryOptions>(builder.Configuration.GetSection("PasswordRecovery"));
 builder.Services.AddScoped<IPasswordResetEmailSender, SmtpPasswordResetEmailSender>();
 builder.Services.AddScoped<PasswordRecoveryService>();
 
 var app = builder.Build();
+var resetArgument = Array.IndexOf(args, "--reset-password");
+if (resetArgument >= 0)
+{
+    if (!app.Environment.IsDevelopment() || resetArgument + 1 >= args.Length)
+        throw new InvalidOperationException("請在 Development 環境使用 --reset-password 帳號。");
+    using var scope = app.Services.CreateScope();
+    await AdminAccountSetup.ResetPasswordAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(),  args[resetArgument + 1]);
+    return;
+}
+
 var adminArgument = Array.IndexOf(args, "--create-admin");
 if (adminArgument >= 0)
 {

@@ -29,6 +29,7 @@
         <div class="stat-bottom"><a asp-area="Admin" asp-controller="Payments" asp-action="Index">查看付款<partial name="_UiIcon" model='"arrow"' /></a></div>
     </section>
 </div>
+@await Component.InvokeAsync("TrialReviewNotice")
 <section class="card calendar-panel">
     <div class="card-body">
         <div class="calendar-intro"><h2 class="h5">課程行事曆</h2><p>時間皆以台灣時間顯示，點選場次可查看詳細資料。</p></div>

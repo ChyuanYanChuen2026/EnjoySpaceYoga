@@ -51,8 +51,8 @@ public class CourseService
         .ToListAsync();
     }
 
-    public async Task CreateAsync(string name, long termId, int classCategoryId, long defaultTeacherId,
-        long defaultLocationId, decimal termPrice, CourseSettings settings)
+    public async Task<long> CreateAsync(string name, long termId, int classCategoryId, long defaultTeacherId,
+        long defaultLocationId, decimal termPrice, CourseSettings settings, byte[]? expectedTermVersion = null)
     {
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         if (string.IsNullOrWhiteSpace(name) || name.Length > 150)
@@ -61,6 +61,8 @@ public class CourseService
         }
 
         await ValidateTermAsync(termId, requiresDraft: true);
+        if (expectedTermVersion != null)
+            await ScheduleVersion.RequireCurrentAsync(_db, termId, expectedTermVersion);
         await ValidateClassCategoryAsync(classCategoryId);
         await ValidateDefaultTeacherAsync(defaultTeacherId);
         await ValidateDefaultLocationAsync(defaultLocationId);
@@ -82,6 +84,7 @@ public class CourseService
         await ScheduleVersion.TouchDraftAsync(_db, termId);
         await _db.SaveChangesAsync();
         await tx.CommitAsync();
+        return course.CourseId;
     }
 
     public async Task<Course?> GetByIdAsync(long courseId)

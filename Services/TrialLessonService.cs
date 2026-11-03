@@ -32,40 +32,6 @@ public class TrialLessonService(AppDbContext db, IDataProtectionProvider protect
         if (input is null || !actual.SequenceEqual(input)) throw new InvalidOperationException("資料已變更，請重新載入並核對。");
     }
 
-    public async Task PopulateGuestAsync(TrialGuestEditModel model)
-    {
-        model.Referrers = await db.Students.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.User.DisplayName)
-            .Select(x => new SelectListItem(x.User.DisplayName + "（" + (x.StudentNo ?? x.StudentId.ToString()) + "）", x.StudentId.ToString())).ToListAsync();
-    }
-    public async Task<TrialGuestEditModel?> GuestAsync(long id)
-    {
-        var g = await db.TrialGuests.AsNoTracking().SingleOrDefaultAsync(x => x.TrialGuestId == id);
-        if (g is null) return null;
-        return new TrialGuestEditModel { Id = g.TrialGuestId, RowVersion = g.RowVersion, Name = g.Name, Phone = g.Phone, Email = g.Email,
-            LineId = g.LineId, SourceType = g.SourceType, ReferrerStudentId = g.ReferrerStudentId, IsActive = g.Status == "Active", Note = g.Note };
-    }
-    public async Task<long> SaveGuestAsync(TrialGuestEditModel input, long actor)
-    {
-        await Admin(actor); Validate(input);
-        if (input.Id < 0 || input.SourceType is not ("Direct" or "Referral" or "Other")) throw new InvalidOperationException("請選擇有效的體驗來源。");
-        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-        if (input.SourceType == "Referral" && (!input.ReferrerStudentId.HasValue || !await db.Students.AnyAsync(x => x.StudentId == input.ReferrerStudentId && x.IsActive)))
-            throw new InvalidOperationException("請選擇有效的介紹學生。");
-        var guest = input.Id == 0 ? new TrialGuest { CreatedByUserId = actor, CreatedAtUtc = UtcNow } :
-            await db.TrialGuests.SingleOrDefaultAsync(x => x.TrialGuestId == input.Id) ?? throw new InvalidOperationException("找不到體驗生。");
-        if (input.Id > 0)
-        {
-            Version(guest.RowVersion, input.RowVersion);
-            if (guest.ConvertedStudentId != null) throw new InvalidOperationException("此體驗生已轉為正式學生，請使用學生管理。");
-        }
-        guest.Name = input.Name.Trim(); guest.Phone = input.Phone.Trim(); guest.Email = input.Email?.Trim() ?? "";
-        guest.LineId = input.LineId?.Trim() ?? ""; guest.SourceType = input.SourceType;
-        guest.ReferrerStudentId = input.SourceType == "Referral" ? input.ReferrerStudentId : null;
-        guest.Status = input.IsActive ? "Active" : "Inactive"; guest.Note = input.Note?.Trim(); guest.UpdatedAtUtc = UtcNow;
-        if (input.Id == 0) db.TrialGuests.Add(guest);
-        await db.SaveChangesAsync(); await tx.CommitAsync(); return guest.TrialGuestId;
-    }
-
     public async Task<LessonPlanEditModel?> PlanAsync(long id) => await db.LessonPlans.AsNoTracking().Where(x => x.LessonPlanId == id)
         .Select(x => new LessonPlanEditModel { Id = x.LessonPlanId, RowVersion = x.RowVersion, PlanCode = x.PlanCode, PlanName = x.PlanName,
             PlanType = x.PlanType, SessionQuota = x.SessionQuota, Price = x.Price, ValidityUnit = x.ValidityUnit, ValidityValue = x.ValidityValue, IsActive = x.IsActive, RequiresReferrer = x.RequiresReferrer }).SingleOrDefaultAsync();
@@ -96,7 +62,7 @@ public class TrialLessonService(AppDbContext db, IDataProtectionProvider protect
     {
         input.OwnerType = input.OwnerType == "Student" ? "Student" : "TrialGuest";
         input.Plans = (await db.LessonPlans.AsNoTracking().Where(x => x.IsActive && x.AudienceType == input.OwnerType).OrderBy(x => x.PlanName).ToListAsync())
-            .Select(x => new SelectListItem($"{x.PlanName} · {x.SessionQuota} 堂 · ${x.Price:N2}", x.LessonPlanId.ToString())).ToList();
+            .Select(x => new SelectListItem($"{x.PlanName} · {x.SessionQuota} 堂 · ${x.Price:N0}", x.LessonPlanId.ToString())).ToList();
         input.Owners = input.OwnerType == "Student"
             ? await db.Students.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.User.DisplayName).Select(x => new SelectListItem(x.User.DisplayName, x.StudentId.ToString())).ToListAsync()
             : await db.TrialGuests.AsNoTracking().Where(x => x.Status == "Active" && x.ConvertedStudentId == null).OrderBy(x => x.Name).Select(x => new SelectListItem(x.Name + " · " + x.Phone, x.TrialGuestId.ToString())).ToListAsync();

@@ -18,8 +18,20 @@ public class PortalTrialRequest
     public LessonPlan LessonPlan { get; set; } = null!;
     [MaxLength(100)] public string PlanName { get; set; } = "";
     [Column(TypeName = "decimal(10,2)")] public decimal QuotedPrice { get; set; }
+    public short? QuotedQuota { get; set; }
+    [MaxLength(30)] public string? QuotedValidityUnit { get; set; }
+    public int? QuotedValidityValue { get; set; }
+    public bool? RequiresReferrerAtRequest { get; set; }
     [MaxLength(30)] public string Status { get; set; } = "Pending";
     [MaxLength(300)] public string? Note { get; set; }
     [MaxLength(100)] public string? ReferrerName { get; set; }
+    // Existing database fields restored from the schema inventory; no schema change here.
+    public long? LessonPassId { get; set; }
+    public LessonPass? LessonPass { get; set; }
+    public long? ReviewedByUserId { get; set; }
+    public User? ReviewedByUser { get; set; }
+    [Column(TypeName = "datetime2")] public DateTime? ReviewedAtUtc { get; set; }
+    [MaxLength(500)] public string? ReviewNote { get; set; }
+    [Timestamp] public byte[] RowVersion { get; set; } = [];
     public DateTime CreatedAtUtc { get; set; }
 }

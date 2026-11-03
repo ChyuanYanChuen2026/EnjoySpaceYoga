@@ -2,7 +2,7 @@
 @using EnjoySpace.Web.Areas.Admin.ViewModels
 @{ ViewData["Title"] = "請假與補課"; var taiwan = TimeSpan.FromHours(8); }
 <h1 class="h3 mb-3">請假與補課</h1>
-<p class="text-secondary">管理員代辦，同一期補課。登記請假請從「場次管理 → 名單／點名」選擇學員。</p>
+<p class="text-secondary">包含學生自行請假與管理員代辦紀錄。可補原學期日期範圍內的其他課程，不限相同學期資料。代辦請假請從「場次管理 → 名單／點名」選擇學員。</p>
 <nav class="nav nav-pills mb-3" aria-label="請假補課分類">
     <a asp-action="Index" asp-route-tab="leaves" class="nav-link @(Model.Tab == "leaves" ? "active" : "")">請假紀錄</a>
     <a asp-action="Index" asp-route-tab="entitlements" class="nav-link @(Model.Tab == "entitlements" ? "active" : "")">補課資格</a>
@@ -17,6 +17,7 @@
         <h2 class="h6">@item.Participant.Student.User.DisplayName · @item.Participant.ClassSession.Course.Name <span class="badge bg-secondary">@LeaveMakeupListModel.Label(item.Status)</span></h2>
         <p class="mb-1">原課堂：@item.Participant.ClassSession.StartsAt.ToOffset(taiwan).ToString("yyyy/MM/dd HH:mm")</p>
         <p class="mb-1">原因：@item.Reason</p>
+        <p class="mb-1">來源：@(item.RequestSource == "Student" ? "學生自行請假" : "管理員代辦")</p>
         <p>補課資格：@LeaveMakeupListModel.Label(item.Entitlement.Status)</p>
         <div class="d-flex gap-2 flex-wrap">
             <a asp-controller="Attendance" asp-action="Index" asp-route-sessionId="@item.Participant.ClassSessionId" class="btn btn-sm btn-outline-secondary">原課堂名單</a>
@@ -37,10 +38,16 @@
 }
 @foreach (var item in Model.Entitlements)
 {
+    var sourceSession = item.SourceType == "Cancellation" ? item.SourceCancellationParticipant?.ClassSession : item.SourceLeave?.Participant.ClassSession;
     <article class="card card-body mb-3">
         <h2 class="h6">@item.Student.User.DisplayName · @item.SourceTerm.Name <span class="badge bg-secondary">@LeaveMakeupListModel.Label(item.Status)</span></h2>
-        <p>來源：@item.SourceLeave.Participant.ClassSession.Course.Name · @item.SourceLeave.Participant.ClassSession.StartsAt.ToOffset(taiwan).ToString("yyyy/MM/dd HH:mm") 請假</p>
-        @if (item.Status == "Available") { <div><a asp-action="Apply" asp-route-entitlementId="@item.MakeupEntitlementId" class="btn btn-primary btn-sm">選擇補課場次</a></div> }
+        @if (sourceSession is not null)
+        {
+            <p>來源：@sourceSession.Course.Name · @sourceSession.StartsAt.ToOffset(taiwan).ToString("yyyy/MM/dd HH:mm") @(item.SourceType == "Cancellation" ? "停課" : "請假")</p>
+        }
+        else { <p>來源資料待核對。</p> }
+        @if (item.Status == "Available" && item.SourceType == "Leave" && item.SourceLeave is not null) { <div><a asp-action="Apply" asp-route-entitlementId="@item.MakeupEntitlementId" class="btn btn-primary btn-sm">選擇補課場次</a></div> }
+        @if (item.Status == "Available" && item.SourceType == "Cancellation") { <p class="small text-secondary mb-0">停課補課資格目前僅供查詢，安排流程尚待恢復。</p> }
     </article>
 }
 @foreach (var item in Model.Requests)

@@ -1,0 +1,59 @@
+@model TeacherDashboardModel
+@{
+    ViewData["Title"] = "老師儀表板";
+    var taiwan = TimeSpan.FromHours(8);
+    var gridStart = Model.Month.AddDays(-(int)Model.Month.DayOfWeek);
+    var days = DateTime.DaysInMonth(Model.Month.Year, Model.Month.Month);
+    var weeks = ((int)Model.Month.DayOfWeek + days + 6) / 7;
+    var grouped = Model.MonthSessions.ToLookup(x => DateOnly.FromDateTime(x.StartsAt.ToOffset(taiwan).DateTime));
+}
+<div class="dashboard-heading">
+    <div><h1>老師儀表板</h1><p>@User.Identity?.Name，歡迎回來。這裡是您的課程與申請概況。</p></div>
+    <time class="dashboard-date" datetime="@Model.Today.ToString("yyyy-MM-dd")">@Model.Today.ToString("yyyy年M月d日") · 台灣時間</time>
+</div>
+<div class="dashboard-stats">
+    <section class="card stat-card"><h2 class="stat-title"><partial name="_UiIcon" model='"calendar"' />今日課堂</h2><p class="stat-number">@Model.TodaySessions.Count(x => !x.IsCancelled)</p><div class="stat-bottom">不含停課場次</div></section>
+    <section class="card stat-card"><h2 class="stat-title"><partial name="_UiIcon" model='"people"' />今日學生</h2><p class="stat-number">@Model.TodayStudentCount</p><div class="stat-bottom">有效名單人數，同一學生計一次</div></section>
+    <section class="card stat-card"><h2 class="stat-title"><partial name="_UiIcon" model='"book"' />@Model.Month.ToString("M 月")授課場次</h2><p class="stat-number">@Model.MonthSessions.Count(x => !x.IsCancelled)</p><div class="stat-bottom">含本人代課及加開課</div></section>
+    <section class="card stat-card"><h2 class="stat-title"><partial name="_UiIcon" model='"file"' />待審核申請</h2><p class="stat-number">@Model.PendingRequestCount</p><div class="stat-bottom"><a asp-controller="TeacherRequests" asp-action="Index">查看我的加開／超收申請 <partial name="_UiIcon" model='"arrow"' /></a></div></section>
+</div>
+<section class="card mb-4"><div class="card-body">
+    <h2 class="h5 mb-3">今日課程</h2>
+    @if (Model.TodaySessions.Count == 0) { <p class="text-secondary mb-0">今天沒有安排授課場次，可在下方課表查看其他日期。</p> }
+    <div class="teacher-today-list">
+    @foreach (var session in Model.TodaySessions) {
+        <article class="teacher-today-item">
+            <div><strong>@session.StartsAt.ToOffset(taiwan).ToString("HH:mm")–@session.EndsAt.ToOffset(taiwan).ToString("HH:mm")</strong><div>@session.CourseName</div></div>
+            <div class="text-secondary">@session.LocationName<br />@session.RegisteredCount / @session.Capacity 人</div>
+            <div>@if (session.IsCancelled) { <span class="badge bg-secondary me-2">已停課</span> }<a asp-action="Details" asp-route-id="@session.Id" class="btn btn-outline-primary btn-sm">查看場次</a></div>
+        </article>
+    }
+    </div>
+</div></section>
+<section class="card calendar-panel" id="my-calendar"><div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between gap-3 mb-3 align-items-center">
+        <div><h2 class="h5 mb-1">我的課程行事曆</h2><p class="small text-secondary mb-0">僅顯示本人授課場次，點選課程查看詳情。時間皆為台灣時間。</p></div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <a asp-action="Index" asp-route-month="@Model.Month.AddMonths(-1).ToString("yyyy-MM-dd")" asp-fragment="my-calendar" class="btn btn-outline-secondary btn-sm" aria-label="上一個月">上月</a>
+            <strong>@Model.Month.ToString("yyyy 年 M 月")</strong>
+            <a asp-action="Index" asp-route-month="@Model.Month.AddMonths(1).ToString("yyyy-MM-dd")" asp-fragment="my-calendar" class="btn btn-outline-secondary btn-sm" aria-label="下一個月">下月</a>
+            <a asp-action="Index" asp-fragment="my-calendar" class="btn btn-outline-primary btn-sm">本月</a>
+        </div>
+    </div>
+    @if (Model.MonthSessions.Count == 0) { <p class="alert alert-light border">這個月尚無您的授課場次。</p> }
+    <p class="small text-secondary d-md-none">可左右滑動查看完整月曆。</p>
+    <div class="table-responsive" role="region" aria-label="個人月課表" tabindex="0">
+        <table class="teacher-month-grid"><caption class="visually-hidden">@Model.Month.ToString("yyyy 年 M 月")個人授課課表</caption>
+            <thead><tr>@foreach (var day in new[] { "日", "一", "二", "三", "四", "五", "六" }) { <th scope="col">@($"週{day}")</th> }</tr></thead>
+            <tbody>@for (var week = 0; week < weeks; week++) { <tr>@for (var weekday = 0; weekday < 7; weekday++) {
+                var date = gridStart.AddDays(week * 7 + weekday);
+                <td class="@(date.Month != Model.Month.Month ? "outside-month" : "") @(date == Model.Today ? "is-today" : "")">
+                    <time datetime="@date.ToString("yyyy-MM-dd")" aria-current="@(date == Model.Today ? "date" : null)">@date.Day</time>
+                    @foreach (var session in grouped[date]) {
+                        <a class="teacher-calendar-event @(session.IsCancelled ? "cancelled" : "")" asp-action="Details" asp-route-id="@session.Id"><strong>@session.StartsAt.ToOffset(taiwan).ToString("HH:mm") @(session.IsCancelled ? "已停課" : "")</strong><span>@session.CourseName</span><small>@session.RegisteredCount / @session.Capacity 人</small></a>
+                    }
+                </td>
+            }</tr> }</tbody>
+        </table>
+    </div>
+</div></section>

@@ -9,7 +9,9 @@ public class MakeupEntitlement
     public long MakeupEntitlementId { get; set; }
     public long StudentId { get; set; }
     public long SourceTermId { get; set; }
-    public long SourceLeaveRequestId { get; set; }
+    public long? SourceLeaveRequestId { get; set; }
+    public long? SourceCancellationParticipantId { get; set; }
+    public ClassSessionParticipant? SourceCancellationParticipant { get; set; }
     [MaxLength(30)] public string SourceType { get; set; } = "Leave";
     [MaxLength(30)] public string Status { get; set; } = "Available";
     [Column(TypeName = "datetime2(0)")] public DateTime CreatedAtUtc { get; set; }
@@ -18,5 +20,5 @@ public class MakeupEntitlement
     [Timestamp] public byte[] RowVersion { get; set; } = [];
     public Student Student { get; set; } = null!;
     public Term SourceTerm { get; set; } = null!;
-    public LeaveRequest SourceLeave { get; set; } = null!;
+    public LeaveRequest? SourceLeave { get; set; }
 }

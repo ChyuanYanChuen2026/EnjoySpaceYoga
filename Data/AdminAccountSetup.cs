@@ -8,16 +8,13 @@ public static class AdminAccountSetup
 {
     public static async Task CreateAsync(AppDbContext db, string account)
     {
-        if (string.IsNullOrWhiteSpace(account) || account.Length > 100)
-            throw new InvalidOperationException("請提供 100 字內的管理員帳號。");
-        if (await db.Users.AnyAsync(x => x.Account == account))
-            throw new InvalidOperationException("此帳號已存在；不會覆蓋既有密碼或提升既有帳號權限。");
+        if (string.IsNullOrWhiteSpace(account) || account.Length > 100) throw new InvalidOperationException("請提供 100 字內的管理員帳號。");
+        if (await db.Users.AnyAsync(x => x.Account == account))  throw new InvalidOperationException("此帳號已存在；不會覆蓋既有密碼或提升既有帳號權限。");
         Console.Write("請輸入新管理員密碼（至少 12 字元，不會顯示）：");
         var password = ReadPassword();
         Console.Write("再次輸入密碼：");
         var confirmation = ReadPassword();
-        if (password.Length < 12 || password != confirmation)
-            throw new InvalidOperationException("密碼須至少 12 字元，且兩次輸入相同。");
+        if (password.Length < 12 || password != confirmation) throw new InvalidOperationException("密碼須至少 12 字元，且兩次輸入相同。");
         var role = await db.Roles.SingleAsync(x => x.RoleCode == "Admin" && x.IsActive);
         var user = new User { Account = account.Trim(), DisplayName = account.Trim(), IsActive = true };
         user.PasswordHash = new PasswordHasher<User>().HashPassword(user, password);
@@ -26,6 +23,22 @@ public static class AdminAccountSetup
         Console.WriteLine("管理員已建立，請至 /Account/Login 登入。");
     }
 
+    public static async Task ResetPasswordAsync(AppDbContext db, string account)
+    {
+        var user = await db.Users.SingleOrDefaultAsync( u => u.Account == account.Trim());
+        if (user is null) throw new InvalidOperationException("找不到此帳號。");
+        Console.WriteLine($"即將重設帳號：{user.Account}");
+        Console.Write("請輸入新密碼（12～200 字元，不會顯示）：");
+        var password = ReadPassword();
+        Console.Write("再次輸入新密碼：");
+        var confirmation = ReadPassword();
+        if (password.Length is < 12 or > 200 || password != confirmation)
+            throw new InvalidOperationException("密碼須為 12～200 字元，且兩次輸入相同。");
+        user.PasswordHash = new PasswordHasher<User>().HashPassword(user, password);
+        user.UpdatedAtUtc = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        Console.WriteLine($"帳號 {user.Account} 密碼已重設，帳號啟用狀態未變更。");
+    }
     private static string ReadPassword()
     {
         if (Console.IsInputRedirected) throw new InvalidOperationException("請在互動式終端機執行管理員建立指令。");

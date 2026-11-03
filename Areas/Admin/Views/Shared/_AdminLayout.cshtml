@@ -1,11 +1,12 @@
 @{
     var current = ViewContext.RouteData.Values["controller"]?.ToString();
     if (current == "Attendance") current = "ClassSessions";
+    if (current == "ScheduleSetup") current = "Terms";
     var groups = new[] {
         (Title: "總覽", Items: new[] { ("Dashboard", "儀表板", "home", "Admin") }),
         (Title: "課程與教學", Items: new[] { ("Terms", "學期管理", "calendar", "Admin"), ("Courses", "課程管理", "book", "Admin"), ("ClassSessions", "場次管理", "calendar", "Admin"), ("LeaveMakeup", "請假與補課", "clock", "Admin"), ("TeacherRequests", "老師加開／超收申請", "file", "") }),
-        (Title: "報名與款項", Items: new[] { ("EnrollmentApplications", "待審核報名", "check", "Admin"), ("CourseEnrollments", "正式報名名單", "people", "Admin"), ("Payments", "付款管理", "wallet", "Admin"), ("LessonPlans", "方案管理", "book", "Admin"), ("LessonPasses", "方案購買紀錄", "file", "Admin") }),
-        (Title: "學員與老師", Items: new[] { ("Students", "學生管理", "people", "Admin"), ("Teachers", "老師管理", "user", "Admin"), ("TrialGuests", "體驗生管理", "user", "Admin"), ("PortalTrials", "官網體驗申請", "check", "Admin") })
+        (Title: "報名與款項", Items: new[] { ("EnrollmentApplications", "待審核報名", "check", "Admin"), ("CourseEnrollments", "正式報名管理", "people", "Admin"), ("TrialDesk", "體驗方案與預約", "file", "Admin"), ("Payments", "付款管理", "wallet", "Admin"), ("LessonPlans", "方案管理", "book", "Admin"), ("LessonPasses", "方案購買紀錄", "file", "Admin") }),
+        (Title: "學員與老師", Items: new[] { ("Students", "學生管理", "people", "Admin"), ("Teachers", "老師管理", "user", "Admin") })
     };
 }
 <!DOCTYPE html>
@@ -16,6 +17,8 @@
     <title>@ViewData["Title"]｜Enjoy Space 後台</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/workspace.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/lib/tempus-dominus/tempus-dominus.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/date-time-picker.css" asp-append-version="true" />
 </head>
 <body class="admin-app">
     <a href="#main-content" class="skip-link">跳至主要內容</a>
@@ -31,10 +34,11 @@
                         @foreach (var item in group.Items)
                         {
                             var active = current == item.Item1;
-                            <a class="admin-nav-link @(active ? "active" : "")" asp-area="@item.Item4" asp-controller="@item.Item1" asp-action="Index" aria-current="@(active ? "page" : null)"><partial name="_UiIcon" model="item.Item3" /><span>@item.Item2</span></a>
+                            <a class="admin-nav-link @(active ? "active" : "")" asp-area="@item.Item4" asp-controller="@item.Item1" asp-action="Index" aria-current="@(active ? "page" : null)"><partial name="_UiIcon" model="item.Item3" /><span>@item.Item2</span>@if (item.Item1 == "TrialDesk") { @await Component.InvokeAsync("TrialReviewNotice", new { compact = true }) }</a>
                         }
                     </div>
                 }
+                <a class="admin-nav-link" asp-area="" asp-controller="Classroom" asp-action="Errors"><span>打卡異常紀錄</span></a>
             </nav>
             <div class="sidebar-caption">Enjoy Space · 後台管理系統</div>
         </div>
@@ -54,14 +58,20 @@
             </div>
         </header>
         <main id="main-content" class="admin-main" tabindex="-1">
-            @if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
-            @if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+            @if (ViewData["InlineFeedback"] is not true)
+            {
+                @if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+                @if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+            }
             @RenderBody()
         </main>
         <footer class="admin-footer"><span>Enjoy Space 米亞工作室 · 後台管理系統</span><a asp-area="" asp-controller="Home" asp-action="Index">返回入口首頁</a></footer>
     </div>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
     <script type="module" src="~/js/table-sort.mjs" asp-append-version="true"></script>
+<script src="~/lib/tempus-dominus/popper.min.js" asp-append-version="true"></script>
+    <script src="~/lib/tempus-dominus/tempus-dominus.js" asp-append-version="true"></script>
+    <script type="module" src="~/js/date-time-picker.mjs" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

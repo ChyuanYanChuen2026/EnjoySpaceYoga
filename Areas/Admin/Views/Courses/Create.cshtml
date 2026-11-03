@@ -1,4 +1,4 @@
-﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.CourseCreateViewModel
+@model EnjoySpace.Web.Areas.Admin.ViewModels.CourseCreateViewModel
 
 @{
     ViewData["Title"] = "新增課程";
@@ -59,7 +59,7 @@
                 </div>
                 <div class="col-md-6 mb-3">
                     <label asp-for="TermPrice" class="form-label"></label>
-                    <input asp-for="TermPrice" type="number" min="0" max="99999999.99" step="0.01" class="form-control" />
+                    <input asp-for="TermPrice" asp-format="{0:0.##}" type="number" min="0" max="99999999.99" step="0.01" class="form-control" />
                     <span asp-validation-for="TermPrice" class="text-danger"></span>
                 </div>
             </div>

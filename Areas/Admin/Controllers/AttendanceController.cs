@@ -15,7 +15,7 @@ public class AttendanceController(AttendanceService attendance) : Controller
     public async Task<IActionResult> Index(int sessionId)
     {
         var roster = await attendance.GetRosterAsync(sessionId);
-        return roster is null ? NotFound() : View(roster);
+        return roster is null ? NotFound() : SessionPage(sessionId);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -24,7 +24,7 @@ public class AttendanceController(AttendanceService attendance) : Controller
         if (!ModelState.IsValid)
         {
             TempData["Error"] = "點名資料無效，請重新選擇狀態、確認備註不超過 500 字，再送出。";
-            return RedirectToAction(nameof(Index), new { sessionId = model.SessionId });
+            return SessionPage(model.SessionId);
         }
         if (!long.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var actorId)) return Forbid();
         try
@@ -36,6 +36,9 @@ public class AttendanceController(AttendanceService attendance) : Controller
         catch (DbUpdateConcurrencyException) { TempData["Error"] = "點名紀錄已被其他人修改，請重新確認。"; }
         catch (DbUpdateException) { TempData["Error"] = "名單資料已變更，請重新確認後再操作。"; }
         catch (SqlException e) when (e.Number == 1205) { TempData["Error"] = "其他人正在更新名單，請重新確認後再操作。"; }
-        return RedirectToAction(nameof(Index), new { sessionId = model.SessionId });
+        return SessionPage(model.SessionId);
     }
+
+    private RedirectToActionResult SessionPage(int sessionId) =>
+        RedirectToAction("Details", "ClassSessions", new { area = "Admin", id = sessionId }, "attendance");
 }

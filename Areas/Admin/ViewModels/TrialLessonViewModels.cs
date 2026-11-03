@@ -5,21 +5,6 @@ using EnjoySpace.Web.Models.Entities;
 
 namespace EnjoySpace.Web.Areas.Admin.ViewModels;
 
-public class TrialGuestEditModel
-{
-    public long Id { get; set; }
-    public byte[]? RowVersion { get; set; }
-    [Required, StringLength(100)] public string Name { get; set; } = "";
-    [Required, StringLength(30)] public string Phone { get; set; } = "";
-    [EmailAddress, StringLength(200)] public string? Email { get; set; }
-    [StringLength(100)] public string? LineId { get; set; }
-    [Required] public string SourceType { get; set; } = "Direct";
-    public long? ReferrerStudentId { get; set; }
-    public bool IsActive { get; set; } = true;
-    [StringLength(500)] public string? Note { get; set; }
-    [ValidateNever] public List<SelectListItem> Referrers { get; set; } = [];
-}
-
 public class LessonPlanEditModel
 {
     public long Id { get; set; }

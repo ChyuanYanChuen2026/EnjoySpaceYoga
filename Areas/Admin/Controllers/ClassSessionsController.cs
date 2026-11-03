@@ -26,7 +26,7 @@ public class ClassSessionsController : Controller
 
 
     [HttpGet]
-    public async Task<IActionResult> Details(int id)
+    public async Task<IActionResult> Details(int id, [FromServices] AttendanceService attendance)
     {
         var model = await _classSessionService.GetDetailAsync(id);
 
@@ -34,7 +34,9 @@ public class ClassSessionsController : Controller
         {
             return NotFound();
         }
-        return View(model);
+        var roster = await attendance.GetRosterAsync(id);
+        if (roster is null) return NotFound();
+        return View(new ClassSessionWorkspaceModel { Session = model, Roster = roster });
     }
 
     [HttpGet]
@@ -87,11 +89,9 @@ public class ClassSessionsController : Controller
 
 
     [HttpGet]
-    public async Task<IActionResult> Create()
+    public IActionResult Create()
     {
-        var model = new ClassSessionCreateViewModel();
-        await PopulateOptionsAsync(model);
-        return View(model);
+        return RedirectToAction("Index", "ScheduleSetup");
     }
 
     private async Task PopulateOptionsAsync( ClassSessionCreateViewModel model)

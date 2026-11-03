@@ -7,7 +7,7 @@
 <div class="card card-body mb-3"><dl class="row mb-0">
     <dt class="col-sm-3">購買對象</dt><dd class="col-sm-9">@(Model.TrialGuest?.Name ?? Model.Student?.User.DisplayName)</dd>
     <dt class="col-sm-3">購買時方案</dt><dd class="col-sm-9">@Model.PlanNameAtPurchase · @Model.SessionQuotaAtPurchase 堂</dd>
-    <dt class="col-sm-3">應收金額</dt><dd class="col-sm-9">$@Model.AmountAtPurchase.ToString("N2")</dd>
+    <dt class="col-sm-3">應收金額</dt><dd class="col-sm-9">$@Model.AmountAtPurchase.ToString("N0")</dd>
     <dt class="col-sm-3">效期</dt><dd class="col-sm-9">@Model.ValidFromDate.ToString("yyyy/MM/dd") ～ @(Model.ValidUntilDate?.ToString("yyyy/MM/dd") ?? "不限期")（含起訖日）</dd>
     <dt class="col-sm-3">付款</dt><dd class="col-sm-9">@WorkflowLabels.Payment(Model.Payment.Status)</dd>
     <dt class="col-sm-3">堂券狀態</dt><dd class="col-sm-9">@(Model.Status == "Pending" ? "待付款，尚未啟用" : Model.Status == "Cancelled" ? "已取消" : Model.ValidUntilDate < today ? "已過期" : Model.ValidFromDate > today ? "已啟用，尚未到生效日" : "已啟用")</dd>
@@ -21,7 +21,7 @@
         <h2 class="h5">確認收款並啟用</h2>
         <input name="Id" type="hidden" value="@Model.LessonPassId" /><input name="RowVersion" type="hidden" value="@Convert.ToBase64String(Model.RowVersion)" />
         <div class="row g-3">
-            <div class="col-md-4"><label for="ReceivedAmount" class="form-label">實收金額</label><input name="ReceivedAmount" id="ReceivedAmount" type="number" min="0" step="0.01" value="@Model.AmountAtPurchase.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control" required /></div>
+            <div class="col-md-4"><label for="ReceivedAmount" class="form-label">實收金額</label><input name="ReceivedAmount" id="ReceivedAmount" type="number" min="0" step="0.01" value="@Model.AmountAtPurchase.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" required /></div>
             <div class="col-md-4"><label for="Method" class="form-label">付款方式</label><select name="Method" id="Method" class="form-select"><option value="Cash">現金</option><option value="Transfer">轉帳</option><option value="LinePay">Line Pay</option></select></div>
             <div class="col-md-4"><label for="PaidAtTaiwan" class="form-label">付款時間（台灣）</label><input name="PaidAtTaiwan" id="PaidAtTaiwan" type="datetime-local" value="@ViewData["PaidAtTaiwan"]" class="form-control" required /></div>
             <div><label for="PaymentNote" class="form-label">收款備註</label><input name="Note" id="PaymentNote" maxlength="500" class="form-control" /></div>

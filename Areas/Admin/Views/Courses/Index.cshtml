@@ -20,7 +20,7 @@
 }
 
 <div class="mb-3">
-    <a asp-area="Admin"  asp-controller="Courses" asp-action="Create"  class="btn btn-primary"> 新增課程</a>
+    <a asp-area="Admin" asp-controller="ScheduleSetup" asp-action="Index" asp-route-termId="@Model.Controls.Filter.TermId" class="btn btn-primary">新增課程（步驟設定）</a>
 </div>
 
 <partial name="_CatalogFilters" model="Model.Controls" />
@@ -52,7 +52,7 @@
                                 <td>@course.Term.Name</td>
                                 <td>@course.Name</td>
                                 <td>@course.DefaultCapacity</td>
-                                <td class="text-nowrap">NT$ @course.TermPrice.ToString("N2")</td>
+                                <td class="text-nowrap">NT$ @course.TermPrice.ToString("N0")</td>
                                 <td class="text-nowrap">@(course.IsActive ? "啟用" : "停用")／@(course.IsPubliclyVisible ? "公開" : "不公開")</td>
                                 <td class="text-nowrap">@course.Term.StartDate.ToString("yyyy/MM/dd")～@course.Term.EndDate.ToString("yyyy/MM/dd")</td>
                                 <td class="text-nowrap">

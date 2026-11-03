@@ -9,7 +9,7 @@
         <div class="col-md-6"><label asp-for="PlanName" class="form-label">方案名稱</label><input asp-for="PlanName" class="form-control" maxlength="100" required /></div>
         <div class="col-md-6"><label asp-for="PlanType" class="form-label">方案類型／購買對象</label><select asp-for="PlanType" class="form-select"><option value="Trial">體驗方案（體驗生）</option><option value="Flexible">堂券方案（正式學生）</option></select></div>
         <div class="col-md-3"><label asp-for="SessionQuota" class="form-label">堂數</label><input asp-for="SessionQuota" type="number" min="1" max="32767" class="form-control" required /></div>
-        <div class="col-md-3"><label asp-for="Price" class="form-label">價格（元）</label><input asp-for="Price" type="number" step="0.01" min="0" max="99999999.99" class="form-control" required /></div>
+        <div class="col-md-3"><label asp-for="Price" class="form-label">價格（元）</label><input asp-for="Price" asp-format="{0:0.##}" type="number" step="0.01" min="0" max="99999999.99" class="form-control" required /></div>
         <div class="col-md-6"><label asp-for="ValidityUnit" class="form-label">效期類型</label><select asp-for="ValidityUnit" class="form-select"><option value="Days">指定天數（含生效日）</option><option value="Months">日曆月份（至到期對應日前一天）</option><option value="Unlimited">不限期</option></select></div>
         <div class="col-md-6"><label asp-for="ValidityValue" class="form-label">有效天數／月數（不限期時不使用）</label><input asp-for="ValidityValue" type="number" min="1" max="32767" class="form-control" /></div>
         <div class="form-check ms-2"><input asp-for="IsActive" class="form-check-input" /><label asp-for="IsActive" class="form-check-label">啟用，可供購買</label></div>

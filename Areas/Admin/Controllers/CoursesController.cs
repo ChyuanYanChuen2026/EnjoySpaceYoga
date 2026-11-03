@@ -77,16 +77,9 @@ public class CoursesController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Create()
+    public IActionResult Create()
     {
-        var model = new CourseCreateViewModel
-        {
-            TermOptions = await GetDraftTermOptionsAsync(),
-            ClassCategoryOptions = await GetClassCategoryOptionsAsync(),
-            TeacherOptions = await GetTeacherOptionsAsync(),
-            LocationOptions = await GetLocationOptionsAsync(),
-        };
-        return View(model);
+        return RedirectToAction("Index", "ScheduleSetup");
     }
 
     [HttpGet]

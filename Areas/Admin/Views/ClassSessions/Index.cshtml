@@ -8,8 +8,12 @@
 <div class="mb-4">
     <h1 class="h3 mb-2">場次管理</h1>
     <p class="text-secondary mb-0">
-        實際上課場次，時間皆以台灣時間顯示。
+        實際上課場次，時間皆以台灣時間顯示。點選課程名稱查看場次與出缺席。
     </p>
+    @if (Model.Controls.Filter.Sort == "recent")
+    {
+        <p class="small text-secondary mt-2 mb-0">今天與接下來的場次由近到遠排列；歷史場次排在後面，由新到舊排列。</p>
+    }
 </div>
 
 @if (TempData["SuccessMessage"] is string message)
@@ -20,7 +24,7 @@
 }
 
 <div class="mb-3">
-    <a asp-area="Admin"  asp-controller="ClassSessions" asp-action="Create" class="btn btn-primary">新增場次</a>
+    <a asp-area="Admin" asp-controller="ScheduleSetup" asp-action="Index" asp-route-termId="@Model.Controls.Filter.TermId" class="btn btn-primary">新增場次（步驟設定）</a>
 </div>
 
 <partial name="_CatalogFilters" model="Model.Controls" />
@@ -42,26 +46,23 @@
                             <th sort-key="date" scope="col">開始時間</th>
                             <th sort-key="end" scope="col">結束時間</th>
                             <th sort-key="capacity" scope="col">名額上限</th>
-                            <th scope="col">操作</th>
+                            <th scope="col">課堂簽到</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var session in Model.Items)
                         {
                             <tr>
-                                <td>@session.CourseName</td>
+                                <td><a asp-area="Admin" asp-controller="ClassSessions" asp-action="Details" asp-route-id="@session.Id">@session.CourseName</a></td>
                                 <td>@session.TeacherName</td>
                                 <td>@session.LocationName</td>
                                 <td>@session.StartsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm")</td>
                                 <td>@session.EndsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm")</td>
                                 <td>@session.EffectiveCapacity</td>
                                 <td>
-                                    <a asp-area="Admin" asp-controller="ClassSessions" asp-action="Details" asp-route-id="@session.Id" class="btn btn-sm btn-outline-primary">詳細</a>
-                                    <a asp-area="Admin" asp-controller="Attendance" asp-action="Index" asp-route-sessionId="@session.Id" class="btn btn-sm btn-outline-primary">名單／點名</a>
-                                    @if (session.CanDelete)
-                                    {
-                                        <a asp-action="Delete" asp-route-id="@session.Id" class="btn btn-sm btn-outline-danger">刪除</a>
-                                    }
+                                    <a asp-area="" asp-controller="Classroom" asp-action="Index" asp-route-sessionId="@session.Id"
+                                       class="btn btn-sm btn-outline-primary text-nowrap"
+                                       aria-label="@(session.CourseName + " " + session.StartsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm") + " 的 QR Code 與即時點名")">QR Code／點名</a>
                                 </td>
                             </tr>
                         }

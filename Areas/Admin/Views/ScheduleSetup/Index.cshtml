@@ -1,0 +1,276 @@
+@model EnjoySpace.Web.Areas.Admin.ViewModels.ScheduleSetupViewModel
+@{
+    ViewData["Title"] = "新增學期課程設定";
+    var names = new[] { "學期設定", "課程設定", "場次設定", "整期核對" };
+}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div><h1 class="h3">新增學期課程設定</h1><p class="text-secondary mb-0">每一步檢核後儲存草稿。一門課排完場次後，再新增下一門課。</p></div>
+    <a asp-controller="Terms" asp-action="Index" class="btn btn-outline-secondary">返回學期列表</a>
+</div>
+<ol class="setup-steps" aria-label="設定進度">
+    @for (var i = 1; i <= names.Length; i++)
+    {
+        <li class="@(Model.Step == i ? "is-current" : "")" aria-current="@(Model.Step == i ? "step" : null)"><span>@i</span>@names[i - 1]</li>
+    }
+</ol>
+@if (Model.TermId > 0)
+{
+    <div class="alert alert-light border">@Model.Term.Name · @Model.Term.StartDate?.ToString("yyyy/MM/dd") ～ @Model.Term.EndDate?.ToString("yyyy/MM/dd") <span class="badge bg-secondary">草稿</span><br />已儲存的內容可從學期列表「繼續設定」開啟。草稿不會公開，也不會開放報名。</div>
+}
+<div asp-validation-summary="All" class="text-danger mb-3" role="alert"></div>
+@if (!ViewData.ModelState.IsValid)
+{
+    <p><a asp-action="Index" asp-route-termId="@Model.TermId" asp-route-courseId="@Model.CourseId" asp-route-step="@Model.Step">重新載入此步驟</a>（未儲存的輸入將清除）</p>
+}
+@if (Model.Step == 1)
+{
+    @if (Model.TermId == 0 && Model.DraftTerms.Count > 0)
+    {
+        <form method="get" asp-action="Index" class="card card-body mb-3">
+            <label for="resume-term" class="form-label">繼續已有的草稿</label>
+            <div class="d-flex flex-wrap gap-2"><select id="resume-term" name="termId" class="form-select" required>
+                <option value="">請選擇草稿學期</option>
+                @foreach (var draft in Model.DraftTerms) { <option value="@draft.TermId">@draft.Name（@draft.StartDate.ToString("yyyy/MM/dd")）</option> }
+            </select><button class="btn btn-outline-primary">繼續設定</button></div>
+        </form>
+    }
+    <section class="card card-body">
+        <h2 class="h5 mb-3">步驟 1 · 學期設定</h2>
+        @if (Model.TermId == 0)
+        {
+            <p class="text-secondary">新建時預填台灣當天日期與目前時間，請依實際學期與報名期間調整，報名結束時間須晚於開始時間。</p>
+        }
+        <form method="post" asp-action="SaveTerm" data-setup-form>
+            <input type="hidden" name="termId" value="@Model.TermId" />
+            @if (Model.TermId > 0) { <input type="hidden" name="rowVersion" value="@Convert.ToBase64String(Model.RowVersion)" /> }
+            <div class="row g-3">
+                <div class="col-12">
+                    <label asp-for="Term.Name" class="form-label"></label>
+                    <input asp-for="Term.Name" class="form-control" />
+                    <span asp-validation-for="Term.Name" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="Term.StartDate" class="form-label"></label>
+                    <input asp-for="Term.StartDate" type="date" class="form-control" />
+                    <span asp-validation-for="Term.StartDate" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="Term.EndDate" class="form-label"></label>
+                    <input asp-for="Term.EndDate" type="date" class="form-control" />
+                    <span asp-validation-for="Term.EndDate" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="Term.RegistrationStartAtTaiwan" class="form-label"></label>
+                    <input asp-for="Term.RegistrationStartAtTaiwan" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
+                    <span asp-validation-for="Term.RegistrationStartAtTaiwan" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="Term.RegistrationEndAtTaiwan" class="form-label"></label>
+                    <input asp-for="Term.RegistrationEndAtTaiwan" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
+                    <span asp-validation-for="Term.RegistrationEndAtTaiwan" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <p class="text-muted mb-0">
+                        報名時間可以留空；若兩者皆填寫，
+                        結束時間必須晚於開始時間。
+                    </p>
+                </div>
+            </div>
+
+            <button class="btn btn-primary mt-3">檢核並儲存草稿，下一步</button>
+        </form>
+    </section>
+}
+else if (Model.Step == 2)
+{
+    <section class="card card-body">
+        <h2 class="h5 mb-3">步驟 2 · 新增一門課程</h2>
+        <form method="post" asp-action="SaveCourse" data-setup-form>
+            <input type="hidden" name="termId" value="@Model.TermId" />
+            <input type="hidden" name="rowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+            <input asp-for="Course.TermId" type="hidden" />
+            <div class="mb-3">
+                <label asp-for="Course.ClassCategoryId" class="form-label"></label>
+                <select asp-for="Course.ClassCategoryId"  asp-items="Model.Course.ClassCategoryOptions"  class="form-select">
+                    <option value="">請選擇課程分類</option>
+                </select>
+                <span asp-validation-for="Course.ClassCategoryId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Course.DefaultTeacherId" class="form-label"></label>
+                <select asp-for="Course.DefaultTeacherId" asp-items="Model.Course.TeacherOptions"  class="form-select">
+                    <option value="">請選擇預設老師</option>
+                </select>
+                <span asp-validation-for="Course.DefaultTeacherId"  class="text-danger"></span>
+            </div>
+
+             <div class="mb-3">
+                <label asp-for="Course.DefaultLocationId" class="form-label"></label>
+                <select asp-for="Course.DefaultLocationId" asp-items="Model.Course.LocationOptions" class="form-select">
+                    <option value="">請選擇預設地點</option>
+                </select>
+                <span asp-validation-for="Course.DefaultLocationId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Course.Name" class="form-label"></label>
+                <input asp-for="Course.Name" class="form-control" />
+                <span asp-validation-for="Course.Name" class="text-danger"></span>
+            </div>
+
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Course.DefaultCapacity" class="form-label"></label>
+                    <input asp-for="Course.DefaultCapacity" type="number" min="1" max="32767" step="1" class="form-control" />
+                    <span asp-validation-for="Course.DefaultCapacity" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Course.TermPrice" class="form-label"></label>
+                    <input asp-for="Course.TermPrice" asp-format="{0:0.##}" type="number" min="0" max="99999999.99" step="0.01" class="form-control" />
+                    <span asp-validation-for="Course.TermPrice" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="form-check"><input asp-for="Course.IsPubliclyVisible" class="form-check-input" /><label asp-for="Course.IsPubliclyVisible" class="form-check-label"></label></div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="form-check"><input asp-for="Course.AllowsFlexibleBooking" class="form-check-input" /><label asp-for="Course.AllowsFlexibleBooking" class="form-check-label"></label></div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="form-check"><input asp-for="Course.AllowsMakeup" class="form-check-input" /><label asp-for="Course.AllowsMakeup" class="form-check-label"></label></div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="form-check"><input asp-for="Course.IsActive" class="form-check-input" /><label asp-for="Course.IsActive" class="form-check-label"></label></div>
+                </div>
+            </div>
+            <p class="text-secondary">公開顯示的課程仍須等學期離開草稿才會顯示於前台；停用課程不進行場次設定。</p>
+            <div class="d-flex flex-wrap gap-2">
+                <a asp-action="Index" asp-route-termId="@Model.TermId" asp-route-step="1" class="btn btn-outline-secondary">上一步：學期設定</a>
+                <button class="btn btn-primary">檢核並儲存課程，下一步</button>
+                @if (Model.Courses.Count > 0) { <a asp-action="Index" asp-route-termId="@Model.TermId" asp-route-step="4" class="btn btn-outline-primary">查看已儲存課程</a> }
+            </div>
+        </form>
+    </section>
+}
+else if (Model.Step == 3)
+{
+    <section class="card card-body mb-3">
+        <h2 class="h5">步驟 3 · @Model.CourseName 的場次</h2>
+        <p class="text-secondary">每次儲存一個場次，時間以台灣時間為準。名額沿用課程設定：@Model.Capacity 人。</p>
+        <form method="post" asp-action="SaveSession" data-setup-form>
+            <input type="hidden" name="termId" value="@Model.TermId" />
+            <input type="hidden" name="courseId" value="@Model.CourseId" />
+            <input type="hidden" name="rowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+            <input asp-for="Session.CourseId" type="hidden" />
+            <div class="mb-3">
+                <label asp-for="Session.TeacherId" class="form-label"></label>
+                <select asp-for="Session.TeacherId" asp-items="Model.Session.TeacherOptions" class="form-select">
+                    <option value="0">請選擇老師</option>
+                </select>
+                <span asp-validation-for="Session.TeacherId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Session.StudioLocationId" class="form-label"></label>
+                <select asp-for="Session.StudioLocationId" asp-items="Model.Session.LocationOptions" class="form-select">
+                    <option value="0">請選擇地點</option>
+                </select>
+                <span asp-validation-for="Session.StudioLocationId"  class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Session.StartsAt" class="form-label"></label>
+                    <input asp-for="Session.StartsAt" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
+                    <span asp-validation-for="Session.StartsAt" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Session.EndsAt" class="form-label"></label>
+                    <input asp-for="Session.EndsAt"  type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
+                    <span asp-validation-for="Session.EndsAt"  class="text-danger"></span>
+                </div>
+            </div>
+
+            <button class="btn btn-primary">檢核並儲存此場次</button>
+        </form>
+    </section>
+}
+@if (Model.Step is 3 or 4)
+{
+    @if (Model.Step == 4)
+    {
+        <section class="card card-body mb-3">
+            <h2 class="h5">步驟 4 · 整期課程核對</h2>
+            <p class="text-secondary">請核對每門課的完整堂數。系統可檢查場次是否存在與時段衝突，但無法替您判斷預定堂數是否已排完。</p>
+            <div class="table-responsive"><table class="table align-middle" data-sort-local>
+                <thead><tr><th>課程</th><th>狀態</th><th>已排場次</th><th>操作</th></tr></thead>
+                <tbody>@foreach (var item in Model.Courses)
+                {
+                    <tr><td>@item.Name</td><td>@(item.IsActive ? "啟用" : "停用")</td><td>@item.SessionCount</td><td>
+                        @if (item.IsActive) { <a asp-action="Index" asp-route-termId="@Model.TermId" asp-route-courseId="@item.CourseId" asp-route-step="3" class="btn btn-sm btn-outline-primary">繼續排場次</a> }
+                        <a asp-controller="Courses" asp-action="Edit" asp-route-id="@item.CourseId" class="btn btn-sm btn-outline-secondary">編輯課程</a>
+                    </td></tr>
+                }</tbody>
+            </table></div>
+        </section>
+    }
+    <section class="card card-body mb-3">
+        <h2 class="h5">已儲存場次（@Model.Sessions.Count 堂）</h2>
+        @if (Model.Sessions.Count == 0) { <p class="text-secondary">尚無場次，請先儲存至少一個場次才能進入下一步。</p> }
+        else
+        {
+            <div class="table-responsive"><table class="table align-middle" data-sort-local>
+                <thead><tr><th>課程</th><th>開始時間（台灣）</th><th>結束時間（台灣）</th><th>老師</th><th>教室</th><th>名額</th><th>操作</th></tr></thead>
+                <tbody>@foreach (var item in Model.Sessions)
+                {
+                    <tr><td>@item.CourseName</td><td>@item.StartsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")</td><td>@item.EndsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")</td><td>@item.TeacherName</td><td>@item.LocationName</td><td>@item.EffectiveCapacity</td><td><a asp-controller="ClassSessions" asp-action="Details" asp-route-id="@item.Id">查看</a> · <a asp-controller="ClassSessions" asp-action="Delete" asp-route-id="@item.Id">刪除確認</a></td></tr>
+                }</tbody>
+            </table></div>
+        }
+    </section>
+}
+@if (Model.Step == 3)
+{
+    <form method="post" asp-action="NextCourse" class="card card-body" data-setup-form>
+        <input type="hidden" name="termId" value="@Model.TermId" />
+        <input type="hidden" name="courseId" value="@Model.CourseId" />
+        <input type="hidden" name="rowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+        <p>確認本課所有場次都已按上方按鈕儲存後，再選擇下一步。</p>
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-controller="Courses" asp-action="Edit" asp-route-id="@Model.CourseId" class="btn btn-outline-secondary">編輯本課資料</a>
+            <button name="next" value="course" class="btn btn-outline-primary" disabled="@(Model.Sessions.Count == 0)">本課場次已排完，新增下一門課</button>
+            <button name="next" value="review" class="btn btn-primary" disabled="@(Model.Sessions.Count == 0)">本課場次已排完，整期核對</button>
+        </div>
+    </form>
+}
+@if (Model.Step == 4)
+{
+    <section class="card card-body">
+        @if (Model.Issues.Count > 0) { <div class="alert alert-warning"><strong>尚待完成</strong><ul class="mb-0">@foreach (var issue in Model.Issues) { <li>@issue</li> }</ul></div> }
+        <form method="post" asp-action="Complete" data-setup-form>
+            <input type="hidden" name="termId" value="@Model.TermId" />
+            <input type="hidden" name="rowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+            <div class="form-check mb-3"><input id="confirm-schedule" type="checkbox" name="confirmSchedule" value="true" class="form-check-input" required /><label for="confirm-schedule" class="form-check-label">我已核對每門啟用課程的完整堂數與上課時間</label></div>
+            <div class="d-flex flex-wrap gap-2">
+                <a asp-action="Index" asp-route-termId="@Model.TermId" asp-route-step="2" class="btn btn-outline-primary">新增下一門課</a>
+                <a asp-controller="Terms" asp-action="Index" class="btn btn-outline-secondary">保留草稿並離開</a>
+                <button class="btn btn-primary" disabled="@(Model.Issues.Count > 0)">檢核完成，前往開放報名確認</button>
+            </div>
+            <p class="text-secondary mt-2 mb-0">目前仍保留草稿。下一頁需明確選擇「開放報名」並確認儲存後才生效。</p>
+        </form>
+    </section>
+}
+@section Scripts {
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/schedule-setup.js" asp-append-version="true"></script>
+}

@@ -1,19 +1,9 @@
 @model EnjoySpace.Web.Areas.Admin.ViewModels.AttendanceRosterViewModel
 @using EnjoySpace.Web.Areas.Admin.ViewModels
 @{
-    ViewData["Title"] = "課堂名單與出缺席";
-    var taiwan = TimeSpan.FromHours(8);
     var active = Model.Participants.Where(x => x.IsActive).ToList();
 }
 
-<h1 class="h3 mb-3">課堂名單與出缺席</h1>
-<div class="card shadow-sm mb-3">
-    <div class="card-body">
-        <h2 class="h5">@Model.CourseName</h2>
-        <p class="mb-1">@Model.TeacherName · @Model.LocationName</p>
-        <p class="mb-0">@Model.StartsAt.ToOffset(taiwan).ToString("yyyy/MM/dd HH:mm") ～ @Model.EndsAt.ToOffset(taiwan).ToString("HH:mm")（台灣時間）</p>
-    </div>
-</div>
 @if (TempData["Success"] is string success)
 {
     <div class="alert alert-success" role="status">@success</div>
@@ -22,7 +12,7 @@
 {
     <div class="alert alert-danger" role="alert">@error</div>
 }
-<p>有效名單 @active.Count 人：未點名 @active.Count(x => x.Status == "Scheduled")、出席 @active.Count(x => x.Status == "Present")、遲到 @active.Count(x => x.Status == "Late")、缺席 @active.Count(x => x.Status == "Absent")。</p>
+<p id="attendance-live" data-session="@Model.SessionId" role="status">有效名單 @active.Count 人：未點名 @active.Count(x => x.Status == "Scheduled")、出席 @active.Count(x => x.Status == "Present")、遲到 @active.Count(x => x.Status == "Late")、缺席 @active.Count(x => x.Status == "Absent")。</p>
 @if (!Model.HasStarted)
 {
     <div class="alert alert-info">課堂尚未開始，可以查看名單；開始後才能登記出缺席。</div>
@@ -38,12 +28,12 @@
         <div class="card-body">
             <h2 class="h6">@row.StudentName <span class="text-secondary">@(row.StudentNo ?? "未設定學號")</span>
                 <span class="badge bg-secondary">@AttendanceStatuses.Labels.GetValueOrDefault(row.Status, row.Status)</span>
-                <span class="badge bg-light text-dark">@(row.ParticipationType == "Makeup" ? "補課" : "固定期課")</span>
+                <span class="badge bg-light text-dark">@(row.ParticipationType switch { "Regular" => "固定期課", "Makeup" => "補課", "Trial" => "體驗", "Flexible" => "自由預約", _ => row.ParticipationType })</span>
                 @if (!row.IsActive) { <span class="badge bg-warning text-dark">@(row.ParticipantStatus == "OnLeave" ? "請假中" : "非有效名單")</span> }
             </h2>
             @if (!Model.HasStarted && row.IsActive && row.ParticipationType == "Regular")
             {
-                <a asp-controller="LeaveMakeup" asp-action="Leave" asp-route-participantId="@row.ParticipantId" class="btn btn-sm btn-outline-primary mb-2">登記請假</a>
+                <a asp-controller="LeaveMakeup" asp-action="Leave" asp-route-participantId="@row.ParticipantId" asp-route-returnToSession="true" class="btn btn-sm btn-outline-primary mb-2">登記請假</a>
             }
             @if (row.ParticipantStatus == "OnLeave" || row.ParticipationType == "Makeup")
             {
@@ -79,4 +69,3 @@
         </div>
     </div>
 }
-<a asp-area="Admin" asp-controller="ClassSessions" asp-action="Details" asp-route-id="@Model.SessionId" class="btn btn-outline-secondary">返回場次詳細</a>

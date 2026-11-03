@@ -20,12 +20,12 @@ namespace EnjoySpace.Web.Controllers;
 public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimeProvider clock, PortalCatalogService catalog) : ControllerBase
 {
     private long Actor => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-    private IQueryable<ClassSession> PublicSessions => catalog.Sessions.AsNoTracking();
+    private IQueryable<ClassSession> PublicSessions => catalog.Sessions.AsNoTracking().Where(x => !x.IsCancelled);
 
     [HttpGet("csrf")]
     public IActionResult Csrf() => Ok(new { token = antiforgery.GetAndStoreTokens(HttpContext).RequestToken });
 
-    [HttpPost("login"), EnableRateLimiting("login")]
+    [HttpPost("login"), EnableRateLimiting("login"), PortalFormValidation]
     public async Task<IActionResult> Login(LoginInput input)
     {
         var user = await db.Users.SingleOrDefaultAsync(x => x.Account == input.Account.Trim() && x.IsActive);
@@ -46,7 +46,7 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         return Ok(new { user.DisplayName, roles = roles.Intersect(PortalAuthentication.Roles) });
     }
 
-    [HttpPost("register"), EnableRateLimiting("login")]
+    [HttpPost("register"), EnableRateLimiting("login"), PortalFormValidation]
     public async Task<IActionResult> Register(RegisterInput input)
     {
         if (input.Password.Length < 10 || input.Password != input.ConfirmPassword) return BadRequest(new { message = "密碼須至少 10 字，且兩次輸入相同。" });
@@ -117,7 +117,7 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
     public async Task<IActionResult> Dashboard()
     {
         var now = clock.GetUtcNow();
-        var sessions = db.ClassSessions.AsNoTracking().Where(x => x.StartsAt >= now &&
+        var sessions = db.ClassSessions.AsNoTracking().Where(x => !x.IsCancelled && x.StartsAt >= now &&
             ((User.IsInRole("Teacher") && x.Teacher.UserId == Actor && x.Teacher.IsActive) ||
             catalog.Participants.Any(p => p.ClassSessionId == x.Id && p.Student.UserId == Actor && p.Student.IsActive)));
         return Ok(new
@@ -136,11 +136,16 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         });
     }
 
-    [HttpPost("trial-requests"), Authorize(AuthenticationSchemes = PortalAuthentication.Scheme, Roles = "Student,TrialGuest"), EnableRateLimiting("portal-trial")]
+    [HttpPost("trial-requests"), Authorize(AuthenticationSchemes = PortalAuthentication.Scheme, Roles = "Student"), EnableRateLimiting("portal-trial"), PortalFormValidation]
     public async Task<IActionResult> Apply(TrialInput input)
     {
         if (input.SubmissionKey == Guid.Empty) return BadRequest(new { message = "申請識別碼無效。" });
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        // Membership is required even on a replay; a TrialGuest record alone is not a student account.
+        // Being a student member does not establish prior successful enrollment or trial eligibility.
+        if (!await db.Students.AnyAsync(x => x.UserId == Actor && x.IsActive && x.User.IsActive
+            && db.UserRoles.Any(r => r.UserId == x.UserId && r.Role.IsActive && r.Role.RoleCode == "Student")))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "體驗申請須使用有效的學生會員帳號；若已有體驗帳號，請聯繫工作室確認學生會員資格。" });
         var existing = await db.PortalTrialRequests.SingleOrDefaultAsync(x => x.SubmissionKey == input.SubmissionKey);
         if (existing != null) return existing.UserId == Actor ? Ok(new { existing.Id }) : Conflict();
         var session = await PublicSessions.SingleOrDefaultAsync(x => x.Id == input.SessionId && x.StartsAt > clock.GetUtcNow());
@@ -161,7 +166,9 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         var guestId = await db.PortalTrialRequests.Where(x => x.UserId == Actor && x.TrialGuest.Status == "Active" && x.TrialGuest.ConvertedStudentId == null)
             .Select(x => (long?)x.TrialGuestId).FirstOrDefaultAsync();
         var request = new PortalTrialRequest { SubmissionKey = input.SubmissionKey, UserId = Actor, ClassSessionId = session.Id,
-            LessonPlanId = plan.LessonPlanId, PlanName = plan.PlanName, QuotedPrice = plan.Price, Note = input.Note?.Trim(), ReferrerName = referrerName, CreatedAtUtc = clock.GetUtcNow().UtcDateTime };
+            LessonPlanId = plan.LessonPlanId, PlanName = plan.PlanName, QuotedPrice = plan.Price,
+            QuotedQuota = plan.SessionQuota, QuotedValidityUnit = plan.ValidityUnit, QuotedValidityValue = plan.ValidityValue, RequiresReferrerAtRequest = plan.RequiresReferrer,
+            Note = input.Note?.Trim(), ReferrerName = referrerName, CreatedAtUtc = clock.GetUtcNow().UtcDateTime };
         if (guestId.HasValue)
         {
             var ownedGuest = await db.TrialGuests.SingleAsync(x => x.TrialGuestId == guestId.Value);
@@ -178,25 +185,39 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
 
 public class LoginInput
 {
-    [Required, StringLength(100)] public string Account { get; set; } = "";
-    [Required, StringLength(200)] public string Password { get; set; } = "";
+    [Required(ErrorMessage = "請輸入帳號。"), StringLength(100, ErrorMessage = "帳號最多 100 字。")]
+    public string Account { get; set; } = "";
+    [Required(ErrorMessage = "請輸入密碼。"), StringLength(200, ErrorMessage = "密碼最多 200 字。")]
+    public string Password { get; set; } = "";
 }
 public class RegisterInput : LoginInput
 {
-    [Required, StringLength(100)] public string Name { get; set; } = "";
-    [Required, EmailAddress, StringLength(200)] public string Email { get; set; } = "";
-    [Required, Phone, StringLength(30)] public string Phone { get; set; } = "";
-    [Required, MinLength(10), StringLength(200)] public string ConfirmPassword { get; set; } = "";
+    [Required(ErrorMessage = "請輸入姓名。"), StringLength(100, ErrorMessage = "姓名最多 100 字。")]
+    public string Name { get; set; } = "";
+    [Required(ErrorMessage = "請輸入電子郵件。"), EmailAddress(ErrorMessage = "請輸入有效的電子郵件地址。"), StringLength(200, ErrorMessage = "電子郵件最多 200 字。")]
+    public string Email { get; set; } = "";
+    [Required(ErrorMessage = "請輸入電話。"), Phone(ErrorMessage = "請輸入有效的電話號碼。"), StringLength(30, ErrorMessage = "電話最多 30 字。")]
+    public string Phone { get; set; } = "";
+    [Required(ErrorMessage = "請再次輸入密碼。"), MinLength(10, ErrorMessage = "確認密碼至少須有 10 字。"), StringLength(200, ErrorMessage = "確認密碼最多 200 字。")]
+    public string ConfirmPassword { get; set; } = "";
 }
 public class TrialInput
 {
     public Guid SubmissionKey { get; set; }
-    [Range(1, int.MaxValue)] public int SessionId { get; set; }
-    [Range(1, long.MaxValue)] public long PlanId { get; set; }
-    [Required, StringLength(100)] public string Name { get; set; } = "";
-    [Required, Phone, StringLength(30)] public string Phone { get; set; } = "";
-    [Required, EmailAddress, StringLength(200)] public string Email { get; set; } = "";
-    [StringLength(100)] public string? LineId { get; set; }
-    [StringLength(300)] public string? Note { get; set; }
-    [StringLength(100)] public string? ReferrerName { get; set; }
+    [Range(1, int.MaxValue, ErrorMessage = "請選擇有效的體驗場次。")]
+    public int SessionId { get; set; }
+    [Range(1, long.MaxValue, ErrorMessage = "請選擇有效的體驗方案。")]
+    public long PlanId { get; set; }
+    [Required(ErrorMessage = "請輸入姓名。"), StringLength(100, ErrorMessage = "姓名最多 100 字。")]
+    public string Name { get; set; } = "";
+    [Required(ErrorMessage = "請輸入電話。"), Phone(ErrorMessage = "請輸入有效的電話號碼。"), StringLength(30, ErrorMessage = "電話最多 30 字。")]
+    public string Phone { get; set; } = "";
+    [Required(ErrorMessage = "請輸入電子郵件。"), EmailAddress(ErrorMessage = "請輸入有效的電子郵件地址。"), StringLength(200, ErrorMessage = "電子郵件最多 200 字。")]
+    public string Email { get; set; } = "";
+    [StringLength(100, ErrorMessage = "通訊帳號（LINE）最多 100 字。")]
+    public string? LineId { get; set; }
+    [StringLength(300, ErrorMessage = "備註最多 300 字。")]
+    public string? Note { get; set; }
+    [StringLength(100, ErrorMessage = "介紹人姓名最多 100 字。")]
+    public string? ReferrerName { get; set; }
 }

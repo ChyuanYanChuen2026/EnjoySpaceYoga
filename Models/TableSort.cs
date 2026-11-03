@@ -13,6 +13,12 @@ public interface ITableSort
 public sealed class TableSort<T>(string defaultSort, Expression<Func<T, object?>> identity) : ITableSort
 {
     private readonly Dictionary<string, (string Label, LambdaExpression Expression, Expression<Func<T, object?>>[] Secondary)> columns = new();
+    private readonly Dictionary<string, (string Label, Func<IQueryable<T>, IOrderedQueryable<T>> Apply)> presets = new();
+    public TableSort<T> Preset(string key, string label, Func<IQueryable<T>, IOrderedQueryable<T>> apply)
+    {
+        presets.Add(key, (label, apply));
+        return this;
+    }
     public TableSort<T> Column<TKey>(string key, string label, Expression<Func<T, TKey>> expression, params Expression<Func<T, object?>>[] secondary)
     {
         columns.Add(key, (label, expression, secondary));
@@ -21,17 +27,20 @@ public sealed class TableSort<T>(string defaultSort, Expression<Func<T, object?>
     public string Normalize(string? sort)
     {
         if (sort is null) return defaultSort;
+        if (presets.ContainsKey(sort)) return sort;
         var split = sort.LastIndexOf('_');
         return split > 0 && columns.ContainsKey(sort[..split]) && sort[(split + 1)..] is "asc" or "desc" ? sort : defaultSort;
     }
     public string Label(string key) => columns[key].Label;
-    public List<SelectListItem> Options() => columns.SelectMany(c => new[] {
+    public List<SelectListItem> Options() => presets.Select(p => new SelectListItem(p.Value.Label, p.Key)).Concat(columns.SelectMany(c => new[] {
         new SelectListItem(c.Value.Label + "：升冪", c.Key + "_asc"),
-        new SelectListItem(c.Value.Label + "：降冪", c.Key + "_desc") }).ToList();
+        new SelectListItem(c.Value.Label + "：降冪", c.Key + "_desc") })).ToList();
 
     public IOrderedQueryable<T> Apply(IQueryable<T> query, string? sort)
     {
         var normalized = Normalize(sort);
+        if (presets.TryGetValue(normalized, out var preset))
+            return Order(preset.Apply(query), Unbox(identity), "ThenBy");
         var split = normalized.LastIndexOf('_');
         var column = columns[normalized[..split]];
         var descending = normalized.EndsWith("_desc");

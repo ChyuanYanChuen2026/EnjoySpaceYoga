@@ -40,6 +40,8 @@ public class MakeupCreateModel
     [Range(1, int.MaxValue, ErrorMessage = "請選擇補課場次。")] public int TargetSessionId { get; set; }
     [ValidateNever] public string StudentName { get; set; } = "";
     [ValidateNever] public string SourceDescription { get; set; } = "";
+    [ValidateNever] public DateOnly PeriodStart { get; set; }
+    [ValidateNever] public DateOnly PeriodEnd { get; set; }
     [ValidateNever] public List<SelectListItem> Targets { get; set; } = [];
 }
 

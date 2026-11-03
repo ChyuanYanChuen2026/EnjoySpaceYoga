@@ -8,7 +8,7 @@
 <div class="card card-body mb-3">
     <p><strong>學生：</strong>@Model.StudentName（@Model.StudentAccount）</p>
     <p><strong>學期／課程：</strong>@Model.TermName · @Model.CourseName</p>
-    <p><strong>整期堂數：</strong>@Model.Sessions.Count 堂　<strong>整期金額：</strong>NT$ @Model.Amount.ToString("N2")</p>
+    <p><strong>整期堂數：</strong>@Model.Sessions.Count 堂　<strong>整期金額：</strong>NT$ @Model.Amount.ToString("N0")</p>
     <div class="table-responsive">
         <table class="table" data-sort-local>
             <thead><tr><th data-sort-type="number">開始時間（台灣）</th><th data-sort-type="number">結束時間（台灣）</th><th data-sort-type="text">老師</th><th data-sort-type="text">地點</th></tr></thead>

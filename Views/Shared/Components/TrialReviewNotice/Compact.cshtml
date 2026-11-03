@@ -1,0 +1,5 @@
+@model EnjoySpace.Web.Services.TrialReviewSummary
+@if (Model.Total > 0)
+{
+    <span class="trial-review-badge ms-auto" title="方案 @Model.Plans 筆、逐堂預約 @Model.Bookings 筆待審核"><span aria-hidden="true">@Model.Total</span><span class="visually-hidden">體驗待審核共 @Model.Total 筆</span></span>
+}
