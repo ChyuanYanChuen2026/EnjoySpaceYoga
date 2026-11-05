@@ -62,7 +62,7 @@ public class ClassSessionService
             .SingleOrDefaultAsync();
     }
 
-    public async Task<List<ClassSessionListItem>> GetCalendarSessionsAsync( DateTimeOffset start, DateTimeOffset end)
+    public async Task<List<CalendarSessionItem>> GetCalendarSessionsAsync(DateTimeOffset start, DateTimeOffset end)
     {
         if (end <= start)
         {
@@ -76,16 +76,10 @@ public class ClassSessionService
                 session.EndsAt > start)
             .OrderBy(session => session.StartsAt)
             .ThenBy(session => session.Id)
-            .Select(session => new ClassSessionListItem
-            {
-                Id = session.Id,
-                CourseName = session.Course.Name,
-                TeacherName = session.Teacher.User!.DisplayName,
-                LocationName = session.StudioLocation.Name,
-                StartsAt = session.StartsAt,
-                EndsAt = session.EndsAt,
-                EffectiveCapacity = session.CapacityOverride ?? session.Capacity
-            }).ToListAsync();
+            .Select(session => new CalendarSessionItem(
+                session.Id, session.CourseId, session.Course.Name, session.Teacher.User!.DisplayName,
+                session.Course.TermId, session.Course.Term.Name, session.StartsAt, session.EndsAt))
+            .ToListAsync();
     }
 
     public async Task<List<Course>> GetCourseOptionsAsync()

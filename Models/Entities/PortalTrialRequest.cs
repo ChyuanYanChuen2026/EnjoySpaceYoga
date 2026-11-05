@@ -10,6 +10,12 @@ public class PortalTrialRequest
     public Guid SubmissionKey { get; set; }
     public long UserId { get; set; }
     public User User { get; set; } = null!;
+    // Immutable submission details. NULL as a group identifies legacy requests without a snapshot.
+    [MaxLength(100)] public string? SubmittedName { get; set; }
+    [MaxLength(30)] public string? SubmittedPhone { get; set; }
+    [MaxLength(200)] public string? SubmittedEmail { get; set; }
+    [MaxLength(100)] public string? SubmittedLineId { get; set; }
+    [MaxLength(100)] public string? SubmittedAccount { get; set; }
     public long TrialGuestId { get; set; }
     public TrialGuest TrialGuest { get; set; } = null!;
     public int ClassSessionId { get; set; }

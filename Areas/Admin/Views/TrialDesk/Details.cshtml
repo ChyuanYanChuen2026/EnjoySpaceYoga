@@ -4,7 +4,22 @@
 @{
     ViewData["Title"] = "體驗申請審核與排課";
     var bookings = (List<TrialBooking>)ViewBag.Bookings;
+    var bookingStatus = (string)ViewBag.BookingStatus;
+    var visibleBookings = bookingStatus switch
+    {
+        "approved" => bookings.Where(b => b.Status == "Approved").ToList(),
+        "cancelled" => bookings.Where(b => b.Status == "Cancelled").ToList(),
+        _ => bookings
+    };
     var taiwan = TimeSpan.FromHours(8);
+    // Check the snapshot as a group: an intentionally blank LINE must never use later guest data.
+    var hasSubmissionSnapshot = Model.SubmittedName != null && Model.SubmittedAccount != null;
+    var applicantName = hasSubmissionSnapshot ? Model.SubmittedName : Model.TrialGuest.Name;
+    var applicantPhone = hasSubmissionSnapshot ? Model.SubmittedPhone : Model.TrialGuest.Phone;
+    var applicantEmail = hasSubmissionSnapshot ? Model.SubmittedEmail : Model.TrialGuest.Email;
+    var applicantLineId = hasSubmissionSnapshot ? Model.SubmittedLineId : Model.TrialGuest.LineId;
+    var applicantAccount = hasSubmissionSnapshot ? Model.SubmittedAccount : Model.User.Account;
+    var submittedAt = new DateTimeOffset(DateTime.SpecifyKind(Model.CreatedAtUtc, DateTimeKind.Utc)).ToOffset(taiwan);
     var status = new Dictionary<string, string> { ["Pending"] = "待審核", ["Contacted"] = "已聯繫，待審核", ["Approved"] = "已核准", ["Rejected"] = "已退回", ["Cancelled"] = "已取消" };
     var needsReview = Model.Status is "Pending" or "Contacted";
     var validityValue = Model.QuotedValidityValue ?? Model.LessonPlan.ValidityValue;
@@ -26,7 +41,24 @@
         <section class="card">
             <div class="card-body">
                 <div class="trial-section-heading"><h2 class="h5 mb-0">申請資訊</h2><span class="trial-status">@status.GetValueOrDefault(Model.Status, Model.Status)</span></div>
-                <h3 class="trial-applicant">@Model.User.DisplayName</h3>
+                @if (hasSubmissionSnapshot)
+                {
+                    <p class="small text-secondary">以下聯絡資料與帳號為前台送出申請時保存的內容。</p>
+                }
+                else
+                {
+                    <p class="alert alert-warning small">此舊申請未保存送出時的聯絡資料與帳號，以下顯示目前關聯資料，可能與當時填寫內容不同。</p>
+                }
+                <h3 class="trial-applicant">@applicantName</h3>
+                <dl class="trial-facts">
+                    <div><dt>申請帳號</dt><dd>@applicantAccount</dd></div>
+                    <div><dt>會員編號</dt><dd>@Model.UserId</dd></div>
+                    <div><dt>聯絡電話</dt><dd>@(string.IsNullOrWhiteSpace(applicantPhone) ? "未填寫" : applicantPhone)</dd></div>
+                    <div><dt>Email</dt><dd>@(string.IsNullOrWhiteSpace(applicantEmail) ? "未填寫" : applicantEmail)</dd></div>
+                    <div><dt>LINE ID</dt><dd>@(string.IsNullOrWhiteSpace(applicantLineId) ? "未填寫" : applicantLineId)</dd></div>
+                    <div><dt>申請時間</dt><dd>@submittedAt.ToString("yyyy/MM/dd HH:mm")（台灣）</dd></div>
+                </dl>
+                <h3 class="h6 border-top pt-3">申請方案與備註</h3>
                 <dl class="trial-facts">
                     <div><dt>體驗方案</dt><dd>@Model.PlanName</dd></div>
                     <div><dt>申請報價</dt><dd class="fw-semibold">NT$ @Model.QuotedPrice.ToString("N0")</dd></div>
@@ -97,12 +129,33 @@
         </div></section>
     }
     <section aria-labelledby="trial-bookings-title">
-        <div class="trial-section-heading"><h2 id="trial-bookings-title" class="h5 mb-0">逐堂預約與審核</h2><span class="small text-secondary">共 @bookings.Count 筆</span></div>
+        <div class="trial-section-heading"><h2 id="trial-bookings-title" class="h5 mb-0">逐堂預約與審核</h2><span class="small text-secondary">顯示 @visibleBookings.Count 筆／共 @bookings.Count 筆</span></div>
+        @if (ViewBag.ShowBookingFilters)
+        {
+            <nav class="nav nav-tabs trial-review-tabs mb-3" aria-label="逐堂預約狀態篩選">
+                <a asp-action="Details" asp-route-id="@Model.Id" asp-route-bookingStatus="all" asp-fragment="trial-bookings-title"
+                   class="nav-link @(bookingStatus == "all" ? "active" : "")" aria-current="@(bookingStatus == "all" ? "page" : null)">
+                    全部 <span class="trial-status ms-1">@bookings.Count</span>
+                </a>
+                <a asp-action="Details" asp-route-id="@Model.Id" asp-route-bookingStatus="approved" asp-fragment="trial-bookings-title"
+                   class="nav-link @(bookingStatus == "approved" ? "active" : "")" aria-current="@(bookingStatus == "approved" ? "page" : null)">
+                    已核准 <span class="trial-status ms-1">@bookings.Count(b => b.Status == "Approved")</span>
+                </a>
+                <a asp-action="Details" asp-route-id="@Model.Id" asp-route-bookingStatus="cancelled" asp-fragment="trial-bookings-title"
+                   class="nav-link @(bookingStatus == "cancelled" ? "active" : "")" aria-current="@(bookingStatus == "cancelled" ? "page" : null)">
+                    已取消 <span class="trial-status ms-1">@bookings.Count(b => b.Status == "Cancelled")</span>
+                </a>
+            </nav>
+        }
         @if (bookings.Count == 0)
         {
             <div class="card"><div class="card-body trial-empty"><p class="fw-semibold mb-1">尚無逐堂預約</p><p class="text-secondary mb-0">方案核准且款項確認後，可在此安排與查看各堂預約。</p></div></div>
         }
-        @foreach (var b in bookings)
+        else if (visibleBookings.Count == 0)
+        {
+            <div class="card"><div class="card-body trial-empty"><p class="fw-semibold mb-1">@(bookingStatus == "approved" ? "目前沒有已核准的預約" : "目前沒有已取消的預約")</p><p class="text-secondary mb-0">切換「全部」可查看其他預約紀錄。</p></div></div>
+        }
+        @foreach (var b in visibleBookings)
         {
             <article class="card mb-3"><div class="card-body">
                 <div class="trial-section-heading"><h3 class="h6 mb-0">預約 #@b.Id</h3><span class="trial-status">@status.GetValueOrDefault(b.Status, b.Status)</span></div>

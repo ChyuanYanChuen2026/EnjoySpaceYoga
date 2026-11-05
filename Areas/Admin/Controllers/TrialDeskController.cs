@@ -28,13 +28,17 @@ public class TrialDeskController(AppDbContext db, TrialBookingService service, T
         model.PendingBookings = await reviews.PendingBookings.Where(x => ids.Contains(x.TrialRequestId))
             .GroupBy(x => x.TrialRequestId).Select(g => new { Id = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.Id, x => x.Count);
+        model.BookingReminders = await service.BookingRemindersAsync(model.Items);
         return View(model);
     }
-    [HttpGet] public async Task<IActionResult> Details(long id) {
+    [HttpGet] public async Task<IActionResult> Details(long id, string bookingStatus = "all") {
         await service.AdminAsync(Actor);
         var r = await service.Requests.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
         if (r == null) return NotFound();
         ViewBag.Bookings = await db.TrialBookings.Include(x => x.ClassSession).ThenInclude(x => x.Course).Where(x => x.TrialRequestId == id).OrderBy(x => x.Id).AsNoTracking().ToListAsync();
+        var quota = r.LessonPass?.SessionQuotaAtPurchase ?? r.QuotedQuota ?? r.LessonPlan.SessionQuota;
+        ViewBag.ShowBookingFilters = quota >= 2;
+        ViewBag.BookingStatus = quota >= 2 && bookingStatus is ("approved" or "cancelled") ? bookingStatus : "all";
         ViewBag.Referrers = await db.Students.Where(x => x.IsActive && x.User.IsActive && x.UserId != r.UserId).OrderBy(x => x.User.DisplayName)
             .Select(x => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem(x.User.DisplayName, x.StudentId.ToString())).ToListAsync();
         ViewBag.Remaining = await service.RemainingAsync(r);

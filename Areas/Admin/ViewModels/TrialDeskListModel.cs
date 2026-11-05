@@ -6,4 +6,5 @@ public class TrialDeskListModel : PagedRecords<PortalTrialRequest>
 {
     public string Review { get; set; } = "all";
     public Dictionary<long, int> PendingBookings { get; set; } = [];
+    public Dictionary<long, int> BookingReminders { get; set; } = [];
 }

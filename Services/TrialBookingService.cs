@@ -71,12 +71,32 @@ public class TrialBookingService(AppDbContext db, TimeProvider clock)
         r.Status = approve ? "Approved" : "Rejected"; r.ReviewedByUserId = actor; r.ReviewedAtUtc = clock.GetUtcNow().UtcDateTime; r.ReviewNote = note?.Trim();
         await db.SaveChangesAsync(); await tx.CommitAsync();
     }
-    private IQueryable<TrialBooking> Held(long request) => db.TrialBookings.Where(x => x.TrialRequestId == request && (x.Status == "Pending" || x.Status == "Approved"));
-    public async Task<int> RemainingAsync(PortalTrialRequest r)
+    private IQueryable<TrialBooking> Held => db.TrialBookings.Where(x => x.Status == "Pending" || x.Status == "Approved");
+    public async Task<int> RemainingAsync(PortalTrialRequest r) => (await RemainingAsync(new[] { r }))[r.Id];
+
+    public async Task<Dictionary<long, int>> RemainingAsync(IReadOnlyCollection<PortalTrialRequest> requests)
     {
+        if (requests.Count == 0) return [];
+        var ids = requests.Select(x => x.Id).ToArray();
+        var passIds = requests.Where(x => x.LessonPassId.HasValue).Select(x => x.LessonPassId!.Value).Distinct().ToArray();
+        var held = await Held.Where(x => ids.Contains(x.TrialRequestId))
+            .GroupBy(x => x.TrialRequestId).Select(g => new { Id = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Id, x => x.Count);
         // Legacy approved roster entries without a child booking also consume the original pass.
-        var old = r.LessonPassId == null ? 0 : await db.ClassSessionParticipants.CountAsync(x => x.LessonPassId == r.LessonPassId && x.TrialBookingId == null && x.Status == "Active");
-        return Math.Max(0, (r.LessonPass?.SessionQuotaAtPurchase ?? 0) - await Held(r.Id).CountAsync() - old);
+        var old = await db.ClassSessionParticipants
+            .Where(x => x.LessonPassId.HasValue && passIds.Contains(x.LessonPassId.Value) && x.TrialBookingId == null && x.Status == "Active")
+            .GroupBy(x => x.LessonPassId!.Value).Select(g => new { Id = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Id, x => x.Count);
+        return requests.ToDictionary(r => r.Id, r => Math.Max(0, (r.LessonPass?.SessionQuotaAtPurchase ?? 0)
+            - held.GetValueOrDefault(r.Id) - (r.LessonPassId is { } passId ? old.GetValueOrDefault(passId) : 0)));
+    }
+
+    public async Task<Dictionary<long, int>> BookingRemindersAsync(IEnumerable<PortalTrialRequest> requests)
+    {
+        var today = Today;
+        var available = requests.Where(r => Unavailable(r, today) == null).ToArray();
+        var remaining = await RemainingAsync(available);
+        return remaining.Where(x => x.Value > 0).ToDictionary(x => x.Key, x => x.Value);
     }
     private IQueryable<ClassSession> Targets(PortalTrialRequest r, long student)
     {

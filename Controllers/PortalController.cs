@@ -54,7 +54,7 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         if (role is null) return Problem("學生註冊尚未啟用，請聯繫工作室。", statusCode: 503);
         var account = input.Account.Trim();
         if (await db.Users.AnyAsync(x => x.Account == account)) return Conflict(new { message = "此帳號已使用，請登入或改用其他帳號。" });
-        var user = new User { Account = account, DisplayName = input.Name.Trim(), Email = input.Email.Trim(), Phone = input.Phone.Trim(), CreatedAtUtc = clock.GetUtcNow().UtcDateTime };
+        var user = new User { Account = account, DisplayName = input.Name.Trim(), Email = input.Email.Trim(), Phone = input.Phone, CreatedAtUtc = clock.GetUtcNow().UtcDateTime };
         user.PasswordHash = new PasswordHasher<User>().HashPassword(user, input.Password);
         // Registration creates a student account; a trial guest is created only on trial application.
         db.Students.Add(new Student
@@ -75,7 +75,7 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
 
     [HttpGet("me"), Authorize(AuthenticationSchemes = PortalAuthentication.Scheme)]
     public async Task<IActionResult> Me() => Ok(await db.Users.Where(x => x.UserId == Actor).Select(x => new
-    { x.DisplayName, x.Email, x.Phone, roles = db.UserRoles.Where(r => r.UserId == x.UserId && r.Role.IsActive).Select(r => r.Role.RoleCode).ToArray() }).SingleAsync());
+    { x.Account, x.DisplayName, x.Email, x.Phone, roles = db.UserRoles.Where(r => r.UserId == x.UserId && r.Role.IsActive).Select(r => r.Role.RoleCode).ToArray() }).SingleAsync());
 
     [HttpGet("catalog")]
     public async Task<IActionResult> Catalog() => Ok(new
@@ -165,7 +165,10 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         // Reuse only a guest already linked by a previous authenticated request, never by unverified email or phone.
         var guestId = await db.PortalTrialRequests.Where(x => x.UserId == Actor && x.TrialGuest.Status == "Active" && x.TrialGuest.ConvertedStudentId == null)
             .Select(x => (long?)x.TrialGuestId).FirstOrDefaultAsync();
+        var submittedAccount = await db.Users.Where(x => x.UserId == Actor).Select(x => x.Account).SingleAsync();
         var request = new PortalTrialRequest { SubmissionKey = input.SubmissionKey, UserId = Actor, ClassSessionId = session.Id,
+            SubmittedName = guest.Name, SubmittedPhone = guest.Phone, SubmittedEmail = guest.Email,
+            SubmittedLineId = guest.LineId, SubmittedAccount = submittedAccount,
             LessonPlanId = plan.LessonPlanId, PlanName = plan.PlanName, QuotedPrice = plan.Price,
             QuotedQuota = plan.SessionQuota, QuotedValidityUnit = plan.ValidityUnit, QuotedValidityValue = plan.ValidityValue, RequiresReferrerAtRequest = plan.RequiresReferrer,
             Note = input.Note?.Trim(), ReferrerName = referrerName, CreatedAtUtc = clock.GetUtcNow().UtcDateTime };
@@ -196,7 +199,8 @@ public class RegisterInput : LoginInput
     public string Name { get; set; } = "";
     [Required(ErrorMessage = "請輸入電子郵件。"), EmailAddress(ErrorMessage = "請輸入有效的電子郵件地址。"), StringLength(200, ErrorMessage = "電子郵件最多 200 字。")]
     public string Email { get; set; } = "";
-    [Required(ErrorMessage = "請輸入電話。"), Phone(ErrorMessage = "請輸入有效的電話號碼。"), StringLength(30, ErrorMessage = "電話最多 30 字。")]
+    [Required(ErrorMessage = "請輸入手機號碼。"), StringLength(10, ErrorMessage = TaiwanMobile.ErrorMessage)]
+    [RegularExpression(TaiwanMobile.InputPattern, ErrorMessage = TaiwanMobile.ErrorMessage)]
     public string Phone { get; set; } = "";
     [Required(ErrorMessage = "請再次輸入密碼。"), MinLength(10, ErrorMessage = "確認密碼至少須有 10 字。"), StringLength(200, ErrorMessage = "確認密碼最多 200 字。")]
     public string ConfirmPassword { get; set; } = "";
@@ -210,7 +214,8 @@ public class TrialInput
     public long PlanId { get; set; }
     [Required(ErrorMessage = "請輸入姓名。"), StringLength(100, ErrorMessage = "姓名最多 100 字。")]
     public string Name { get; set; } = "";
-    [Required(ErrorMessage = "請輸入電話。"), Phone(ErrorMessage = "請輸入有效的電話號碼。"), StringLength(30, ErrorMessage = "電話最多 30 字。")]
+    [Required(ErrorMessage = "請輸入手機號碼。"), StringLength(10, ErrorMessage = TaiwanMobile.ErrorMessage)]
+    [RegularExpression(TaiwanMobile.InputPattern, ErrorMessage = TaiwanMobile.ErrorMessage)]
     public string Phone { get; set; } = "";
     [Required(ErrorMessage = "請輸入電子郵件。"), EmailAddress(ErrorMessage = "請輸入有效的電子郵件地址。"), StringLength(200, ErrorMessage = "電子郵件最多 200 字。")]
     public string Email { get; set; } = "";

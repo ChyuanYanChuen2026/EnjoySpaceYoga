@@ -82,6 +82,14 @@ public class ClassSessionsController : Controller
             start = session.StartsAt.ToString("O"),
             end = session.EndsAt.ToString("O"),
             allDay = false,
+            extendedProps = new
+            {
+                termId = session.TermId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                termName = session.TermName,
+                courseId = session.CourseId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                courseName = session.CourseName,
+                teacherName = session.TeacherName
+            },
             url = Url.Action( nameof(Details), "ClassSessions", new { area = "Admin", id = session.Id })
         });
         return Json(events);

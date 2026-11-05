@@ -48,7 +48,7 @@ public class StudentsController(AppDbContext db) : Controller
 
         model.DisplayName = model.DisplayName.Trim();
         model.StudentNo = Clean(model.StudentNo);
-        model.Phone = Clean(model.Phone);
+        model.Phone = string.IsNullOrEmpty(model.Phone) ? null : model.Phone;
         model.Email = Clean(model.Email);
         model.Note = Clean(model.Note);
 
@@ -143,6 +143,7 @@ public class StudentsController(AppDbContext db) : Controller
             .Select(s => new StudentEditViewModel
             {
                 StudentId = s.StudentId,
+                Account = s.User.Account,
                 StudentNo = s.StudentNo,
                 DisplayName = s.User.DisplayName,
                 Phone = s.User.Phone,
@@ -165,12 +166,23 @@ public class StudentsController(AppDbContext db) : Controller
         if (id != model.StudentId)
             return BadRequest();
 
+        var student = await db.Students
+            .Include(s => s.User)
+            .SingleOrDefaultAsync(s => s.StudentId == id);
+
+        if (student is null) return NotFound();
+        var user = student.User;
+
+        // Display the stored account on every error path; never accept it from the form.
+        model.Account = user.Account;
+        ModelState.Remove(nameof(model.Account));
+
         if (!ModelState.IsValid)
             return View(model);
 
         model.DisplayName = model.DisplayName.Trim();
         model.StudentNo = Clean(model.StudentNo);
-        model.Phone = Clean(model.Phone);
+        model.Phone = string.IsNullOrEmpty(model.Phone) ? null : model.Phone;
         model.Email = Clean(model.Email);
         model.Note = Clean(model.Note);
 
@@ -193,12 +205,6 @@ public class StudentsController(AppDbContext db) : Controller
         }
 
         if (!ModelState.IsValid) return View(model);
-        var student = await db.Students
-            .Include(s => s.User)
-            .SingleOrDefaultAsync(s => s.StudentId == id);
-
-        if (student is null) return NotFound();
-        var user = student.User;
 
         // 使用開啟表單時的版本，檢查期間是否有人修改資料。
         db.Entry(user).Property(u => u.RowVersion).OriginalValue = model.RowVersion;

@@ -1084,6 +1084,26 @@ namespace EnjoySpace.Web.Migrations
                     b.Property<Guid>("SubmissionKey")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("SubmittedAccount")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SubmittedEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("SubmittedLineId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SubmittedName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SubmittedPhone")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<long>("TrialGuestId")
                         .HasColumnType("bigint");
 

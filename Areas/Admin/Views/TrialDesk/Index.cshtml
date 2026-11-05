@@ -14,7 +14,8 @@
 {
     var pendingPlan = r.Status is "Pending" or "Contacted";
     var pendingBookings = Model.PendingBookings.GetValueOrDefault(r.Id);
-    <article class="card mb-3 @(pendingPlan || pendingBookings > 0 ? "trial-review-needed" : "")">
+    var remainingBookings = Model.BookingReminders.GetValueOrDefault(r.Id);
+    <article class="card mb-3 @(pendingPlan || pendingBookings > 0 || remainingBookings > 0 ? "trial-review-needed" : "")">
         <div class="card-body">
             <div class="trial-section-heading mb-2">
                 <h2 class="h5 mb-0"><a asp-action="Details" asp-route-id="@r.Id">申請 #@r.Id · @r.User.DisplayName · @r.PlanName</a></h2>
@@ -32,7 +33,12 @@
             <div class="trial-actions">
                 @if (pendingPlan) { <a asp-action="Details" asp-route-id="@r.Id" class="btn btn-primary">審核方案</a> }
                 @if (pendingBookings > 0) { <a asp-action="Details" asp-route-id="@r.Id" asp-fragment="trial-bookings-title" class="btn btn-primary">審核逐堂預約</a> }
-                @if (!pendingPlan && pendingBookings == 0) { <a asp-action="Details" asp-route-id="@r.Id" class="btn btn-outline-secondary">查看方案與預約</a> }
+                @if (remainingBookings > 0)
+                {
+                    <a asp-action="Details" asp-route-id="@r.Id" asp-fragment="trial-booking-form" class="btn btn-outline-primary">尚未完成體驗課堂預約</a>
+                    <span class="small text-secondary">尚有 @remainingBookings 堂待預約</span>
+                }
+                @if (!pendingPlan && pendingBookings == 0 && remainingBookings == 0) { <a asp-action="Details" asp-route-id="@r.Id" class="btn btn-outline-secondary">查看方案與預約</a> }
             </div>
         </div>
     </article>
