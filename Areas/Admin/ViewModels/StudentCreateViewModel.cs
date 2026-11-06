@@ -36,3 +36,4 @@ public class StudentCreateViewModel
     [StringLength(500, ErrorMessage = "備註最多 500 字")]
     [Display(Name = "備註")]
     public string? Note { get; set; }
+}

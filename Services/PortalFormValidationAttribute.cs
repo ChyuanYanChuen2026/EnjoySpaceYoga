@@ -14,7 +14,7 @@ public sealed class PortalFormValidationAttribute : ActionFilterAttribute
     private static readonly Dictionary<string, string> Fields = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Account"] = "帳號", ["Password"] = "密碼", ["ConfirmPassword"] = "確認密碼",
-        ["Name"] = "姓名", ["Email"] = "電子郵件", ["Phone"] = "電話",
+        ["Name"] = "姓名", ["Email"] = "電子郵件", ["Phone"] = "手機",
         ["LineId"] = "LINE 帳號", ["Note"] = "備註", ["ReferrerName"] = "介紹人姓名",
         ["SessionId"] = "體驗場次", ["PlanId"] = "體驗方案", ["SessionIds"] = "預約場次",
         ["SubmissionKey"] = "申請識別碼", ["BatchKey"] = "預約識別碼", ["RowVersion"] = "資料版本",
