@@ -33,7 +33,10 @@ namespace EnjoySpace.Web.Migrations
                 principalColumn: "StudioLocationId");
 
             migrationBuilder.Sql("""
-                IF NOT EXISTS (
+                -- 空白資料庫沒有需要搬移的舊場次，不必預先建立固定教室。
+                -- 有舊場次時仍完整核對教室，避免搬移到錯誤地點。
+                IF EXISTS (SELECT 1 FROM dbo.ClassSessions)
+                AND NOT EXISTS (
                     SELECT 1
                     FROM dbo.StudioLocations
                     WHERE StudioLocationId = 1

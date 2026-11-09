@@ -28,6 +28,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- 本機連線與開發設定不隨正式網站發佈；正式值由 App Service 提供。 -->
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
     <None Remove="EnjoySpace.Web.csproj.Backup.tmp" />
     <EmbeddedResource Include="Migrations/Sql/ReconcileRecoveredSchema.sql" LogicalName="EnjoySpace.Recovery.compatible-up.sql" />
   </ItemGroup>
