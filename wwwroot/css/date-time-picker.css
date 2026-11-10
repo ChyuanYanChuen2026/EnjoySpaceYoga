@@ -1,0 +1,20 @@
+.es-date-picker { flex-wrap: nowrap; }
+.es-date-picker .form-control { min-width: 0; }
+.es-picker-toggle { display: inline-flex; align-items: center; }
+.tempus-dominus-widget { font-family: inherit; max-width: calc(100vw - 24px); z-index: 1090; }
+.tempus-dominus-widget.light { color: var(--es-ink); border: 1px solid var(--es-border); border-radius: .5rem; }
+.tempus-dominus-widget.light .date-container-days div:not(.no-highlight).active,
+.tempus-dominus-widget.light .time-container div:not(.no-highlight).active { background-color: var(--es-green); }
+.tempus-dominus-widget i[class^="es-td-"] { display: inline-block; font-style: normal; font-size: 1.2rem; line-height: 1; }
+.es-td-clock::before { content: '◷'; }
+.es-td-calendar::before { content: '▦'; }
+.es-td-up::before { content: '↑'; }
+.es-td-down::before { content: '↓'; }
+.es-td-prev::before { content: '‹'; }
+.es-td-next::before { content: '›'; }
+.es-td-clear::before { content: '清除'; font-size: .85rem; }
+.es-td-close::before { content: '完成'; font-size: .85rem; }
+.es-picker-time-entry { display: flex; align-items: center; gap: .75rem; padding: .6rem; margin: .3rem 0 0; border-top: 1px solid var(--es-border); font-size: .85rem; }
+.es-picker-time-entry .form-control { flex: 1; width: 8rem; min-width: 0; }
+
+.es-picker-time-entry input:invalid { border-color: #b63c3c; }

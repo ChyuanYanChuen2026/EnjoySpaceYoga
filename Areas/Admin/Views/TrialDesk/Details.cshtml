@@ -1,0 +1,186 @@
+@model EnjoySpace.Web.Models.Entities.PortalTrialRequest
+@using EnjoySpace.Web.Models.Entities
+@using EnjoySpace.Web.Models
+@{
+    ViewData["Title"] = "體驗申請審核與排課";
+    var bookings = (List<TrialBooking>)ViewBag.Bookings;
+    var bookingStatus = (string)ViewBag.BookingStatus;
+    var visibleBookings = bookingStatus switch
+    {
+        "approved" => bookings.Where(b => b.Status == "Approved").ToList(),
+        "cancelled" => bookings.Where(b => b.Status == "Cancelled").ToList(),
+        _ => bookings
+    };
+    var taiwan = TimeSpan.FromHours(8);
+    // Check the snapshot as a group: an intentionally blank LINE must never use later guest data.
+    var hasSubmissionSnapshot = Model.SubmittedName != null && Model.SubmittedAccount != null;
+    var applicantName = hasSubmissionSnapshot ? Model.SubmittedName : Model.TrialGuest.Name;
+    var applicantPhone = hasSubmissionSnapshot ? Model.SubmittedPhone : Model.TrialGuest.Phone;
+    var applicantEmail = hasSubmissionSnapshot ? Model.SubmittedEmail : Model.TrialGuest.Email;
+    var applicantLineId = hasSubmissionSnapshot ? Model.SubmittedLineId : Model.TrialGuest.LineId;
+    var applicantAccount = hasSubmissionSnapshot ? Model.SubmittedAccount : Model.User.Account;
+    var submittedAt = new DateTimeOffset(DateTime.SpecifyKind(Model.CreatedAtUtc, DateTimeKind.Utc)).ToOffset(taiwan);
+    var status = new Dictionary<string, string> { ["Pending"] = "待審核", ["Contacted"] = "已聯繫，待審核", ["Approved"] = "已核准", ["Rejected"] = "已退回", ["Cancelled"] = "已取消" };
+    var needsReview = Model.Status is "Pending" or "Contacted";
+    var validityValue = Model.QuotedValidityValue ?? Model.LessonPlan.ValidityValue;
+    var validityLabel = (Model.QuotedValidityUnit ?? Model.LessonPlan.ValidityUnit) switch
+    {
+        "Days" => $"{validityValue} 天（含生效日）",
+        "Months" => $"{validityValue} 個月",
+        "Session" => "依堂次使用",
+        "Unlimited" => "不限期",
+        _ => "請洽工作室確認效期"
+    };
+}
+<div class="trial-desk">
+    <div class="dashboard-heading">
+        <div><h1>體驗申請 #@Model.Id</h1><p>核對申請與方案，再處理各堂預約。</p></div>
+        <a asp-action="Index" class="btn btn-outline-secondary">返回體驗申請</a>
+    </div>
+    <div class="trial-detail-grid">
+        <section class="card">
+            <div class="card-body">
+                <div class="trial-section-heading"><h2 class="h5 mb-0">申請資訊</h2><span class="trial-status">@status.GetValueOrDefault(Model.Status, Model.Status)</span></div>
+                @if (hasSubmissionSnapshot)
+                {
+                    <p class="small text-secondary">以下聯絡資料與帳號為前台送出申請時保存的內容。</p>
+                }
+                else
+                {
+                    <p class="alert alert-warning small">此舊申請未保存送出時的聯絡資料與帳號，以下顯示目前關聯資料，可能與當時填寫內容不同。</p>
+                }
+                <h3 class="trial-applicant">@applicantName</h3>
+                <dl class="trial-facts">
+                    <div><dt>申請帳號</dt><dd>@applicantAccount</dd></div>
+                    <div><dt>會員編號</dt><dd>@Model.UserId</dd></div>
+                    <div><dt>聯絡電話</dt><dd>@(string.IsNullOrWhiteSpace(applicantPhone) ? "未填寫" : applicantPhone)</dd></div>
+                    <div><dt>Email</dt><dd>@(string.IsNullOrWhiteSpace(applicantEmail) ? "未填寫" : applicantEmail)</dd></div>
+                    <div><dt>LINE ID</dt><dd>@(string.IsNullOrWhiteSpace(applicantLineId) ? "未填寫" : applicantLineId)</dd></div>
+                    <div><dt>申請時間</dt><dd>@submittedAt.ToString("yyyy/MM/dd HH:mm")（台灣）</dd></div>
+                </dl>
+                <h3 class="h6 border-top pt-3">申請方案與備註</h3>
+                <dl class="trial-facts">
+                    <div><dt>體驗方案</dt><dd>@Model.PlanName</dd></div>
+                    <div><dt>申請報價</dt><dd class="fw-semibold">NT$ @Model.QuotedPrice.ToString("N0")</dd></div>
+                    <div><dt>介紹人</dt><dd>@(string.IsNullOrWhiteSpace(Model.ReferrerName) ? "無" : Model.ReferrerName)</dd></div>
+                    <div><dt>申請備註</dt><dd class="trial-note">@(string.IsNullOrWhiteSpace(Model.Note) ? "無" : Model.Note)</dd></div>
+                </dl>
+                <div class="trial-session-summary">
+                    <h3 class="h6">原希望場次</h3>
+                    <p class="mb-1">@Model.ClassSession.Course.Name</p>
+                    <p class="mb-1">@Model.ClassSession.StartsAt.ToOffset(taiwan).ToString("yyyy/MM/dd HH:mm")（台灣）</p>
+                    <p class="small text-secondary mb-0">實際安排以下方已核准的逐堂預約為準。</p>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.ReviewNote))
+                {
+                    <div class="mt-3"><h3 class="h6">審核說明</h3><p class="trial-note mb-0">@Model.ReviewNote</p></div>
+                }
+            </div>
+        </section>
+        @if (needsReview)
+        {
+            <section class="card">
+                <div class="card-body">
+                    <div class="trial-section-heading"><h2 class="h5 mb-0">方案審核</h2></div>
+                    <div class="trial-plan-summary">
+                        <div><span>審核堂數</span><strong>@(Model.QuotedQuota ?? Model.LessonPlan.SessionQuota) 堂</strong></div>
+                        <div><span>方案效期</span><strong>@validityLabel</strong></div>
+                    </div>
+                    @if (Model.QuotedQuota == null)
+                    {
+                        <p class="alert alert-warning small">此為舊申請，未保存當時的堂數與效期快照。核准前請核對目前方案與原約定；價格仍使用申請時的報價。</p>
+                    }
+                    <form asp-action="Review" method="post" class="trial-form">
+                        <input name="id" type="hidden" value="@Model.Id" />
+                        <input name="rowVersion" type="hidden" value="@Convert.ToBase64String(Model.RowVersion)" />
+                        <div><label for="trial-valid-from" class="form-label">方案生效日</label><input id="trial-valid-from" type="date" name="from" value="@DateTimeOffset.UtcNow.ToOffset(taiwan).ToString("yyyy-MM-dd")" required class="form-control" /></div>
+                        @if (Model.RequiresReferrerAtRequest ?? Model.LessonPlan.RequiresReferrer)
+                        {
+                            <div><label for="trial-referrer" class="form-label">核對介紹學生</label><select id="trial-referrer" name="referrerId" class="form-select" asp-items="ViewBag.Referrers"><option value="">請選擇核對後的介紹人</option></select></div>
+                        }
+                        <div><label for="trial-review-note" class="form-label">審核說明 <span class="text-secondary small">（退回必填）</span></label><textarea id="trial-review-note" name="note" maxlength="500" rows="3" class="form-control" placeholder="請填寫核對結果或退回原因"></textarea></div>
+                        <div class="trial-actions"><button type="submit" name="approve" value="true" class="btn btn-primary">核准方案</button><button type="submit" name="approve" value="false" class="btn btn-outline-danger">退回申請</button></div>
+                    </form>
+                </div>
+            </section>
+        }
+        @if (Model.LessonPass != null)
+        {
+            <section class="card"><div class="card-body">
+                <div class="trial-section-heading"><h2 class="h5 mb-0">方案與款項</h2></div>
+                <dl class="trial-facts">
+                    <div><dt>方案效期</dt><dd>@Model.LessonPass.ValidFromDate.ToString("yyyy/MM/dd") ～ @(Model.LessonPass.ValidUntilDate?.ToString("yyyy/MM/dd") ?? "不限期")</dd></div>
+                    <div><dt>尚可預約</dt><dd><strong>@ViewBag.Remaining 堂</strong><span class="small text-secondary d-block">待審預約也占用堂數</span></dd></div>
+                </dl>
+                <a asp-controller="LessonPasses" asp-action="Details" asp-route-id="@Model.LessonPassId" class="btn btn-outline-primary">查看方案與確認收款</a>
+            </div></section>
+        }
+    </div>
+    @if (Model.Status == "Approved" && Model.LessonPass?.Status == "Active" && Model.LessonPass.Payment.Status == "Confirmed")
+    {
+        <section class="card mb-4"><div class="card-body">
+            <h2 class="h5">安排希望上的場次</h2><p class="text-secondary small">送出後每堂產生獨立預約單，再於下方逐堂核准；核准後才加入上課名單。</p>
+            <form id="trial-booking-form" asp-action="Book" method="post" data-request="@Model.Id" class="trial-form">
+                <input name="id" type="hidden" value="@Model.Id" /><input name="rowVersion" type="hidden" value="@Convert.ToBase64String(Model.RowVersion)" /><input name="batchKey" type="hidden" value="@Guid.NewGuid()" />
+                <div id="trial-selects"></div>
+                <div class="trial-actions"><button id="add-trial-session" type="button" class="btn btn-outline-secondary" disabled>＋ 增加一堂</button><button id="submit-trial-booking" type="submit" class="btn btn-primary" disabled>送出預約</button></div>
+                <p id="trial-booking-message" role="alert" class="text-secondary mb-0"></p>
+            </form>
+        </div></section>
+    }
+    <section aria-labelledby="trial-bookings-title">
+        <div class="trial-section-heading"><h2 id="trial-bookings-title" class="h5 mb-0">逐堂預約與審核</h2><span class="small text-secondary">顯示 @visibleBookings.Count 筆／共 @bookings.Count 筆</span></div>
+        @if (ViewBag.ShowBookingFilters)
+        {
+            <nav class="nav nav-tabs trial-review-tabs mb-3" aria-label="逐堂預約狀態篩選">
+                <a asp-action="Details" asp-route-id="@Model.Id" asp-route-bookingStatus="all" asp-fragment="trial-bookings-title"
+                   class="nav-link @(bookingStatus == "all" ? "active" : "")" aria-current="@(bookingStatus == "all" ? "page" : null)">
+                    全部 <span class="trial-status ms-1">@bookings.Count</span>
+                </a>
+                <a asp-action="Details" asp-route-id="@Model.Id" asp-route-bookingStatus="approved" asp-fragment="trial-bookings-title"
+                   class="nav-link @(bookingStatus == "approved" ? "active" : "")" aria-current="@(bookingStatus == "approved" ? "page" : null)">
+                    已核准 <span class="trial-status ms-1">@bookings.Count(b => b.Status == "Approved")</span>
+                </a>
+                <a asp-action="Details" asp-route-id="@Model.Id" asp-route-bookingStatus="cancelled" asp-fragment="trial-bookings-title"
+                   class="nav-link @(bookingStatus == "cancelled" ? "active" : "")" aria-current="@(bookingStatus == "cancelled" ? "page" : null)">
+                    已取消 <span class="trial-status ms-1">@bookings.Count(b => b.Status == "Cancelled")</span>
+                </a>
+            </nav>
+        }
+        @if (bookings.Count == 0)
+        {
+            <div class="card"><div class="card-body trial-empty"><p class="fw-semibold mb-1">尚無逐堂預約</p><p class="text-secondary mb-0">方案核准且款項確認後，可在此安排與查看各堂預約。</p></div></div>
+        }
+        else if (visibleBookings.Count == 0)
+        {
+            <div class="card"><div class="card-body trial-empty"><p class="fw-semibold mb-1">@(bookingStatus == "approved" ? "目前沒有已核准的預約" : "目前沒有已取消的預約")</p><p class="text-secondary mb-0">切換「全部」可查看其他預約紀錄。</p></div></div>
+        }
+        @foreach (var b in visibleBookings)
+        {
+            <article class="card mb-3"><div class="card-body">
+                <div class="trial-section-heading"><h3 class="h6 mb-0">預約 #@b.Id</h3><span class="trial-status">@status.GetValueOrDefault(b.Status, b.Status)</span></div>
+                <p class="fw-semibold mb-1">@b.ClassSession.Course.Name</p>
+                <p class="text-secondary">@b.ClassSession.StartsAt.ToOffset(taiwan).ToString("yyyy/MM/dd HH:mm")（台灣）</p>
+                @if (!string.IsNullOrWhiteSpace(b.ReviewNote)) { <p class="trial-note">@b.ReviewNote</p> }
+                @if (b.Status == "Pending")
+                {
+                    <form asp-action="ReviewBooking" method="post" class="trial-form trial-booking-review">
+                        <input name="id" type="hidden" value="@b.Id" /><input name="requestId" type="hidden" value="@Model.Id" /><input name="rowVersion" type="hidden" value="@Convert.ToBase64String(b.RowVersion)" />
+                        <div><label for="@($"booking-note-{b.Id}")" class="form-label">審核說明 <span class="text-secondary small">（退回必填）</span></label><input id="@($"booking-note-{b.Id}")" name="note" maxlength="500" class="form-control" /></div>
+                        <div class="trial-actions"><button type="submit" name="approve" value="true" class="btn btn-primary">核准並登記上課</button><button type="submit" name="approve" value="false" class="btn btn-outline-danger">退回這堂</button></div>
+                    </form>
+                }
+                @if (b.Status is "Pending" or "Approved")
+                {
+                    <form asp-action="CancelBooking" method="post" class="trial-form trial-cancel-form">
+                        <input name="id" type="hidden" value="@b.Id" /><input name="requestId" type="hidden" value="@Model.Id" /><input name="rowVersion" type="hidden" value="@Convert.ToBase64String(b.RowVersion)" />
+                        <div><label for="@($"booking-cancel-{b.Id}")" class="form-label">取消原因</label><input id="@($"booking-cancel-{b.Id}")" name="reason" required maxlength="500" class="form-control" /></div>
+                        <div><button type="submit" class="btn btn-outline-secondary">取消這堂預約</button></div>
+                    </form>
+                }
+                @if (b.Status == "Approved") { <a asp-area="" asp-controller="Classroom" asp-action="Index" asp-route-sessionId="@b.ClassSessionId" class="btn btn-outline-primary mt-3">課堂打卡與點名</a> }
+            </div></article>
+        }
+    </section>
+</div>
+@section Scripts { <script src="~/js/trial-booking.js" asp-append-version="true"></script> }

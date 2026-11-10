@@ -1,42 +1,68 @@
-﻿@model EnjoySpace.Web.Models.ClassSessionDetailModel
+@model EnjoySpace.Web.Areas.Admin.ViewModels.ClassSessionWorkspaceModel
 
 @{
-    ViewData["Title"] = "場次詳細";
+    ViewData["Title"] = "場次與出缺席";
+    ViewData["InlineFeedback"] = true;
+    var session = Model.Session;
     var taiwanOffset = TimeSpan.FromHours(8);
 }
 
-<h1 class="h3 mb-4">場次詳細</h1>
+<div class="dashboard-heading">
+    <div><h1>場次與出缺席</h1><p>查看場次資訊，直接管理本堂名單與出勤。</p></div>
+    <a asp-action="Index" class="btn btn-outline-secondary">返回場次列表</a>
+</div>
+<div class="mb-3">
+    <a asp-area="" asp-controller="Classroom" asp-action="Index" asp-route-sessionId="@session.Id" class="btn btn-primary">課堂 QR Code 與即時點名</a>
+</div>
 
-<div class="card shadow-sm mb-4">
+<section id="session-information" class="card shadow-sm mb-4" aria-label="場次資訊">
     <div class="card-body">
         <dl class="row mb-0">
             <dt class="col-sm-3">課程</dt>
-            <dd class="col-sm-9">@Model.CourseName</dd>
+            <dd class="col-sm-9">@session.CourseName</dd>
+            <dt class="col-sm-3">場次類型</dt><dd class="col-sm-9">@(session.IsExtraSession ? "額外加開單堂（不含在整期報名）" : "固定期課")</dd>
 
             <dt class="col-sm-3">老師</dt>
-            <dd class="col-sm-9">@Model.TeacherName</dd>
+            <dd class="col-sm-9">@session.TeacherName</dd>
 
             <dt class="col-sm-3">地點</dt>
-            <dd class="col-sm-9">@Model.LocationName</dd>
+            <dd class="col-sm-9">@session.LocationName</dd>
 
             <dt class="col-sm-3">開始時間（台灣）</dt>
-            <dd class="col-sm-9"> @(Model.StartsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm"))</dd>
+            <dd class="col-sm-9"> @(session.StartsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm"))</dd>
 
             <dt class="col-sm-3">結束時間（台灣）</dt>
-            <dd class="col-sm-9">@(Model.EndsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm"))</dd>
+            <dd class="col-sm-9">@(session.EndsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm"))</dd>
 
             <dt class="col-sm-3">正常名額</dt>
-            <dd class="col-sm-9">@Model.Capacity</dd>
+            <dd class="col-sm-9">@session.Capacity</dd>
 
             <dt class="col-sm-3">超收核准上限</dt>
             <dd class="col-sm-9">
-                @(Model.CapacityOverride?.ToString() ?? "未設定")
+                @(session.CapacityOverride?.ToString() ?? "未設定")
             </dd>
 
             <dt class="col-sm-3">目前名額上限</dt>
-            <dd class="col-sm-9">@Model.EffectiveCapacity</dd>
+            <dd class="col-sm-9">@session.EffectiveCapacity</dd>
+
+            <dt class="col-sm-3">已報名人數／上限人數</dt>
+            <dd class="col-sm-9">
+                <span class="fw-semibold">@session.RegisteredCount / @session.EffectiveCapacity 人</span>
+                <small class="d-block text-secondary">依本場次有效上課名單計算，不含待審核申請。</small>
+            </dd>
         </dl>
     </div>
-</div>
-
-<a asp-area="Admin" asp-controller="ClassSessions" asp-action="Index" class="btn btn-outline-secondary">返回場次列表</a>
+</section>
+@if (session.CanDelete)
+{
+    <a asp-action="Delete" asp-route-id="@session.Id" class="btn btn-outline-danger">刪除場次</a>
+}
+else
+{
+    <p class="text-secondary">學期已離開草稿或課程已有報名，不能直接刪除場次；請保留紀錄並另行安排取消／調課。</p>
+}
+<section id="attendance" class="mt-4" aria-labelledby="attendance-title">
+    <h2 id="attendance-title" class="h4 mb-3">課堂名單與出缺席</h2>
+    <partial name="~/Areas/Admin/Views/Attendance/_Roster.cshtml" model="Model.Roster" />
+</section>
+@section Scripts { <script src="~/js/attendance-live.js" asp-append-version="true"></script> }

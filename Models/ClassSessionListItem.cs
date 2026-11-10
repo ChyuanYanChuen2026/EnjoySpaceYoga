@@ -15,4 +15,5 @@ public class ClassSessionListItem
     public DateTimeOffset EndsAt { get; set; }
 
     public int EffectiveCapacity { get; set; }
+    public bool CanDelete { get; set; }
 }

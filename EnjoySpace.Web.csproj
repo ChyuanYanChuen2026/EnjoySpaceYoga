@@ -13,6 +13,29 @@
 
   <ItemGroup>
     <Compile Remove="Models\Entities\Location.cs" />
+    <Compile Remove="artifacts\**" />
+    <Compile Remove="docs\**" />
+    <Compile Remove="Tests\**" />
+    <Compile Remove="Tools\**" />
+    <Content Remove="artifacts\**" />
+    <Content Remove="docs\**" />
+    <Content Remove="Tests\**" />
+    <Content Remove="Tools\**" />
+    <EmbeddedResource Remove="artifacts\**" />
+    <EmbeddedResource Remove="docs\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <EmbeddedResource Remove="Tools\**" />
+    <None Remove="artifacts\**" />
+    <None Remove="docs\**" />
+    <None Remove="Tests\**" />
+    <None Remove="Tools\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 本機連線與開發設定不隨正式網站發佈；正式值由 App Service 提供。 -->
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+    <None Remove="EnjoySpace.Web.csproj.Backup.tmp" />
+    <EmbeddedResource Include="Migrations/Sql/ReconcileRecoveredSchema.sql" LogicalName="EnjoySpace.Recovery.compatible-up.sql" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,6 +44,8 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.*" />
+    <PackageReference Include="QRCoder" Version="1.7.0" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
   </ItemGroup>
 
 </Project>

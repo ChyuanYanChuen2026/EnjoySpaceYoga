@@ -1,0 +1,79 @@
+﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.TeacherEditViewModel
+
+@{
+    ViewData["Title"] = "編輯老師";
+}
+
+<h1 class="h3 mb-2">編輯老師</h1>
+<p class="text-muted"> 修改老師基本資料與老師身分狀態。</p>
+
+<div class="card">
+    <div class="card-body">
+      <form asp-area="Admin" asp-controller="Teachers" asp-action="Edit"  asp-route-id="@Model.TeacherId"  method="post">
+
+    <input asp-for="TeacherId" type="hidden" />
+    <input type="hidden"  name="RowVersion"  value="@Convert.ToBase64String(Model.RowVersion)" />
+
+            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="alert alert-light border">
+                        <strong>老師登入帳號</strong>
+                        <div class="text-break mt-1">@Model.Account</div>
+                        <p class="small text-muted mb-2 mt-2">填妥 Email，並啟用老師身分與登入帳號後，將此帳號提供給老師。老師可到登入頁的「忘記密碼／首次設定密碼」，使用帳號及登記的 Email 收取驗證信。</p>
+                        <div class="form-check">
+                            <input asp-for="IsUserActive" class="form-check-input" />
+                            <label asp-for="IsUserActive" class="form-check-label"></label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label asp-for="DisplayName" class="form-label"></label>
+                    <input asp-for="DisplayName" class="form-control" />
+                    <span asp-validation-for="DisplayName"  class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="TeacherNo" class="form-label"></label>
+                    <input asp-for="TeacherNo" class="form-control" />
+                    <span asp-validation-for="TeacherNo" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="Phone" class="form-label"></label>
+                    <input asp-for="Phone" class="form-control" />
+                    <span asp-validation-for="Phone" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <div class="form-check">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label asp-for="IsActive" class="form-check-label"></label>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="Note" class="form-label"></label>
+                    <textarea asp-for="Note" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Note" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">儲存修改</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">返回列表</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

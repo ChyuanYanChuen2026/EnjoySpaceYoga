@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
+using EnjoySpace.Web.Services;
+
 namespace EnjoySpace.Web.Areas.Admin.ViewModels;
 
 public class StudentCreateViewModel
@@ -13,9 +15,10 @@ public class StudentCreateViewModel
     [Display(Name = "學號")]
     public string? StudentNo { get; set; }
 
-    [Phone(ErrorMessage = "請輸入有效的電話號碼")]
-    [StringLength(30, ErrorMessage = "電話最多 30 字")]
-    [Display(Name = "電話")]
+    [RegularExpression(TaiwanMobile.InputPattern, ErrorMessage = TaiwanMobile.ErrorMessage)]
+    [StringLength(10, ErrorMessage = TaiwanMobile.ErrorMessage)]
+    [DisplayFormat(ConvertEmptyStringToNull = false)]
+    [Display(Name = "手機號碼")]
     public string? Phone { get; set; }
 
     [EmailAddress(ErrorMessage = "請輸入有效的 Email")]

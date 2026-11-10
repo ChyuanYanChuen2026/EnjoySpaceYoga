@@ -1,0 +1,51 @@
+@model EnjoySpace.Web.Areas.Admin.ViewModels.TrialDeskListModel
+@{
+    ViewData["Title"] = "體驗方案與逐堂預約";
+    var status = new Dictionary<string,string> { ["Pending"]="待審核", ["Contacted"]="已聯繫，待審核", ["Approved"]="已核准", ["Rejected"]="已退回", ["Cancelled"]="已取消" };
+}
+<div class="dashboard-heading"><div><h1>體驗方案與逐堂預約</h1><p>先審核方案、確認款項，再逐堂審核預約並加入上課名單。</p></div></div>
+@await Component.InvokeAsync("TrialReviewNotice")
+<nav class="nav nav-tabs trial-review-tabs mb-3" aria-label="體驗審核頁籤">
+    <a asp-action="Index" asp-route-review="all" class="nav-link @(Model.Review == "all" ? "active" : "")" aria-current="@(Model.Review == "all" ? "page" : null)">全部申請</a>
+    <a asp-action="Index" asp-route-review="plans" class="nav-link @(Model.Review == "plans" ? "active" : "")" aria-current="@(Model.Review == "plans" ? "page" : null)">方案待審核</a>
+    <a asp-action="Index" asp-route-review="bookings" class="nav-link @(Model.Review == "bookings" ? "active" : "")" aria-current="@(Model.Review == "bookings" ? "page" : null)">預約待審核</a>
+</nav>
+@foreach (var r in Model.Items)
+{
+    var pendingPlan = r.Status is "Pending" or "Contacted";
+    var pendingBookings = Model.PendingBookings.GetValueOrDefault(r.Id);
+    var remainingBookings = Model.BookingReminders.GetValueOrDefault(r.Id);
+    <article class="card mb-3 @(pendingPlan || pendingBookings > 0 || remainingBookings > 0 ? "trial-review-needed" : "")">
+        <div class="card-body">
+            <div class="trial-section-heading mb-2">
+                <h2 class="h5 mb-0"><a asp-action="Details" asp-route-id="@r.Id">申請 #@r.Id · @r.User.DisplayName · @r.PlanName</a></h2>
+                <div class="trial-actions">
+                    @if (pendingPlan) { <span class="trial-review-badge">方案待審核</span> }
+                    @if (pendingBookings > 0) { <span class="trial-review-badge">預約待審核 @pendingBookings 筆</span> }
+                </div>
+            </div>
+            <p class="mb-2">方案：@status.GetValueOrDefault(r.Status, r.Status) · NT$ @r.QuotedPrice.ToString("N0")</p>
+            <p class="small text-secondary mb-3">
+                @if (r.LessonPass == null) { <span>尚未建立體驗方案與付款紀錄</span> }
+                else if (r.LessonPass.Payment.Status == "Confirmed") { <span>款項已確認／免費</span> }
+                else { <span>款項狀態：@(r.LessonPass.Payment.Status switch { "Pending" => "待確認收款", "Cancelled" => "已取消", "Refunded" => "已退款", var value => value })</span> }
+            </p>
+            <div class="trial-actions">
+                @if (pendingPlan) { <a asp-action="Details" asp-route-id="@r.Id" class="btn btn-primary">審核方案</a> }
+                @if (pendingBookings > 0) { <a asp-action="Details" asp-route-id="@r.Id" asp-fragment="trial-bookings-title" class="btn btn-primary">審核逐堂預約</a> }
+                @if (remainingBookings > 0)
+                {
+                    <a asp-action="Details" asp-route-id="@r.Id" asp-fragment="trial-booking-form" class="btn btn-outline-primary">尚未完成體驗課堂預約</a>
+                    <span class="small text-secondary">尚有 @remainingBookings 堂待預約</span>
+                }
+                @if (!pendingPlan && pendingBookings == 0 && remainingBookings == 0) { <a asp-action="Details" asp-route-id="@r.Id" class="btn btn-outline-secondary">查看方案與預約</a> }
+            </div>
+        </div>
+    </article>
+}
+@if (Model.Items.Count == 0) { <div class="card p-4 text-secondary">@(Model.Review == "all" ? "目前沒有體驗申請。" : "目前沒有此類待審核項目。")</div> }
+<nav class="d-flex flex-wrap align-items-center gap-3 mt-3" aria-label="體驗申請分頁">
+    <span>第 @Model.Page / @Model.PageCount 頁，共 @Model.TotalCount 筆申請</span>
+    @if (Model.Page > 1) { <a asp-action="Index" asp-route-review="@Model.Review" asp-route-page="@(Model.Page - 1)" class="btn btn-outline-secondary">上一頁</a> }
+    @if (Model.Page < Model.PageCount) { <a asp-action="Index" asp-route-review="@Model.Review" asp-route-page="@(Model.Page + 1)" class="btn btn-outline-secondary">下一頁</a> }
+</nav>

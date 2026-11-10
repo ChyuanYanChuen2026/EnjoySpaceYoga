@@ -18,9 +18,17 @@ public static class DbSeeder
 
     public static async Task<ScheduleSyncResult> SeedAsync(AppDbContext db)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
         var term = await EnsureTermAsync(db);
+        // Never let startup schedule synchronization rewrite a released or purchased timetable.
+        if (term.Status != "Draft"
+            || await db.EnrollmentApplications.AnyAsync(x => x.Course.TermId == term.TermId)
+            || await db.CourseEnrollments.AnyAsync(x => x.Course.TermId == term.TermId))
+        {
+            Console.WriteLine("秋季課表已離開草稿或已有報名紀錄，略過自動課表同步。");
+            return new ScheduleSyncResult(false, false, 0, 0, 0, 0, 0);
+        }
         var location = await EnsureStudioLocationAsync(db);
         var (mia, miaCreated) = await EnsureTeacherAsync(
             db,
@@ -123,7 +131,7 @@ public static class DbSeeder
         var termStart = At(2026, 9, 1, 0, 0);
         var termEndExclusive = At(2026, 11, 1, 0, 0);
         var existingSessions = await db.ClassSessions
-            .Where(item => courseIds.Contains(item.CourseId) &&
+            .Where(item => !item.IsExtraSession && courseIds.Contains(item.CourseId) &&
                            item.StartsAt >= termStart &&
                            item.StartsAt < termEndExclusive)
             .OrderBy(item => item.Id)
@@ -198,6 +206,7 @@ public static class DbSeeder
         }
 
         await db.SaveChangesAsync();
+        await EnjoySpace.Web.Services.ScheduleVersion.TouchDraftAsync(db, term.TermId);
         await transaction.CommitAsync();
 
         return new ScheduleSyncResult(

@@ -1,0 +1,20 @@
+@model EnjoySpace.Web.Models.ClassSessionDetailModel
+@{ ViewData["Title"] = "刪除場次確認"; }
+<h1 class="h3">刪除場次確認</h1>
+<div class="card card-body mb-3">
+    <p><strong>@Model.CourseName</strong> · @Model.TeacherName · @Model.LocationName</p>
+    <p>@Model.StartsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm") ～ @Model.EndsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")（台灣時間）</p>
+    @if (Model.CanDelete)
+    {
+        <p class="text-danger">刪除後此場次將從課表移除。請核對課程與日期後再確認。</p>
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+            <input type="hidden" name="rowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+            <button class="btn btn-danger">確認刪除此場次</button>
+        </form>
+    }
+    else
+    {
+        <p class="text-danger">@(Model.HasApplications ? "此課程已有報名紀錄，不能直接刪除場次，須另行安排取消／調課並保留紀錄。" : "學期已離開草稿，不能直接刪除已公布的場次。")</p>
+    }
+</div>
+<a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">返回場次明細</a>

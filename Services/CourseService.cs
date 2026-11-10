@@ -1,7 +1,9 @@
-﻿using EnjoySpace.Web.Data;
+﻿using EnjoySpace.Web.Areas.Admin.ViewModels;
+using EnjoySpace.Web.Data;
 using EnjoySpace.Web.Models.Entities;
 using EnjoySpace.Web.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace EnjoySpace.Web.Services;
 
@@ -13,13 +15,20 @@ public class CourseService
     {
         _db = db;
     }
-
-    private async Task ValidateTermAsync(long termId)
+    private async Task ValidateTermAsync(long termId, bool requiresDraft = false)
     {
         var term = await _db.Terms.AsNoTracking().SingleOrDefaultAsync(item => item.TermId == termId);
+
         if (term is null)
         {
             throw new ArgumentException("所選學期不存在，請重新選擇。");
+        }
+
+        if (requiresDraft &&
+            term.Status != TermStatusOptions.Draft)
+        {
+            throw new ArgumentException(
+                "只能選擇草稿學期；已開放且有報名紀錄的學期不能直接變更課表。");
         }
     }
 
@@ -42,15 +51,18 @@ public class CourseService
         .ToListAsync();
     }
 
-    public async Task CreateAsync(string name, long termId, int classCategoryId, long defaultTeacherId,
-        long defaultLocationId, decimal termPrice, CourseSettings settings)
+    public async Task<long> CreateAsync(string name, long termId, int classCategoryId, long defaultTeacherId,
+        long defaultLocationId, decimal termPrice, CourseSettings settings, byte[]? expectedTermVersion = null)
     {
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         if (string.IsNullOrWhiteSpace(name) || name.Length > 150)
         {
             throw new ArgumentException("課程名稱必填且最多 150 個字元。");
         }
 
-        await ValidateTermAsync(termId);
+        await ValidateTermAsync(termId, requiresDraft: true);
+        if (expectedTermVersion != null)
+            await ScheduleVersion.RequireCurrentAsync(_db, termId, expectedTermVersion);
         await ValidateClassCategoryAsync(classCategoryId);
         await ValidateDefaultTeacherAsync(defaultTeacherId);
         await ValidateDefaultLocationAsync(defaultLocationId);
@@ -69,7 +81,10 @@ public class CourseService
         ApplySettings(course, settings);
         _db.Courses.Add(course);
 
+        await ScheduleVersion.TouchDraftAsync(_db, termId);
         await _db.SaveChangesAsync();
+        await tx.CommitAsync();
+        return course.CourseId;
     }
 
     public async Task<Course?> GetByIdAsync(long courseId)
@@ -81,6 +96,7 @@ public class CourseService
         int classCategoryId, long defaultTeacherId, long defaultLocationId, decimal termPrice,
         byte[] rowVersion, CourseSettings settings)
     {
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         if (string.IsNullOrWhiteSpace(name) || name.Length > 150)
         {
             throw new ArgumentException("課程名稱必填且最多 150 個字元。");
@@ -100,7 +116,24 @@ public class CourseService
             return CourseUpdateResult.Conflict;
         }
 
-        await ValidateTermAsync(termId);
+        var currentTerm = await _db.Terms.AsNoTracking().SingleOrDefaultAsync(term => term.TermId == course.TermId);
+
+        if (currentTerm is null)
+        {
+            throw new ArgumentException("此課程的學期資料不存在，無法修改。");
+        }
+
+        if (currentTerm.Status != TermStatusOptions.Draft)
+        {
+            throw new ArgumentException("只有草稿學期的課程可以修改。");
+        }
+
+        await ValidateTermAsync(termId, requiresDraft: true);
+        if (await _db.EnrollmentApplications.AnyAsync(x => x.CourseId == courseId)
+            || await _db.CourseEnrollments.AnyAsync(x => x.CourseId == courseId))
+            throw new ArgumentException("已有報名紀錄的課程不能直接修改。");
+        if (termId != course.TermId && await _db.ClassSessions.AnyAsync(x => x.CourseId == courseId))
+            throw new ArgumentException("已有場次的課程不能移至其他學期。");
         await ValidateClassCategoryAsync(classCategoryId);
         await ValidateDefaultTeacherAsync(defaultTeacherId);
         await ValidateDefaultLocationAsync(defaultLocationId);
@@ -108,6 +141,7 @@ public class CourseService
         ValidateSettings(settings);
         _db.Entry(course).Property(course => course.RowVersion).OriginalValue = rowVersion;
 
+        var originalTermId = course.TermId;
         course.Name = name.Trim();
         course.TermId = termId;
         course.ClassCategoryId = classCategoryId;
@@ -118,7 +152,10 @@ public class CourseService
 
         try
         {
+            await ScheduleVersion.TouchDraftAsync(_db, originalTermId);
+            if (termId != originalTermId) await ScheduleVersion.TouchDraftAsync(_db, termId);
             await _db.SaveChangesAsync();
+            await tx.CommitAsync();
             return CourseUpdateResult.Saved;
         }
         catch (DbUpdateConcurrencyException)
@@ -156,6 +193,16 @@ public class CourseService
             .AsNoTracking()
             .Where(category => category.IsActive)
             .OrderBy(category => category.ClassCategoryId)
+            .ToListAsync();
+    }
+
+    public async Task<List<Term>> GetDraftTermOptionsAsync()
+    {
+        return await _db.Terms
+            .AsNoTracking()
+            .Where(term => term.Status == TermStatusOptions.Draft)
+            .OrderByDescending(term => term.StartDate)
+            .ThenBy(term => term.TermId)
             .ToListAsync();
     }
 

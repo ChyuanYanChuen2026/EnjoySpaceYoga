@@ -1,16 +1,45 @@
-@model IReadOnlyList<EnjoySpace.Web.Models.Entities.CourseEnrollment>
-@{ ViewData["Title"] = "正式報名名單"; }
-<h1 class="h3">正式報名名單</h1>
-<p class="text-secondary">最近 200 筆已確認付款並核准的整期報名。</p>
-<div class="card card-body table-responsive"><table class="table">
-<thead><tr><th>學生</th><th>學期／課程</th><th>狀態</th><th>報名時間（台灣）</th><th></th></tr></thead>
-<tbody>@foreach (var item in Model)
-{
-    <tr><td>@item.Student.User.DisplayName</td><td>@item.Course.Term.Name · @item.Course.Name</td>
-    <td>@(item.Status == "Active" ? "有效" : item.Status)</td>
-    <td>@(DateTime.SpecifyKind(item.EnrolledAtUtc, DateTimeKind.Utc).AddHours(8).ToString("yyyy/MM/dd HH:mm"))</td>
-    <td><a asp-controller="EnrollmentApplications" asp-action="Details" asp-route-id="@item.EnrollmentApplicationId">查看申請</a></td></tr>
-}</tbody></table>
-@if (Model.Count == 0) { <p>目前沒有正式報名。</p> }
+@model EnjoySpace.Web.Areas.Admin.ViewModels.PagedRecords<EnjoySpace.Web.Models.Entities.CourseEnrollment>
+
+@{ 
+    ViewData["Title"] = "正式報名管理";
+    var sort = ViewData["Sort"]?.ToString();
+}
+<h1 class="h3">正式報名管理</h1>
+
+<p class="text-secondary">查詢已建立的正式報名，包含已取消及停用學生、課程的歷史紀錄。待付款、待審核申請請至報名申請頁處理。</p>
+<a asp-controller="EnrollmentApplications" asp-action="Index" class="btn btn-outline-secondary mb-3">前往報名申請管理</a>
+
+<div class="card card-body table-responsive">
+    
+    <table sort-set="enrollments" class="table">
+        <thead>
+            <tr>
+                <th sort-key="name">學生</th>
+                <th sort-key="course">學期／課程</th>
+                <th sort-key="status">狀態</th>
+                <th sort-key="date">報名時間（台灣）</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td>@item.Student.User.DisplayName</td>
+                    <td>@item.Course.Term.Name · @item.Course.Name</td>
+                    <td>@(item.Status switch { "Active" => "有效", "Cancelled" => "已取消", _ => item.Status })</td>
+                    <td>@(DateTime.SpecifyKind(item.EnrolledAtUtc, DateTimeKind.Utc).AddHours(8).ToString("yyyy/MM/dd HH:mm"))</td>
+                    <td><a asp-controller="EnrollmentApplications" asp-action="Details" asp-route-id="@item.EnrollmentApplicationId">查看申請</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+@if (Model.TotalCount == 0) { <p>目前沒有正式報名。</p> }
 </div>
+<nav class="mt-3" aria-label="正式報名分頁">
+    <p>共 @Model.TotalCount 筆，第 @Model.Page / @Model.PageCount 頁，每頁 20 筆</p>
+    @if (Model.Page > 1) { <a asp-action="Index" asp-route-sort="@sort" asp-route-page="@(Model.Page - 1)" class="btn btn-outline-secondary">上一頁</a> }
+    @if (Model.Page < Model.PageCount) { <a asp-action="Index" asp-route-sort="@sort" asp-route-page="@(Model.Page + 1)" class="btn btn-outline-secondary">下一頁</a> }
+</nav>
 

@@ -1,133 +1,55 @@
-﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.DashboardViewModel
-
+@model EnjoySpace.Web.Areas.Admin.ViewModels.DashboardViewModel
 @{
     ViewData["Title"] = "儀表板";
+    var today = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(8));
 }
-
-<div class="mb-4">
-    <h1 class="h3 mb-2">儀表板</h1>
-    <p class="text-secondary mb-0">
-        瑜珈課程與出缺勤管理系統
-    </p>
+<div class="dashboard-heading">
+    <div><h1>管理儀表板</h1><p>歡迎回來，這裡是課程與報名的最新概況。</p></div>
+    <time class="dashboard-date" datetime="@today.ToString("yyyy-MM-dd")">@today.ToString("yyyy年M月d日") · 台灣時間</time>
 </div>
-
-<div class="row g-3">
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <h2 class="h6 text-secondary">待審核報名</h2>
-                <p class="display-6 fw-semibold mb-2"> @Model.PendingEnrollmentCount</p>
-                <a asp-area="Admin" asp-controller="EnrollmentApplications" asp-action="Index" class="btn btn-sm btn-outline-primary">查看申請</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <h2 class="h6 text-secondary">今日課程數</h2>
-                <p class="display-6 fw-semibold mb-0"> @Model.TodayClassSessionCount </p>
-                <p class="small text-secondary mb-0">依台灣時間計算</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <h2 class="h6 text-secondary">固定期課總數</h2>
-                <p class="display-6 fw-semibold mb-0">@Model.CourseCount </p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card shadow-sm h-100"><div class="card-body">
-            <h2 class="h6 text-secondary">待確認付款</h2>
-            <p class="display-6 fw-semibold mb-2">@Model.PendingPaymentCount</p>
-            <a asp-controller="Payments" asp-action="Index" class="btn btn-sm btn-outline-primary">查看付款</a>
-        </div></div>
-    </div>
-    <div class="card shadow-sm mt-4">
-        <div class="card-body">
-            <h2 class="h5">課程行事曆</h2>
-            <p class="text-secondary small"> 時間皆以台灣時間顯示，點選場次可查看詳細資料。</p>
-            <div id="calendarError" class="alert alert-danger d-none" role="alert"> 無法載入課程資料，請重新整理頁面。</div>
-            <div  id="calendar"  data-events-url="@Url.Action("Events", "ClassSessions", new { area = "Admin" })"></div>
-        </div>
-    </div>
-
+<div class="dashboard-stats">
+    <section class="card stat-card">
+        <h2 class="stat-title mb-0"><partial name="_UiIcon" model='"check"' />待審核報名</h2>
+        <p class="stat-number">@Model.PendingEnrollmentCount</p>
+        <div class="stat-bottom"><a asp-area="Admin" asp-controller="EnrollmentApplications" asp-action="Index">查看申請<partial name="_UiIcon" model='"arrow"' /></a></div>
+    </section>
+    <section class="card stat-card">
+        <h2 class="stat-title mb-0"><partial name="_UiIcon" model='"calendar"' />今日課程數</h2>
+        <p class="stat-number">@Model.TodayClassSessionCount</p>
+        <div class="stat-bottom">依台灣時間計算</div>
+    </section>
+    <section class="card stat-card">
+        <h2 class="stat-title mb-0"><partial name="_UiIcon" model='"book"' />固定期課總數</h2>
+        <p class="stat-number">@Model.CourseCount</p>
+        <div class="stat-bottom">目前建立的固定期課</div>
+    </section>
+    <section class="card stat-card">
+        <h2 class="stat-title mb-0"><partial name="_UiIcon" model='"wallet"' />待確認付款</h2>
+        <p class="stat-number">@Model.PendingPaymentCount</p>
+        <div class="stat-bottom"><a asp-area="Admin" asp-controller="Payments" asp-action="Index">查看付款<partial name="_UiIcon" model='"arrow"' /></a></div>
+    </section>
 </div>
-
+@await Component.InvokeAsync("TrialReviewNotice")
+<section class="card calendar-panel">
+    <div class="card-body">
+        <div class="calendar-intro"><h2 class="h5">課程行事曆</h2><p>時間皆以台灣時間顯示，點選場次可查看詳細資料。</p></div>
+        <div id="calendarLegend" class="calendar-legend" hidden>
+            <label>配色
+                <select id="calendarColorBy">
+                    <option value="term">依檔期</option>
+                    <option value="course">依課程</option>
+                </select>
+            </label>
+            <ul aria-label="目前顯示的課程色彩圖例"></ul>
+        </div>
+        <div id="calendarError" class="alert alert-danger d-none" role="alert">無法載入課程資料，請重新整理頁面。</div>
+        <div id="calendar" data-events-url="@Url.Action("Events", "ClassSessions", new { area = "Admin" })"></div>
+    </div>
+</section>
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.21/index.global.min.js"></script>
-    <script src='https://cdn.jsdelivr.net/npm/luxon@2.3.0/build/global/luxon.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.21/index.global.min.js'></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@@6.1.21/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@@3.7.2/build/global/luxon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@@fullcalendar/core@@6.1.21/locales/zh-tw.global.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@@fullcalendar/luxon3@@6.1.21/index.global.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const calendarElement = document.getElementById('calendar');
-            const errorElement = document.getElementById('calendarError');
-
-            if (!window.FullCalendar || !window.luxon ||  !window.FullCalendar.Luxon3) {
-                errorElement.textContent =  '行事曆元件載入失敗，請確認網路連線後重新整理。';
-                errorElement.classList.remove('d-none');
-                return;
-            }
-
-            const calendar = new FullCalendar.Calendar(calendarElement, {
-                initialView: 'dayGridMonth',
-                locale: 'zh-tw',
-                timeZone: 'Asia/Taipei',
-
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                },
-
-                buttonText: {
-                    today: '今天',
-                    month: '月',
-                    week: '週',
-                    day: '日'
-                },
-
-                height: 'auto',
-                nowIndicator: true,
-                editable: false,
-                selectable: false,
-                dayMaxEvents: true,
-                displayEventEnd: true,
-
-                eventTimeFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                },
-
-                slotLabelFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                },
-
-                events: {
-                    url: calendarElement.dataset.eventsUrl,
-                    success: function () {
-                        errorElement.classList.add('d-none');
-                    },
-                    failure: function () {
-                        errorElement.textContent =
-                            '無法載入課程資料，請重新整理頁面。';
-                        errorElement.classList.remove('d-none');
-                    }
-                }
-            });
-
-            calendar.render();
-        });
-    </script>
+    <script src="~/js/dashboard-calendar.js" asp-append-version="true"></script>
 }

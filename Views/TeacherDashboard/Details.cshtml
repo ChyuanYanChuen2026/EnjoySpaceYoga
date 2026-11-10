@@ -1,0 +1,15 @@
+@model TeacherSessionModel
+@{ ViewData["Title"] = "我的場次詳細"; var taiwan = TimeSpan.FromHours(8); }
+<div class="dashboard-heading"><div><h1>我的場次詳細</h1><p>查看本人授課時間、地點與名額。</p></div></div>
+<section class="card mb-4"><div class="card-body"><dl class="row mb-0">
+    <dt class="col-sm-3">學期</dt><dd class="col-sm-9">@Model.TermName</dd>
+    <dt class="col-sm-3">課程</dt><dd class="col-sm-9">@Model.CourseName</dd>
+    <dt class="col-sm-3">場次類型</dt><dd class="col-sm-9">@(Model.IsExtraSession ? "額外加開單堂" : "固定期課")</dd>
+    <dt class="col-sm-3">地點</dt><dd class="col-sm-9">@Model.LocationName</dd>
+    <dt class="col-sm-3">開始時間（台灣）</dt><dd class="col-sm-9">@Model.StartsAt.ToOffset(taiwan).ToString("yyyy/MM/dd HH:mm")</dd>
+    <dt class="col-sm-3">結束時間（台灣）</dt><dd class="col-sm-9">@Model.EndsAt.ToOffset(taiwan).ToString("yyyy/MM/dd HH:mm")</dd>
+    <dt class="col-sm-3">已報名／上限人數</dt><dd class="col-sm-9">@Model.RegisteredCount / @Model.Capacity 人</dd>
+    <dt class="col-sm-3">場次狀態</dt><dd class="col-sm-9">@(Model.IsCancelled ? "已停課" : "正常排課")</dd>
+</dl></div></section>
+<a asp-action="Index" asp-route-month="@Model.StartsAt.ToOffset(taiwan).ToString("yyyy-MM-01")" asp-fragment="my-calendar" class="btn btn-outline-secondary">返回我的課表</a>
+<a asp-controller="Classroom" asp-action="Index" asp-route-sessionId="@Model.Id" class="btn btn-primary">課堂 QR Code 與點名</a>

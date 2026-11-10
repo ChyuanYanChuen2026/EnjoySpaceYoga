@@ -1,0 +1,67 @@
+﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.TeacherCreateViewModel
+
+@{
+    ViewData["Title"] = "新增老師";
+}
+
+<h1 class="h3 mb-2">新增老師</h1>
+<p class="text-muted">
+    建立老師基本資料，登入帳號預設停用。
+</p>
+
+<div class="card">
+    <div class="card-body">
+        <form asp-area="Admin" asp-controller="Teachers"  asp-action="Create" method="post">
+
+            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label asp-for="DisplayName" class="form-label"></label>
+                    <input asp-for="DisplayName" class="form-control" />
+                    <span asp-validation-for="DisplayName"  class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="TeacherNo" class="form-label"></label>
+                    <input asp-for="TeacherNo" class="form-control" />
+                    <span asp-validation-for="TeacherNo" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="Phone" class="form-label"></label>
+                    <input asp-for="Phone" class="form-control" />
+                    <span asp-validation-for="Phone" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <div class="form-check">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label asp-for="IsActive" class="form-check-label"></label>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="Note" class="form-label"></label>
+                    <textarea asp-for="Note" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Note" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">儲存</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">返回列表</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

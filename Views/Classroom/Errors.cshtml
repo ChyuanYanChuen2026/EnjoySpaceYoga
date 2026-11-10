@@ -1,0 +1,11 @@
+@model List<EnjoySpace.Web.Models.Entities.CheckInEvent>
+@{ Layout = "/Areas/Admin/Views/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "打卡異常紀錄"; }
+<h1>打卡異常紀錄</h1><p>最近 200 筆。異常與出勤分開保存，不會覆蓋出席或遲到。</p>
+@foreach (var item in Model) {
+<article class="card p-3 mb-3"><h2 class="h5">@item.User.DisplayName · @(item.ResolvedAt == null ? "待處理" : "已處理")</h2>
+<p>@item.CreatedAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm:ss") · @item.Code</p><p>@item.Message</p><p>@item.Resolution</p>
+@if(item.ClassSessionId != null){<a asp-action="Index" asp-route-sessionId="@item.ClassSessionId">開啟課堂名單與處理異常</a>}
+@if(item.ResolvedAt == null){<form asp-action="Resolve" method="post" data-resolve-error><input type="hidden" name="id" value="@item.Id"/><label>處理說明<input name="reason" required maxlength="500" class="form-control"/></label><button class="btn btn-outline-primary">記錄處理結果</button><p role="status"></p></form>}
+</article>
+}
+@section Scripts { <script src="~/js/check-in-errors.js" asp-append-version="true"></script> }

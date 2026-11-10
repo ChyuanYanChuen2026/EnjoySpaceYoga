@@ -1,8 +1,42 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@{
+    Layout = null;
+    ViewData["Title"] = "歡迎來到 Enjoy Space";
 }
-
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]｜米亞工作室</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/workspace.css" asp-append-version="true" />
+</head>
+<body class="entry-page">
+    <a href="#main-content" class="skip-link">跳至主要內容</a>
+    <header class="entry-header">
+        <a class="es-brand" asp-controller="Home" asp-action="Index"><partial name="_BrandMark" /><span><strong>Enjoy Space</strong><small>米亞工作室</small></span></a>
+        <span>課程・練習・日常</span>
+    </header>
+    <main class="entry-main" id="main-content" tabindex="-1">
+        <p class="entry-eyebrow">WELCOME TO ENJOY SPACE</p>
+        <h1>留一段時間，<br />給練習，也給自己。</h1>
+        <p class="entry-lead">歡迎來到米亞工作室，請選擇您要前往的入口。</p>
+        <div class="entry-options">
+            @*<a class="entry-option" href="https://enjoyspacefrontend.lanyonyon.workers.dev/">*@
+                <a class="entry-option" href="http://localhost:4000">
+                <span class="entry-icon"><partial name="_UiIcon" model='"calendar"' /></span>
+                <h2>前台入口</h2>
+                <p>瀏覽課程與公開課表，<br />了解方案、提出體驗申請。</p>
+                <span class="entry-action">前往工作室網站<partial name="_UiIcon" model='"arrow"' /></span>
+            </a>
+            <a class="entry-option" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">
+                <span class="entry-icon"><partial name="_UiIcon" model='"check"' /></span>
+                <h2>後台入口</h2>
+                <p>管理課程、學員與報名，<br />處理收款、點名及各項申請。</p>
+                <span class="entry-action">進入管理後台<partial name="_UiIcon" model='"arrow"' /></span>
+            </a>
+        </div>
+    </main>
+    <footer class="entry-footer"><span>© @DateTime.Now.Year Enjoy Space 米亞工作室</span><a asp-controller="Home" asp-action="Privacy">隱私權政策</a></footer>
+</body>
+</html>

@@ -1,0 +1,11 @@
+@model EnjoySpace.Web.Services.TrialReviewSummary
+<section class="card mb-4" aria-label="體驗待審核提醒">
+    <div class="card-body">
+        <h2 class="h5">體驗待審核</h2>
+        <div class="trial-actions">
+            <a asp-area="Admin" asp-controller="TrialDesk" asp-action="Index" asp-route-review="plans" class="btn btn-outline-primary">方案待審核 <strong>@Model.Plans</strong> 筆</a>
+            <a asp-area="Admin" asp-controller="TrialDesk" asp-action="Index" asp-route-review="bookings" class="btn btn-outline-primary">逐堂預約待審核 <strong>@Model.Bookings</strong> 筆</a>
+        </div>
+        <p class="small text-secondary mt-2 mb-0">方案與逐堂預約分別審核；數量於重新整理或進入頁面時更新。</p>
+    </div>
+</section>

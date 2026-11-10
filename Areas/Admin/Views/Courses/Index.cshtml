@@ -1,4 +1,5 @@
-﻿@model IReadOnlyList<EnjoySpace.Web.Models.Entities.Course>
+@model EnjoySpace.Web.Areas.Admin.ViewModels.CatalogListViewModel<EnjoySpace.Web.Models.Entities.Course>
+@using EnjoySpace.Web.Areas.Admin.ViewModels
 
 @{
     ViewData["Title"] = "課程管理";
@@ -19,42 +20,52 @@
 }
 
 <div class="mb-3">
-    <a asp-area="Admin"  asp-controller="Courses" asp-action="Create"  class="btn btn-primary"> 新增課程</a>
+    <a asp-area="Admin" asp-controller="ScheduleSetup" asp-action="Index" asp-route-termId="@Model.Controls.Filter.TermId" class="btn btn-primary">新增課程（步驟設定）</a>
 </div>
 
+<partial name="_CatalogFilters" model="Model.Controls" />
 <div class="card shadow-sm">
     <div class="card-body">
-        @if (Model.Count == 0)
+        @if (Model.Items.Count == 0)
         {
-            <p class="text-secondary mb-0">目前沒有課程資料。</p>
+            <p class="text-secondary mb-0">沒有符合條件的課程資料。</p>
         }
         else
         {
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table sort-set="courses" class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>
-                            <th scope="col">學期名稱</th>
-                            <th scope="col">課程名稱</th>
-                            <th scope="col">預設名額</th>
-                            <th scope="col">期課價格</th>
-                            <th scope="col">狀態</th>
-                            <th scope="col">學期期間</th>
+                            <th sort-key="term" scope="col">學期名稱</th>
+                            <th sort-key="name" scope="col">課程名稱</th>
+                            <th sort-key="capacity" scope="col">預設名額</th>
+                            <th sort-key="price" scope="col">期課價格</th>
+                            <th sort-key="status" scope="col">狀態</th>
+                            <th sort-key="date" scope="col">學期期間</th>
                             <th scope="col">操作</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var course in Model)
+                        @foreach (var course in Model.Items)
                         {
                             <tr>
                                 <td>@course.Term.Name</td>
                                 <td>@course.Name</td>
                                 <td>@course.DefaultCapacity</td>
-                                <td class="text-nowrap">NT$ @course.TermPrice.ToString("N2")</td>
+                                <td class="text-nowrap">NT$ @course.TermPrice.ToString("N0")</td>
                                 <td class="text-nowrap">@(course.IsActive ? "啟用" : "停用")／@(course.IsPubliclyVisible ? "公開" : "不公開")</td>
                                 <td class="text-nowrap">@course.Term.StartDate.ToString("yyyy/MM/dd")～@course.Term.EndDate.ToString("yyyy/MM/dd")</td>
-                                <td>
-                                    <a asp-area="Admin" asp-controller="Courses"  asp-action="Edit"  asp-route-id="@course.CourseId"  class="btn btn-sm btn-outline-primary">編輯 </a>
+                                <td class="text-nowrap">
+                                    @if (course.Term.Status == TermStatusOptions.Draft)
+                                    {
+                                        <a asp-area="Admin" asp-controller="Courses" asp-action="Edit" asp-route-id="@course.CourseId" class="btn btn-sm btn-outline-primary">
+                                            編輯
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">學期已@(TermStatusOptions.GetText(course.Term.Status))</span>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -64,3 +75,5 @@
         }
     </div>
 </div>
+
+<partial name="_CatalogPagination" model="Model.Controls" />

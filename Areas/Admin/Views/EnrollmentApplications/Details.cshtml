@@ -3,11 +3,21 @@
 @model EnjoySpace.Web.Models.Entities.EnrollmentApplication
 @{ ViewData["Title"] = "報名明細"; var version = Convert.ToBase64String(Model.RowVersion); }
 <h1 class="h3">報名 #@Model.Id</h1>
+<div class="alert alert-warning">@EnjoySpace.Web.Services.EnrollmentWorkflowService.NoRefundPolicy</div>
 <div class="card card-body mb-3">
     <h2 class="h5">@Model.Student.User.DisplayName｜@Model.Course.Term.Name · @Model.Course.Name</h2>
-    <p>@Model.QuotedSessionCount 堂｜應收 NT$ @Model.QuotedAmount.ToString("N2")</p>
+    <p>@Model.QuotedSessionCount 堂｜應收 NT$ @Model.QuotedAmount.ToString("N0")</p>
     <p class="mb-0">@WorkflowLabels.Application(Model.Status) · @WorkflowLabels.Payment(Model.Payment?.Status)</p>
+    @if (!string.IsNullOrEmpty(Model.Payment?.PaymentMethod))
+    {
+        <p class="mt-2 mb-0">@(Model.Payment.Status == "Pending" ? "預計付款方式（尚未確認收款）" : "付款方式")：@(Model.Payment.PaymentMethod switch { "Cash" => "現場現金", "Transfer" => "銀行轉帳", "LinePay" => "Line Pay", _ => Model.Payment.PaymentMethod })</p>
+    }
     @if (!string.IsNullOrWhiteSpace(Model.ReviewNote)) { <p class="mt-2 mb-0">審核備註：@Model.ReviewNote</p> }
+    @if (Model.PolicyConfirmedAtUtc.HasValue)
+    {
+        <p class="mt-2 mb-0">確認者（帳號 ID：@Model.PolicyConfirmedByUserId）已於 @(new DateTimeOffset(DateTime.SpecifyKind(Model.PolicyConfirmedAtUtc.Value, DateTimeKind.Utc)).ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")) 記錄學生確認：@Model.ConfirmedPolicy</p>
+    }
+    <a asp-controller="ClassSessions" asp-action="Index" asp-route-CourseId="@Model.CourseId" class="mt-2" target="_blank" rel="noopener">核對課程場次</a>
 </div>
 @if (Model.Status == EnrollmentApplicationStatus.Pending)
 {
@@ -19,13 +29,33 @@
             <input name="Id" value="@Model.Id" type="hidden" />
             <input name="RowVersion" value="@version" type="hidden" />
             <div class="row g-3 mb-3">
-                <div class="col-12 col-md-4"><label for="amount" class="form-label">實收金額</label><input id="amount" name="ReceivedAmount" type="number" step="0.01" min="0" required class="form-control" /></div>
-                <div class="col-12 col-md-4"><label for="method" class="form-label">付款方式</label><select id="method" name="Method" required class="form-select"><option value="">請選擇</option><option value="Transfer">轉帳</option><option value="Cash">現金</option></select></div>
-                <div class="col-12 col-md-4"><label for="paidAt" class="form-label">付款時間（台灣）</label><input id="paidAt" name="PaidAtTaiwan" type="datetime-local" required class="form-control" /></div>
+                <div class="col-12 col-md-4">
+                    <label for="amount" class="form-label">實收金額</label>
+                    <input id="amount" name="ReceivedAmount" type="number" step="0.01" min="0" required class="form-control" />
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="method" class="form-label">付款方式</label>
+                    <select id="method" name="Method" required class="form-select">
+                        <option value="">請選擇</option>
+                        <option value="Transfer">轉帳</option>
+                        <option value="Cash">現金</option>
+                        <option value="LinePay">Line Pay</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="paidAt" class="form-label">付款時間（台灣）</label>
+                    <input id="paidAt" name="PaidAtTaiwan" type="datetime-local" required class="form-control" />
+                </div>
             </div>
             <label for="paymentNote" class="form-label">收款備註／轉帳末五碼</label>
             <textarea id="paymentNote" name="Note" maxlength="500" class="form-control mb-3"></textarea>
-            <div><button class="btn btn-primary">確認已收款</button></div>
+            <div class="form-check mb-3">
+                <input id="student-agreement" name="ConfirmStudentAgreement" value="true" type="checkbox" required class="form-check-input" />
+                <label for="student-agreement" class="form-check-label">已再次與學生確認課程、完整課表、金額，以及報名後不提供退課退款。</label>
+            </div>
+            <div>
+                <button class="btn btn-primary">確認已收款</button>
+            </div>
         </form>
     }
     <form asp-action="Review" method="post" class="card card-body mb-3">
@@ -33,6 +63,14 @@
         <input name="Id" value="@Model.Id" type="hidden" /><input name="RowVersion" value="@version" type="hidden" />
         <label for="reviewNote" class="form-label">審核備註（退回時必填）</label>
         <textarea id="reviewNote" name="Note" maxlength="500" class="form-control mb-3"></textarea>
+        @if (Model.Payment?.Status == "Confirmed")
+        {
+            <div class="form-check mb-3">
+                <input id="final-review" name="ConfirmFinalReview" value="true" type="checkbox" class="form-check-input" />
+                <label for="final-review" class="form-check-label">核准前最後確認：學生、堂數、金額與收款均正確，學生已了解不提供退課退款。</label>
+            </div>
+        }
+        <p class="text-secondary">退回僅用於尚未核准的申請；已核准的報名不提供學生退課退款。</p>
         <div class="d-flex gap-2 flex-wrap">
             @if (Model.Payment?.Status == "Confirmed") { <button name="Approve" value="true" class="btn btn-success">核准並建立正式報名</button> }
             else { <span class="text-secondary align-self-center">完成收款確認後才能核准。</span> }
@@ -41,4 +79,5 @@
     </form>
 }
 <a asp-action="Index">返回報名列表</a>
+
 

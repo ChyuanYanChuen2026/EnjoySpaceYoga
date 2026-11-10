@@ -4,11 +4,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
+builder.Services.AddAuthentication().AddCookie(PortalAuthentication.Scheme, PortalAuthentication.Configure);
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
 {
     options.LoginPath = "/Account/Login";
@@ -19,15 +22,29 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.Events.OnValidatePrincipal = async context =>
     {
         var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-        if (!long.TryParse(context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ||
-            !await db.UserRoles.AnyAsync(x => x.UserId == id && x.User.IsActive && x.Role.IsActive && x.Role.RoleCode == "Admin"))
-            context.RejectPrincipal();
+        if (!long.TryParse(context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id))
+        { context.RejectPrincipal(); return; }
+        if (!await PasswordSession.IsCurrentAsync(db, context.Principal, id))
+        { context.RejectPrincipal(); return; }
+        var roles = await StaffAccess.RolesAsync(db, id);
+        if (roles.Count == 0) { context.RejectPrincipal(); return; }
+        var identity = (ClaimsIdentity)context.Principal!.Identity!;
+        foreach (var claim in identity.FindAll(ClaimTypes.Role).ToList()) identity.RemoveClaim(claim);
+        identity.AddClaims(roles.Select(role => new Claim(ClaimTypes.Role, role)));
     };
 });
 builder.Services.AddAuthorization();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;
+    options.AddPolicy("check-in", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 200, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    options.AddPolicy("password-recovery", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    options.AddPolicy("portal-trial", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
@@ -38,11 +55,36 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<AppDbContext>(options =>options.UseSqlServer(connectionString));
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<CourseService>();
+builder.Services.AddScoped<PortalCatalogService>();
+builder.Services.AddScoped<AdminCatalogService>();
 builder.Services.AddScoped<ClassSessionService>();
 builder.Services.AddScoped<EnrollmentApplicationService>();
 builder.Services.AddScoped<EnrollmentWorkflowService>();
+builder.Services.AddScoped<TermScheduleService>();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddScoped<AttendanceService>();
+builder.Services.AddScoped<CheckInService>();
+builder.Services.AddScoped<TrialBookingService>();
+builder.Services.AddScoped<TrialReviewSummaryService>();
+builder.Services.AddScoped<LeaveMakeupService>();
+builder.Services.AddScoped<TrialLessonService>();
+builder.Services.AddScoped<TeacherRequestService>();
+builder.Services.AddScoped<TeacherDashboardService>();
+builder.Services.Configure<PasswordRecoveryOptions>(builder.Configuration.GetSection("PasswordRecovery"));
+builder.Services.AddScoped<IPasswordResetEmailSender, SmtpPasswordResetEmailSender>();
+builder.Services.AddScoped<PasswordRecoveryService>();
 
 var app = builder.Build();
+var resetArgument = Array.IndexOf(args, "--reset-password");
+if (resetArgument >= 0)
+{
+    if (!app.Environment.IsDevelopment() || resetArgument + 1 >= args.Length)
+        throw new InvalidOperationException("請在 Development 環境使用 --reset-password 帳號。");
+    using var scope = app.Services.CreateScope();
+    await AdminAccountSetup.ResetPasswordAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(),  args[resetArgument + 1]);
+    return;
+}
+
 var adminArgument = Array.IndexOf(args, "--create-admin");
 if (adminArgument >= 0)
 {
@@ -81,6 +123,16 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
+// The portal has a separate cookie and cannot inherit an Admin MVC session.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api/portal"))
+    {
+        var result = await context.AuthenticateAsync(PortalAuthentication.Scheme);
+        context.User = result.Principal ?? new ClaimsPrincipal(new ClaimsIdentity());
+    }
+    await next();
+});
 
 app.UseAuthorization();
 

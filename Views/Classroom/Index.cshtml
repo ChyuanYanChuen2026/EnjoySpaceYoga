@@ -1,0 +1,30 @@
+@model EnjoySpace.Web.Areas.Admin.ViewModels.AttendanceRosterViewModel
+@using EnjoySpace.Web.Areas.Admin.ViewModels
+@{ Layout = User.IsInRole("Admin") ? "/Areas/Admin/Views/Shared/_AdminLayout.cshtml" : "/Views/Shared/_TeacherLayout.cshtml"; ViewData["Title"] = "課堂打卡與點名"; }
+<h1>課堂打卡與點名</h1>
+<section id="classroom" data-session="@Model.SessionId" data-start="@Model.StartsAt.ToString("O")">
+<div class="card p-3 mb-3"><h2 class="h4">@Model.CourseName</h2><p>@Model.TeacherName · @Model.LocationName</p><p>@Model.StartsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm") ～ @Model.EndsAt.ToOffset(TimeSpan.FromHours(8)).ToString("HH:mm")</p>
+<p>開課前 30 分鐘至下課可掃碼；開課超過 10 分鐘記為遲到。QR 碼在此時段內保持不變。</p>
+<button id="open-qr" class="btn btn-primary" type="button" disabled>開啟課堂 QR Code</button>
+<div id="qr-display" hidden class="text-center"><img id="qr-image" alt="本堂課學生確認打卡 QR Code" style="width:min(100%,360px)"/><p id="qr-expiry"></p><p id="qr-warning" class="text-danger"></p></div></div>
+@Html.AntiForgeryToken()
+<p id="classroom-feedback" role="status" aria-live="polite"></p>
+<p class="text-secondary">名單每 5 秒更新。正在編輯的表單不會被覆蓋；如版本已變更，請重新整理後再更正。更正已登記出勤時必須填寫原因。</p>
+<div id="attendance-rows">
+@foreach (var row in Model.Participants) {
+<form class="card p-3 mb-2 attendance-row" data-id="@row.ParticipantId">
+<h3 class="h5">@row.StudentName <small>@row.StudentNo</small></h3>
+<p>名單：@row.ParticipantStatus · <strong class="live-status">@AttendanceStatuses.Labels[row.Status]</strong> <span class="live-time"></span></p>
+<input type="hidden" name="SessionId" value="@Model.SessionId"/><input type="hidden" name="ParticipantId" value="@row.ParticipantId"/>
+<input type="hidden" name="RowVersion" value="@Convert.ToBase64String(row.RowVersion)"/>
+@if(row.IsActive) {
+<label>出勤狀態<select class="form-select" name="Status">@foreach(var s in AttendanceStatuses.Labels){<option value="@s.Key" selected="@(s.Key == row.Status)">@s.Value</option>}</select></label>
+<label>人工登記／更正原因<input class="form-control" name="ManualReason" maxlength="500" value="@row.ManualReason"/></label>
+<button type="submit" class="btn btn-outline-primary mt-2 save-attendance" disabled="@(!Model.HasStarted)">儲存點名</button>
+} else { <p>已請假或取消，不可點名。</p> }
+</form>
+}
+</div><h2 class="h4 mt-4">打卡異常紀錄</h2><div id="check-in-issues" aria-live="polite"></div>
+@if (User.IsInRole("Admin")) { <a asp-action="Errors">查看所有打卡異常</a> }
+</section>
+@section Scripts { <script src="~/js/classroom.js" asp-append-version="true"></script> }

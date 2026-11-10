@@ -1,16 +1,45 @@
 @model EnjoySpace.Web.Controllers.AdminLoginModel
-@{ ViewData["Title"] = "管理員登入"; }
-<div class="row justify-content-center py-4">
-    <div class="col-12 col-sm-8 col-lg-5">
-        <h1 class="h3">管理員登入</h1>
-        <form asp-action="Login" method="post" class="card card-body">
-            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
-            <input asp-for="ReturnUrl" type="hidden" />
-            <label asp-for="Account" class="form-label">帳號</label>
-            <input asp-for="Account" class="form-control mb-3" autocomplete="username" />
-            <label asp-for="Password" class="form-label">密碼</label>
-            <input asp-for="Password" class="form-control mb-3" autocomplete="current-password" />
-            <button class="btn btn-primary">登入</button>
-        </form>
-    </div>
-</div>
+@{
+    Layout = null;
+    ViewData["Title"] = "管理員／老師登入";
+}
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]｜Enjoy Space 後台</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/workspace.css" asp-append-version="true" />
+</head>
+<body class="entry-page admin-app login-page">
+    <a href="#main-content" class="skip-link">跳至主要內容</a>
+    <header class="entry-header">
+        <a class="es-brand" asp-area="" asp-controller="Home" asp-action="Index"><partial name="_BrandMark" /><span><strong>Enjoy Space</strong><small>米亞工作室</small></span></a>
+        <a class="login-home-link" asp-area="" asp-controller="Home" asp-action="Index">返回入口首頁</a>
+    </header>
+    <main class="login-main" id="main-content" tabindex="-1">
+        <section class="card login-card" aria-labelledby="login-title">
+            <div class="login-symbol"><partial name="_UiIcon" model='"user"' /></div>
+            <p class="entry-eyebrow">WELCOME BACK</p>
+            <h1 id="login-title">管理員／老師登入</h1>
+            <p class="login-intro" id="login-help">歡迎回來，請登入以管理課程與教學事務。</p>
+            <form asp-area="" asp-controller="Account" asp-action="Login" method="post" aria-describedby="login-help">
+                <div asp-validation-summary="All" class="login-validation" role="alert"></div>
+                <input asp-for="ReturnUrl" type="hidden" />
+                <div class="login-field">
+                    <label asp-for="Account" class="form-label">帳號</label>
+                    <input asp-for="Account" class="form-control" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="100" required />
+                </div>
+                <div class="login-field">
+                    <label asp-for="Password" class="form-label">密碼</label>
+                    <input asp-for="Password" class="form-control" autocomplete="current-password" required />
+                </div>
+                <button class="btn btn-primary login-submit" type="submit">登入<partial name="_UiIcon" model='"arrow"' /></button>
+            </form>
+            <p class="login-note"><a asp-action="ForgotPassword">忘記密碼／首次設定密碼</a></p>
+        </section>
+    </main>
+    <footer class="entry-footer"><span>© @DateTime.Now.Year Enjoy Space 米亞工作室</span><a asp-area="" asp-controller="Home" asp-action="Privacy">隱私權政策</a></footer>
+</body>
+</html>

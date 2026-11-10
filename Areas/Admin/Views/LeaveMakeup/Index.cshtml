@@ -1,0 +1,86 @@
+@model EnjoySpace.Web.Areas.Admin.ViewModels.LeaveMakeupListModel
+@using EnjoySpace.Web.Areas.Admin.ViewModels
+@{ ViewData["Title"] = "請假與補課"; var taiwan = TimeSpan.FromHours(8); }
+<h1 class="h3 mb-3">請假與補課</h1>
+<p class="text-secondary">包含學生自行請假與管理員代辦紀錄。可補原學期日期範圍內的其他課程，不限相同學期資料。代辦請假請從「場次管理 → 名單／點名」選擇學員。</p>
+<nav class="nav nav-pills mb-3" aria-label="請假補課分類">
+    <a asp-action="Index" asp-route-tab="leaves" class="nav-link @(Model.Tab == "leaves" ? "active" : "")">請假紀錄</a>
+    <a asp-action="Index" asp-route-tab="entitlements" class="nav-link @(Model.Tab == "entitlements" ? "active" : "")">補課資格</a>
+    <a asp-action="Index" asp-route-tab="requests" class="nav-link @(Model.Tab == "requests" ? "active" : "")">補課申請／審核</a>
+</nav>
+@if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+@if (Model.TotalCount == 0) { <p class="alert alert-light border">目前沒有紀錄。</p> }
+@foreach (var item in Model.Leaves)
+{
+    <article class="card card-body mb-3">
+        <h2 class="h6">@item.Participant.Student.User.DisplayName · @item.Participant.ClassSession.Course.Name <span class="badge bg-secondary">@LeaveMakeupListModel.Label(item.Status)</span></h2>
+        <p class="mb-1">原課堂：@item.Participant.ClassSession.StartsAt.ToOffset(taiwan).ToString("yyyy/MM/dd HH:mm")</p>
+        <p class="mb-1">原因：@item.Reason</p>
+        <p class="mb-1">來源：@(item.RequestSource == "Student" ? "學生自行請假" : "管理員代辦")</p>
+        <p>補課資格：@LeaveMakeupListModel.Label(item.Entitlement.Status)</p>
+        <div class="d-flex gap-2 flex-wrap">
+            <a asp-controller="Attendance" asp-action="Index" asp-route-sessionId="@item.Participant.ClassSessionId" class="btn btn-sm btn-outline-secondary">原課堂名單</a>
+            @if (item.Status == "Active" && item.Entitlement.Status == "Available")
+            {
+                <a asp-action="Apply" asp-route-entitlementId="@item.Entitlement.MakeupEntitlementId" class="btn btn-sm btn-primary">申請補課</a>
+                @if (item.Participant.ClassSession.StartsAt > Model.Now)
+                {
+                    <form asp-action="CancelLeave" method="post">
+                        <input name="Id" type="hidden" value="@item.LeaveRequestId" /><input name="RowVersion" type="hidden" value="@Convert.ToBase64String(item.RowVersion)" />
+                        <button type="submit" class="btn btn-sm btn-outline-danger">取消請假並撤銷資格</button>
+                    </form>
+                }
+            }
+            else if (item.Status == "Active") { <span class="small text-secondary">先取消補課申請，才能取消原請假。</span> }
+        </div>
+    </article>
+}
+@foreach (var item in Model.Entitlements)
+{
+    var sourceSession = item.SourceType == "Cancellation" ? item.SourceCancellationParticipant?.ClassSession : item.SourceLeave?.Participant.ClassSession;
+    <article class="card card-body mb-3">
+        <h2 class="h6">@item.Student.User.DisplayName · @item.SourceTerm.Name <span class="badge bg-secondary">@LeaveMakeupListModel.Label(item.Status)</span></h2>
+        @if (sourceSession is not null)
+        {
+            <p>來源：@sourceSession.Course.Name · @sourceSession.StartsAt.ToOffset(taiwan).ToString("yyyy/MM/dd HH:mm") @(item.SourceType == "Cancellation" ? "停課" : "請假")</p>
+        }
+        else { <p>來源資料待核對。</p> }
+        @if (item.Status == "Available" && item.SourceType == "Leave" && item.SourceLeave is not null) { <div><a asp-action="Apply" asp-route-entitlementId="@item.MakeupEntitlementId" class="btn btn-primary btn-sm">選擇補課場次</a></div> }
+        @if (item.Status == "Available" && item.SourceType == "Cancellation") { <p class="small text-secondary mb-0">停課補課資格目前僅供查詢，安排流程尚待恢復。</p> }
+    </article>
+}
+@foreach (var item in Model.Requests)
+{
+    <article class="card card-body mb-3">
+        <h2 class="h6">@item.Entitlement.Student.User.DisplayName · @item.TargetSession.Course.Name <span class="badge bg-secondary">@LeaveMakeupListModel.Label(item.Status)</span></h2>
+        <p>補課時間：@item.TargetSession.StartsAt.ToOffset(taiwan).ToString("yyyy/MM/dd HH:mm")</p>
+        @if (!string.IsNullOrEmpty(item.ReviewNote)) { <p>審核備註：@item.ReviewNote</p> }
+        @if (!string.IsNullOrEmpty(item.CancellationReason)) { <p>取消原因：@item.CancellationReason</p> }
+        <div><a asp-controller="Attendance" asp-action="Index" asp-route-sessionId="@item.TargetClassSessionId" class="btn btn-sm btn-outline-secondary">目標課堂名單</a></div>
+        @if (item.Status == "Pending")
+        {
+            <form asp-action="Review" method="post" class="mt-3">
+                <input name="Id" type="hidden" value="@item.MakeupRequestId" /><input name="RowVersion" type="hidden" value="@Convert.ToBase64String(item.RowVersion)" />
+                <label for="review-@item.MakeupRequestId" class="form-label">審核備註（退回時必填）</label>
+                <input name="Note" id="review-@item.MakeupRequestId" maxlength="500" class="form-control mb-2" />
+                <button name="Approve" value="true" type="submit" class="btn btn-primary btn-sm">核准並加入名單</button>
+                <button name="Approve" value="false" type="submit" class="btn btn-outline-danger btn-sm">退回並釋回資格</button>
+            </form>
+        }
+        @if (item.Status == "Pending" || (item.Status == "Approved" && item.TargetSession.StartsAt > Model.Now))
+        {
+            <form asp-action="CancelMakeup" method="post" class="mt-3">
+                <input name="Id" type="hidden" value="@item.MakeupRequestId" /><input name="RowVersion" type="hidden" value="@Convert.ToBase64String(item.RowVersion)" />
+                <label for="cancel-@item.MakeupRequestId" class="form-label">取消原因</label>
+                <input name="Note" id="cancel-@item.MakeupRequestId" maxlength="500" class="form-control mb-2" required />
+                <button type="submit" class="btn btn-outline-danger btn-sm">取消補課並釋回資格</button>
+            </form>
+        }
+    </article>
+}
+<div class="d-flex align-items-center gap-3 mb-3">
+    <span>共 @Model.TotalCount 筆，第 @Model.Page / @Model.PageCount 頁</span>
+    @if (Model.Page > 1) { <a asp-action="Index" asp-route-tab="@Model.Tab" asp-route-page="@(Model.Page - 1)" class="btn btn-outline-secondary btn-sm">上一頁</a> }
+    @if (Model.Page < Model.PageCount) { <a asp-action="Index" asp-route-tab="@Model.Tab" asp-route-page="@(Model.Page + 1)" class="btn btn-outline-secondary btn-sm">下一頁</a> }
+</div>

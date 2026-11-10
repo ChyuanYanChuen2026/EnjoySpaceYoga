@@ -1,5 +1,7 @@
 ﻿@model EnjoySpace.Web.Areas.Admin.ViewModels.StudentEditViewModel
 
+@using EnjoySpace.Web.Services
+
 @{
     ViewData["Title"] = "編輯學生";
 }
@@ -30,7 +32,10 @@
 
                 <div class="col-12 col-md-6">
                     <label asp-for="Phone" class="form-label"></label>
-                    <input asp-for="Phone" class="form-control" />
+                    <input asp-for="Phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10"
+                           pattern="@TaiwanMobile.InputPattern" title="@TaiwanMobile.ErrorMessage"
+                           placeholder="0912345678" aria-describedby="student-phone-hint" class="form-control" />
+                    <div id="student-phone-hint" class="form-text">@TaiwanMobile.InputHint</div>
                     <span asp-validation-for="Phone" class="text-danger"></span>
                 </div>
 
@@ -38,6 +43,12 @@
                     <label asp-for="Email" class="form-label"></label>
                     <input asp-for="Email" class="form-control" />
                     <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="Account" class="form-label"></label>
+                    <input asp-for="Account" class="form-control" disabled aria-describedby="student-account-hint" />
+                    <div id="student-account-hint" class="form-text">學生登入使用的帳號，僅供查看。</div>
                 </div>
 
                 <div class="col-12 col-md-6">
