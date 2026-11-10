@@ -16,15 +16,19 @@
     <Compile Remove="artifacts\**" />
     <Compile Remove="docs\**" />
     <Compile Remove="Tests\**" />
+    <Compile Remove="Tools\**" />
     <Content Remove="artifacts\**" />
     <Content Remove="docs\**" />
     <Content Remove="Tests\**" />
+    <Content Remove="Tools\**" />
     <EmbeddedResource Remove="artifacts\**" />
     <EmbeddedResource Remove="docs\**" />
     <EmbeddedResource Remove="Tests\**" />
+    <EmbeddedResource Remove="Tools\**" />
     <None Remove="artifacts\**" />
     <None Remove="docs\**" />
     <None Remove="Tests\**" />
+    <None Remove="Tools\**" />
   </ItemGroup>
 
   <ItemGroup>
