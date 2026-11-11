@@ -75,7 +75,49 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
 
     [HttpGet("me"), Authorize(AuthenticationSchemes = PortalAuthentication.Scheme)]
     public async Task<IActionResult> Me() => Ok(await db.Users.Where(x => x.UserId == Actor).Select(x => new
-    { x.Account, x.DisplayName, x.Email, x.Phone, roles = db.UserRoles.Where(r => r.UserId == x.UserId && r.Role.IsActive).Select(r => r.Role.RoleCode).ToArray() }).SingleAsync());
+    { x.Account, x.DisplayName, x.Email, x.Phone, x.LineId, roles = db.UserRoles.Where(r => r.UserId == x.UserId && r.Role.IsActive).Select(r => r.Role.RoleCode).ToArray() }).SingleAsync());
+
+    private IQueryable<Student> CurrentProfileStudent => db.Students
+        .Where(x => x.UserId == Actor && x.IsActive && x.User.IsActive
+            && db.UserRoles.Any(r => r.UserId == x.UserId && r.Role.IsActive && r.Role.RoleCode == "Student"));
+
+    private static object ProfileData(Student student) => new
+    {
+        student.User.Account, student.StudentNo, student.User.DisplayName,
+        student.User.Phone, student.User.Email, student.User.LineId, student.User.RowVersion
+    };
+
+    [HttpGet("profile"), Authorize(AuthenticationSchemes = PortalAuthentication.Scheme, Roles = "Student")]
+    public async Task<IActionResult> Profile()
+    {
+        var student = await CurrentProfileStudent.AsNoTracking().Include(x => x.User).SingleOrDefaultAsync();
+        return student is null
+            ? StatusCode(StatusCodes.Status403Forbidden, new { message = "請使用有效的學生會員帳號查看會員資料。" })
+            : Ok(ProfileData(student));
+    }
+
+    [HttpPost("profile"), Authorize(AuthenticationSchemes = PortalAuthentication.Scheme, Roles = "Student"), PortalFormValidation]
+    public async Task<IActionResult> UpdateProfile(ProfileInput input)
+    {
+        var student = await CurrentProfileStudent.Include(x => x.User).SingleOrDefaultAsync();
+        if (student is null)
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "請使用有效的學生會員帳號修改會員資料。" });
+        var user = student.User;
+        if (!user.RowVersion.SequenceEqual(input.RowVersion))
+            return Conflict(new { message = "會員資料已更新，請重新載入資料後再修改。" });
+
+        // Assign only permitted contact fields on the authenticated member. The shared
+        // User rowversion also prevents overwriting a concurrent administrator update.
+        db.Entry(user).Property(x => x.RowVersion).OriginalValue = input.RowVersion;
+        user.Phone = input.Phone;
+        user.Email = input.Email.Trim();
+        user.LineId = string.IsNullOrWhiteSpace(input.LineId) ? null : input.LineId.Trim();
+        user.UpdatedAtUtc = clock.GetUtcNow().UtcDateTime;
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException)
+        { return Conflict(new { message = "會員資料已更新，請重新載入資料後再修改。" }); }
+        return Ok(new { message = "會員資料已更新。", profile = ProfileData(student) });
+    }
 
     [HttpGet("catalog")]
     public async Task<IActionResult> Catalog() => Ok(new
@@ -184,6 +226,20 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         await db.SaveChangesAsync(); await tx.CommitAsync();
         return Ok(new { request.Id, message = "體驗申請已送出，待工作室人工審核並安排登記上課；此申請尚未保留名額。" });
     }
+}
+
+public class ProfileInput
+{
+    [Required(ErrorMessage = "請輸入手機號碼。"), StringLength(10, ErrorMessage = TaiwanMobile.ErrorMessage)]
+    [RegularExpression(TaiwanMobile.InputPattern, ErrorMessage = TaiwanMobile.ErrorMessage)]
+    public string Phone { get; set; } = "";
+    [Required(ErrorMessage = "請輸入電子郵件。"), EmailAddress(ErrorMessage = "請輸入有效的電子郵件地址。"), StringLength(200, ErrorMessage = "電子郵件最多 200 字。")]
+    [RegularExpression(@"\A[^\s@]+@[^\s@]+\z", ErrorMessage = "請輸入有效的電子郵件地址。")]
+    public string Email { get; set; } = "";
+    [StringLength(100, ErrorMessage = "通訊帳號（LINE）最多 100 字。")]
+    public string? LineId { get; set; }
+    [Required(ErrorMessage = "缺少資料版本，請重新載入資料後再試。"), MinLength(8, ErrorMessage = "資料版本無效，請重新載入資料後再試。"), MaxLength(8, ErrorMessage = "資料版本無效，請重新載入資料後再試。")]
+    public byte[] RowVersion { get; set; } = [];
 }
 
 public class LoginInput

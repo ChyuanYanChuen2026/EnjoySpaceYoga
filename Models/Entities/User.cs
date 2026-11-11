@@ -26,6 +26,9 @@ public class User
     [StringLength(30)]
     public string? Phone { get; set; }
 
+    [StringLength(100)]
+    public string? LineId { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     [Column(TypeName = "datetime2(0)")]

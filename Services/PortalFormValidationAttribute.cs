@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace EnjoySpace.Web.Services;
 
-// Opt in only on student registration/trial forms. Runs before ApiController's
+// Opt in on student registration, profile and trial forms. Runs before ApiController's
 // automatic ModelStateInvalidFilter (-2000), including JSON conversion errors.
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
 public sealed class PortalFormValidationAttribute : ActionFilterAttribute
