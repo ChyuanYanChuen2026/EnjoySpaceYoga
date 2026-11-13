@@ -6,7 +6,8 @@
 <div class="alert alert-warning">@EnjoySpace.Web.Services.EnrollmentWorkflowService.NoRefundPolicy</div>
 <div class="card card-body mb-3">
     <h2 class="h5">@Model.Student.User.DisplayName｜@Model.Course.Term.Name · @Model.Course.Name</h2>
-    <p>@Model.QuotedSessionCount 堂｜應收 NT$ @Model.QuotedAmount.ToString("N0")</p>
+    <p>@Model.QuotedSessionCount 堂｜原報價 NT$ @Model.QuotedAmount.ToString("N0")</p>
+    <p>目前應收 NT$ @((Model.Payment?.Amount ?? Model.QuotedAmount).ToString("N0"))</p>
     <p class="mb-0">@WorkflowLabels.Application(Model.Status) · @WorkflowLabels.Payment(Model.Payment?.Status)</p>
     @if (!string.IsNullOrEmpty(Model.Payment?.PaymentMethod))
     {
@@ -19,10 +20,31 @@
     }
     <a asp-controller="ClassSessions" asp-action="Index" asp-route-CourseId="@Model.CourseId" class="mt-2" target="_blank" rel="noopener">核對課程場次</a>
 </div>
+@if (ViewData["AmountAdjustments"] is List<EnjoySpace.Web.Models.Entities.EnrollmentAmountAdjustment> adjustments && adjustments.Count > 0)
+{
+    <section class="card card-body mb-3">
+        <h2 class="h5">應收金額調整紀錄</h2>
+        @foreach (var adjustment in adjustments)
+        {
+            <p>NT$ @adjustment.PreviousAmount.ToString("N0") → NT$ @adjustment.Amount.ToString("N0")｜@adjustment.AdjustedAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")｜管理員帳號 ID：@adjustment.AdjustedByUserId<br />原因：@adjustment.Reason</p>
+        }
+    </section>
+}
 @if (Model.Status == EnrollmentApplicationStatus.Pending)
 {
     @if (Model.Payment?.Status == "Pending")
     {
+        <form asp-action="AdjustAmount" method="post" class="card card-body mb-3">
+            <h2 class="h5">管理員調整應收金額</h2>
+            <p class="text-secondary">保留原報價；調整後請與學生確認新的應收金額。已確認收款後不可再調整。</p>
+            <input name="Id" value="@Model.Id" type="hidden" />
+            <input name="RowVersion" value="@version" type="hidden" />
+            <label for="adjustedAmount" class="form-label">自訂應收金額（0 以上整數）</label>
+            <input id="adjustedAmount" name="Amount" type="number" min="0" max="99999999" step="1" required class="form-control mb-3" />
+            <label for="adjustmentReason" class="form-label">調整原因（必填）</label>
+            <textarea id="adjustmentReason" name="Reason" maxlength="500" required class="form-control mb-3"></textarea>
+            <div><button class="btn btn-primary">儲存應收調整</button></div>
+        </form>
         <form asp-action="ConfirmPayment" method="post" class="card card-body mb-3">
             <h2 class="h5">確認已收到款項</h2>
             <p class="text-secondary">請核對實際入帳或現金；此操作只登記收款，不會向銀行扣款。</p>

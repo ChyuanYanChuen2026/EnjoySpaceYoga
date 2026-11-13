@@ -4,7 +4,7 @@
 <p>學生：@Model.StudentName</p><p>原請假：@Model.SourceDescription</p>
 <p>可補課日期（台灣）：@Model.PeriodStart.ToString("yyyy/MM/dd") ～ @Model.PeriodEnd.ToString("yyyy/MM/dd")</p>
 <p class="text-secondary">可選上述期間內其他課程的場次，不限相同學期資料。須開放補課、尚未開始、未停課且有空位，並排除已在名單中的課堂。送出申請後保留資格，核准時會再次檢查日期與名額。</p>
-@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+
 @if (Model.Targets.Count == 0)
 {
     <div class="alert alert-info">目前沒有符合條件的補課場次，資格仍保留。</div>

@@ -45,7 +45,7 @@
           else {
             const input = document.createElement('input'); input.required = true; input.maxLength = 500; input.className = 'form-control'; input.placeholder = '填寫處理說明'; input.setAttribute('aria-label', '異常處理說明');
             const button = document.createElement('button'); button.className = 'btn btn-outline-primary mt-2'; button.textContent = '記錄處理結果'; box.append(input, button);
-            box.addEventListener('submit', async e => { e.preventDefault(); button.disabled = true; try { await request('Resolve', { id: issue.id, reason: input.value }); input.blur(); await refresh(); } catch (err) { feedback.textContent = err.message; } finally { button.disabled = false; } });
+            box.addEventListener('submit', async e => { e.preventDefault(); button.disabled = true; try { await request('Resolve', { id: issue.id, reason: input.value }); input.blur(); await refresh(); } catch (err) { if (window.siteNotification) window.siteNotification(err.message, 'error'); else feedback.textContent = err.message; } finally { button.disabled = false; } });
           }
           issues.append(box);
         }
@@ -58,15 +58,15 @@
     form.addEventListener('submit', async e => {
       e.preventDefault(); if (form.dataset.saving) return;
       form.dataset.saving = 'true'; const button = form.querySelector('button'); button.disabled = true;
-      try { const result = await request('Record', Object.fromEntries(new FormData(form))); delete form.dataset.dirty; feedback.textContent = result.message; }
-      catch(e) { feedback.textContent = e.message; }
+      try { const result = await request('Record', Object.fromEntries(new FormData(form))); delete form.dataset.dirty; if (window.siteNotification) window.siteNotification(result.message); else feedback.textContent = result.message; }
+      catch(e) { if (window.siteNotification) window.siteNotification(e.message, 'error'); else feedback.textContent = e.message; }
       finally { delete form.dataset.saving; button.disabled = false; await refresh(); }
     });
   });
   document.querySelector('#open-qr').addEventListener('click', async e => {
     e.target.disabled = true;
     try { const data = await request('Qr', { sessionId }); document.querySelector('#qr-image').src = data.image; document.querySelector('#qr-expiry').textContent = '有效至 ' + local(data.expiresAt); document.querySelector('#qr-warning').textContent = data.warning || ''; document.querySelector('#qr-display').hidden = false; }
-    catch(e) { feedback.textContent = e.message; } finally { await refresh(); }
+    catch(e) { if (window.siteNotification) window.siteNotification(e.message, 'error'); else feedback.textContent = e.message; } finally { await refresh(); }
   });
   refresh(); setInterval(refresh, 5000); document.addEventListener('visibilitychange', refresh);
 })();

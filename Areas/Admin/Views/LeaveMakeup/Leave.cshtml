@@ -3,7 +3,7 @@
 <h1 class="h3">登記請假</h1>
 <p>@Model.StudentName · @Model.CourseName · @Model.StartsAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy/MM/dd HH:mm")（台灣時間）</p>
 <p class="text-secondary">上課前可請假。送出後釋出本堂名額，並取得一筆原學期日期範圍內的補課資格，可選其他課程。取消請假時會重新檢查名額。</p>
-@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+
 <form asp-action="Leave" method="post" class="card card-body">
     <div asp-validation-summary="All" class="text-danger"></div>
     <input asp-for="ParticipantId" type="hidden" />

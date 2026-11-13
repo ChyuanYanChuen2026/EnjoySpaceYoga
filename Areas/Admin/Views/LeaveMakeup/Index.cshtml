@@ -8,8 +8,8 @@
     <a asp-action="Index" asp-route-tab="entitlements" class="nav-link @(Model.Tab == "entitlements" ? "active" : "")">補課資格</a>
     <a asp-action="Index" asp-route-tab="requests" class="nav-link @(Model.Tab == "requests" ? "active" : "")">補課申請／審核</a>
 </nav>
-@if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
-@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+
+
 @if (Model.TotalCount == 0) { <p class="alert alert-light border">目前沒有紀錄。</p> }
 @foreach (var item in Model.Leaves)
 {

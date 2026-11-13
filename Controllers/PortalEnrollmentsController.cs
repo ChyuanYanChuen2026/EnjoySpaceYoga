@@ -63,6 +63,7 @@ public class PortalEnrollmentsController(AppDbContext db, EnrollmentWorkflowServ
             {
                 x.Id, x.CourseId, courseName = x.Course.Name, termName = x.Course.Term.Name,
                 x.QuotedSessionCount, x.QuotedAmount, x.SubmittedAt, x.ReviewedAt, x.ReviewNote,
+                amountDue = x.Payment == null ? x.QuotedAmount : x.Payment.Amount,
                 status = x.Status.ToString(), paymentStatus = x.Payment == null ? null : x.Payment.Status,
                 paymentMethod = x.Payment == null ? null : x.Payment.PaymentMethod
             }).ToListAsync();

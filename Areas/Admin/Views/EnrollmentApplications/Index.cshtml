@@ -13,7 +13,7 @@
 <tbody>@foreach (var item in Model)
 {
     <tr><td>@item.Student.User.DisplayName</td><td>@item.Course.Term.Name · @item.Course.Name</td>
-    <td class="text-nowrap">@item.QuotedSessionCount 堂／@item.QuotedAmount.ToString("N0")</td>
+    <td class="text-nowrap">@item.QuotedSessionCount 堂／@((item.Payment?.Amount ?? item.QuotedAmount).ToString("N0"))<br /><small>原報價 @item.QuotedAmount.ToString("N0")</small></td>
     <td>@WorkflowLabels.Payment(item.Payment?.Status)</td><td>@WorkflowLabels.Application(item.Status)</td>
     <td><a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">查看</a></td></tr>
 }</tbody></table>

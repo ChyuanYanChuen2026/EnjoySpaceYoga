@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<SessionTeacherChange> SessionTeacherChanges => Set<SessionTeacherChange>();
     public DbSet<Student> Students => Set<Student>();
     public DbSet<EnrollmentApplication> EnrollmentApplications => Set<EnrollmentApplication>();
+    public DbSet<EnrollmentAmountAdjustment> EnrollmentAmountAdjustments => Set<EnrollmentAmountAdjustment>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();

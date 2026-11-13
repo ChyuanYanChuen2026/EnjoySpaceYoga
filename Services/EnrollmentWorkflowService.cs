@@ -10,8 +10,9 @@ using System.Text.Json;
 
 namespace EnjoySpace.Web.Services;
 
-public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider protection)
+public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider protection, TimeProvider? clock = null)
 {
+    private readonly TimeProvider clock = clock ?? TimeProvider.System;
     public const string NoRefundPolicy = "報名後不提供學生自行退課退款，請在報名前確認完整課表、堂數與金額。";
     private readonly ITimeLimitedDataProtector confirmationProtector = protection
         .CreateProtector("EnjoySpace.EnrollmentConfirmation.v1").ToTimeLimitedDataProtector();
@@ -81,6 +82,10 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
         if (ticket is null || ticket.ActorId != actorId || ticket.Fingerprint != Fingerprint(preview))
             throw new InvalidOperationException("學生或課程資料已變更，請重新核對報名內容後再送出。");
         
+        // 即使核對課表期間跨過截止時間，也不能建立新的申請或應收款。
+        var registrationError = RegistrationWindow.UnavailableReason(
+            preview.RegistrationStartAtUtc, preview.RegistrationEndAtUtc, clock.GetUtcNow());
+        if (registrationError != null) throw new InvalidOperationException(registrationError);
         // Shared server quote; selecting a payment method never confirms payment.
         var application = new EnrollmentApplication
         {
@@ -106,6 +111,32 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
         return application.Id;
     }
 
+    public async Task AdjustAmountAsync(long id, byte[] version, decimal amount, string reason, long actorId)
+    {
+        await RequireAdminAsync(actorId);
+        if (amount < 0 || amount > 99999999m || amount != decimal.Truncate(amount))
+            throw new InvalidOperationException("自訂應收金額須為 0 至 99,999,999 的整數。");
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+            throw new InvalidOperationException("請填寫 500 字內的金額調整原因。");
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var application = await LoadAsync(id, version);
+        var payment = application.Payment;
+        if (application.Status != EnrollmentApplicationStatus.Pending || payment is null || payment.Status != "Pending"
+            || payment.StudentId != application.StudentId)
+            throw new InvalidOperationException("僅待審且尚未確認收款的報名可調整應收金額。");
+        if (payment.Amount == amount) { await tx.CommitAsync(); return; }
+        db.EnrollmentAmountAdjustments.Add(new EnrollmentAmountAdjustment
+        {
+            EnrollmentApplicationId = id, PreviousAmount = payment.Amount, Amount = amount,
+            Reason = reason.Trim(), AdjustedByUserId = actorId, AdjustedAt = clock.GetUtcNow()
+        });
+        payment.Amount = amount;
+        // Update the application version too: old payment/review forms must be rejected.
+        db.Entry(application).Property(x => x.QuotedAmount).IsModified = true;
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+    }
+
     public async Task ConfirmPaymentAsync(long id, byte[] version, decimal receivedAmount,
         string method, DateTime paidAtTaiwan, string? note, long actorId, bool confirmStudentAgreement)
     {
@@ -127,8 +158,8 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
         
         if (method is not ("Cash" or "Transfer" or "LinePay")) throw new InvalidOperationException("請選擇現金、轉帳或 Line Pay。");
         
-        if (receivedAmount != application.QuotedAmount || payment.Amount != application.QuotedAmount)
-            throw new InvalidOperationException("實收金額必須等於申請報價；本階段不支援部分付款。");
+        if (receivedAmount != payment.Amount || receivedAmount < 0)
+            throw new InvalidOperationException("實收金額必須等於目前應收金額；請先調整應收並填寫原因，不支援部分付款。");
         
         var paidAtUtc = new DateTimeOffset(DateTime.SpecifyKind(paidAtTaiwan, DateTimeKind.Unspecified), TimeSpan.FromHours(8)).UtcDateTime;
         
@@ -172,7 +203,7 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
                 throw new InvalidOperationException("請完成最後核對，確認學生已了解報名後不提供退課退款。");
             await ValidateApplicationScheduleAsync(application);
             if (application.Payment is not { Status: "Confirmed" } payment ||
-                payment.Amount != application.QuotedAmount || payment.StudentId != application.StudentId)
+                payment.StudentId != application.StudentId)
                 throw new InvalidOperationException("需先確認付款，才能核准報名。");
             
             if (!application.Student.IsActive || !application.Course.IsActive)
@@ -259,11 +290,14 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
             ?? throw new InvalidOperationException("找不到啟用中的課程。");
         if (course.Term.Status != TermStatusOptions.Open || course.Term.ScheduleConfirmedAtUtc is null)
             throw new InvalidOperationException(studentAction ? "這門課程尚未開放報名，請稍後再查看或聯繫工作室。" : "此學期尚未確認整期排課完成並開放報名。");
+        var registrationError = RegistrationWindow.UnavailableReason(
+            course.Term.RegistrationStartAtUtc, course.Term.RegistrationEndAtUtc, clock.GetUtcNow());
+        if (registrationError != null) throw new InvalidOperationException(registrationError);
         if (studentAction)
         {
             if (!await new PortalCatalogService(db).Courses.AnyAsync(x => x.CourseId == courseId))
                 throw new InvalidOperationException("此課程目前不開放官網報名，請聯繫工作室。");
-            if (await db.ClassSessions.AnyAsync(x => x.CourseId == courseId && !x.IsExtraSession && x.StartsAt <= DateTimeOffset.UtcNow))
+            if (await db.ClassSessions.AnyAsync(x => x.CourseId == courseId && !x.IsExtraSession && x.StartsAt <= clock.GetUtcNow()))
                 throw new InvalidOperationException("此班級已開課，中途報名請聯繫工作室辦理。");
             if (await db.ClassSessions.AnyAsync(x => x.CourseId == courseId && !x.IsExtraSession &&
                 (x.IsCancelled || !x.Teacher.IsActive || !x.StudioLocation.IsActive)))
@@ -290,6 +324,9 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
         {
             StudentId = studentId, CourseId = courseId, StudentName = student.User.DisplayName,
             StudentAccount = student.User.Account, TermName = course.Term.Name, CourseName = course.Name,
+            RegistrationStartAtUtc = RegistrationWindow.AsUtc(course.Term.RegistrationStartAtUtc),
+            RegistrationEndAtUtc = RegistrationWindow.AsUtc(course.Term.RegistrationEndAtUtc),
+            ServerNowUtc = clock.GetUtcNow(),
             Amount = course.TermPrice, Sessions = sessions
         };
     }
@@ -311,7 +348,8 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
 
     private static string Fingerprint(EnrollmentPreviewModel preview) => Convert.ToHexString(SHA256.HashData(
         JsonSerializer.SerializeToUtf8Bytes(new { preview.StudentId, preview.CourseId, preview.StudentName,
-            preview.StudentAccount, preview.TermName, preview.CourseName, preview.Amount, preview.Sessions, Policy = NoRefundPolicy })));
+            preview.StudentAccount, preview.TermName, preview.CourseName, preview.Amount, preview.Sessions,
+            preview.RegistrationStartAtUtc, preview.RegistrationEndAtUtc, Policy = NoRefundPolicy })));
 
     private sealed record ConfirmationTicket(long ActorId, string Fingerprint);
 }

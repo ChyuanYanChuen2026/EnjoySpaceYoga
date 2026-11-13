@@ -16,6 +16,6 @@
       label.append(select); row.append(label, remove); host.append(row); update();
     }
     add.onclick = append; if (data.sessions.length && data.remaining > 0) append(); else message.textContent = '目前沒有可預約額度或符合效期的場次。'; update();
-    form.onsubmit = e => { const ids = [...form.querySelectorAll('select')].map(x => x.value); if (new Set(ids).size !== ids.length) { e.preventDefault(); window.alert('重複選擇同一堂課，請調整後再送出。'); } else submit.disabled = true; };
-  } catch(e) { message.textContent = e.message; }
+    form.onsubmit = e => { const ids = [...form.querySelectorAll('select')].map(x => x.value); if (new Set(ids).size !== ids.length) { e.preventDefault(); window.siteNotification('重複選擇同一堂課，請調整後再送出。', 'error'); } else submit.disabled = true; };
+  } catch(e) { window.siteNotification(e.message, 'error'); }
 })();

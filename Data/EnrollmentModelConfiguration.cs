@@ -8,6 +8,11 @@ internal static class EnrollmentModelConfiguration
     public static void Configure(ModelBuilder model)
     {
         var application = model.Entity<EnrollmentApplication>();
+        var adjustment = model.Entity<EnrollmentAmountAdjustment>();
+        adjustment.HasOne<EnrollmentApplication>().WithMany().HasForeignKey(x => x.EnrollmentApplicationId).OnDelete(DeleteBehavior.NoAction);
+        adjustment.HasOne<User>().WithMany().HasForeignKey(x => x.AdjustedByUserId).OnDelete(DeleteBehavior.NoAction);
+        adjustment.ToTable("EnrollmentAmountAdjustments", "dbo", t =>
+            t.HasCheckConstraint("CK_EnrollmentAmountAdjustments_Amount", "[Amount] >= 0 AND [Amount] = FLOOR([Amount])"));
         application.Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
         application.Property(x => x.SubmittedAt).HasColumnName("AppliedAtUtc").HasColumnType("datetime2(0)")
             .HasConversion(x => x.UtcDateTime, x => new DateTimeOffset(DateTime.SpecifyKind(x, DateTimeKind.Utc)));

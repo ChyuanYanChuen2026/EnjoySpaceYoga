@@ -4,14 +4,8 @@
     var active = Model.Participants.Where(x => x.IsActive).ToList();
 }
 
-@if (TempData["Success"] is string success)
-{
-    <div class="alert alert-success" role="status">@success</div>
-}
-@if (TempData["Error"] is string error)
-{
-    <div class="alert alert-danger" role="alert">@error</div>
-}
+
+
 <p id="attendance-live" data-session="@Model.SessionId" role="status">有效名單 @active.Count 人：未點名 @active.Count(x => x.Status == "Scheduled")、出席 @active.Count(x => x.Status == "Present")、遲到 @active.Count(x => x.Status == "Late")、缺席 @active.Count(x => x.Status == "Absent")。</p>
 @if (!Model.HasStarted)
 {

@@ -26,7 +26,10 @@ public class EnrollmentApplicationsController(AppDbContext db, EnrollmentWorkflo
     {
         var application = await db.EnrollmentApplications.AsNoTracking().Include(x => x.Student).ThenInclude(x => x.User)
             .Include(x => x.Course).ThenInclude(x => x.Term).Include(x => x.Payment).SingleOrDefaultAsync(x => x.Id == id);
-        return application is null ? NotFound() : View(application);
+        if (application is null) return NotFound();
+        ViewData["AmountAdjustments"] = await db.EnrollmentAmountAdjustments.AsNoTracking()
+            .Where(x => x.EnrollmentApplicationId == id).OrderByDescending(x => x.Id).ToListAsync();
+        return View(application);
     }
     [HttpGet]
     public async Task<IActionResult> Create()
@@ -74,6 +77,11 @@ public class EnrollmentApplicationsController(AppDbContext db, EnrollmentWorkflo
         catch (SqlException e) when (e.Number == 1205) { TempData["Error"] = "其他人正在處理相同課程，請重試。"; }
         return RedirectToAction(nameof(Create));
     }
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AdjustAmount(EnrollmentAmountAdjustmentModel model) =>
+        await ExecuteAsync(model.Id, () => workflow.AdjustAmountAsync(model.Id, model.RowVersion,
+            model.Amount!.Value, model.Reason, ActorId), "應收金額已調整，原報價與調整紀錄已保留。請重新核對金額後收款。");
+
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmPayment(PaymentConfirmModel model) =>
         await ExecuteAsync(model.Id, () => workflow.ConfirmPaymentAsync(model.Id, model.RowVersion,

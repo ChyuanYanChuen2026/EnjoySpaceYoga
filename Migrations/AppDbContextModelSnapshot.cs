@@ -475,6 +475,46 @@ namespace EnjoySpace.Web.Migrations
                     b.ToTable("CourseEnrollments", "dbo");
                 });
 
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.EnrollmentAmountAdjustment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("AdjustedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long>("AdjustedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<long>("EnrollmentApplicationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("PreviousAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdjustedByUserId");
+
+                    b.HasIndex("EnrollmentApplicationId");
+
+                    b.ToTable("EnrollmentAmountAdjustments", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_EnrollmentAmountAdjustments_Amount", "[Amount] >= 0 AND [Amount] = FLOOR([Amount])");
+                        });
+                });
+
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.EnrollmentApplication", b =>
                 {
                     b.Property<long>("Id")
@@ -1974,6 +2014,21 @@ namespace EnjoySpace.Web.Migrations
                     b.Navigation("EnrollmentApplication");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("EnjoySpace.Web.Models.Entities.EnrollmentAmountAdjustment", b =>
+                {
+                    b.HasOne("EnjoySpace.Web.Models.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("AdjustedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("EnjoySpace.Web.Models.Entities.EnrollmentApplication", null)
+                        .WithMany()
+                        .HasForeignKey("EnrollmentApplicationId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("EnjoySpace.Web.Models.Entities.EnrollmentApplication", b =>
