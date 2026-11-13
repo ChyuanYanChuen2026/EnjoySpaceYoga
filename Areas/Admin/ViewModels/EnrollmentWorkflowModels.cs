@@ -42,6 +42,9 @@ public class EnrollmentConfirmationModel
 
 public class EnrollmentPreviewModel : EnrollmentConfirmationModel
 {
+    public DateTime? RegistrationStartAtUtc { get; set; }
+    public DateTime? RegistrationEndAtUtc { get; set; }
+    public DateTimeOffset ServerNowUtc { get; set; }
     public string StudentName { get; set; } = "";
     public string StudentAccount { get; set; } = "";
     public string TermName { get; set; } = "";

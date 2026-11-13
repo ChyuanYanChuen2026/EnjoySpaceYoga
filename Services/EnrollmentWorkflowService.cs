@@ -10,8 +10,9 @@ using System.Text.Json;
 
 namespace EnjoySpace.Web.Services;
 
-public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider protection)
+public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider protection, TimeProvider? clock = null)
 {
+    private readonly TimeProvider clock = clock ?? TimeProvider.System;
     public const string NoRefundPolicy = "報名後不提供學生自行退課退款，請在報名前確認完整課表、堂數與金額。";
     private readonly ITimeLimitedDataProtector confirmationProtector = protection
         .CreateProtector("EnjoySpace.EnrollmentConfirmation.v1").ToTimeLimitedDataProtector();
@@ -81,6 +82,9 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
         if (ticket is null || ticket.ActorId != actorId || ticket.Fingerprint != Fingerprint(preview))
             throw new InvalidOperationException("學生或課程資料已變更，請重新核對報名內容後再送出。");
         
+        var registrationError = RegistrationWindow.UnavailableReason(
+            preview.RegistrationStartAtUtc, preview.RegistrationEndAtUtc, clock.GetUtcNow());
+        if (registrationError != null) throw new InvalidOperationException(registrationError);
         // Shared server quote; selecting a payment method never confirms payment.
         var application = new EnrollmentApplication
         {
@@ -259,11 +263,14 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
             ?? throw new InvalidOperationException("找不到啟用中的課程。");
         if (course.Term.Status != TermStatusOptions.Open || course.Term.ScheduleConfirmedAtUtc is null)
             throw new InvalidOperationException(studentAction ? "這門課程尚未開放報名，請稍後再查看或聯繫工作室。" : "此學期尚未確認整期排課完成並開放報名。");
+        var registrationError = RegistrationWindow.UnavailableReason(
+            course.Term.RegistrationStartAtUtc, course.Term.RegistrationEndAtUtc, clock.GetUtcNow());
+        if (registrationError != null) throw new InvalidOperationException(registrationError);
         if (studentAction)
         {
             if (!await new PortalCatalogService(db).Courses.AnyAsync(x => x.CourseId == courseId))
                 throw new InvalidOperationException("此課程目前不開放官網報名，請聯繫工作室。");
-            if (await db.ClassSessions.AnyAsync(x => x.CourseId == courseId && !x.IsExtraSession && x.StartsAt <= DateTimeOffset.UtcNow))
+            if (await db.ClassSessions.AnyAsync(x => x.CourseId == courseId && !x.IsExtraSession && x.StartsAt <= clock.GetUtcNow()))
                 throw new InvalidOperationException("此班級已開課，中途報名請聯繫工作室辦理。");
             if (await db.ClassSessions.AnyAsync(x => x.CourseId == courseId && !x.IsExtraSession &&
                 (x.IsCancelled || !x.Teacher.IsActive || !x.StudioLocation.IsActive)))
@@ -290,6 +297,9 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
         {
             StudentId = studentId, CourseId = courseId, StudentName = student.User.DisplayName,
             StudentAccount = student.User.Account, TermName = course.Term.Name, CourseName = course.Name,
+            RegistrationStartAtUtc = RegistrationWindow.AsUtc(course.Term.RegistrationStartAtUtc),
+            RegistrationEndAtUtc = RegistrationWindow.AsUtc(course.Term.RegistrationEndAtUtc),
+            ServerNowUtc = clock.GetUtcNow(),
             Amount = course.TermPrice, Sessions = sessions
         };
     }
@@ -311,7 +321,8 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
 
     private static string Fingerprint(EnrollmentPreviewModel preview) => Convert.ToHexString(SHA256.HashData(
         JsonSerializer.SerializeToUtf8Bytes(new { preview.StudentId, preview.CourseId, preview.StudentName,
-            preview.StudentAccount, preview.TermName, preview.CourseName, preview.Amount, preview.Sessions, Policy = NoRefundPolicy })));
+            preview.StudentAccount, preview.TermName, preview.CourseName, preview.Amount, preview.Sessions,
+            preview.RegistrationStartAtUtc, preview.RegistrationEndAtUtc, Policy = NoRefundPolicy })));
 
     private sealed record ConfirmationTicket(long ActorId, string Fingerprint);
 }

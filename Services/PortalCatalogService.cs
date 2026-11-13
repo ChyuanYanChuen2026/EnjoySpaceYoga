@@ -22,6 +22,8 @@ public class PortalCatalogService(AppDbContext db)
         Id = x.CourseId, Name = x.Name, CategoryId = x.ClassCategoryId, Category = x.ClassCategory.Name,
         TermId = x.TermId, TermName = x.Term.Name, TermStatus = x.Term.Status,
         TermStartDate = x.Term.StartDate, TermEndDate = x.Term.EndDate,
+        RegistrationStartAtUtc = RegistrationWindow.AsUtc(x.Term.RegistrationStartAtUtc),
+        RegistrationEndAtUtc = RegistrationWindow.AsUtc(x.Term.RegistrationEndAtUtc),
         TeacherId = x.DefaultTeacherId, Teacher = x.DefaultTeacher.User.DisplayName,
         LocationId = x.DefaultLocationId, Location = x.DefaultLocation.Name, Address = x.DefaultLocation.Address,
         TermPrice = x.TermPrice, Capacity = x.DefaultCapacity,
@@ -58,6 +60,9 @@ public class PortalCourseData
     public string TermStatusText => EnjoySpace.Web.Areas.Admin.ViewModels.TermStatusOptions.GetText(TermStatus);
     public DateOnly TermStartDate { get; set; }
     public DateOnly TermEndDate { get; set; }
+    public DateTime? RegistrationStartAtUtc { get; set; }
+    public DateTime? RegistrationEndAtUtc { get; set; }
+    public DateTimeOffset ServerNowUtc { get; set; } = DateTimeOffset.UtcNow;
     public long TeacherId { get; set; }
     public string Teacher { get; set; } = "";
     public long LocationId { get; set; }
@@ -72,9 +77,10 @@ public class PortalCourseData
     public DateTimeOffset? FirstSessionAt { get; set; }
     public bool HasEnrollmentCapacity { get; set; }
     public bool HasUnavailableSessions { get; set; }
-    public string? EnrollmentUnavailableReason => FirstSessionAt <= DateTimeOffset.UtcNow ? "此班級已開課，中途報名請聯繫工作室。" :
+    public string? EnrollmentUnavailableReason => RegistrationWindow.UnavailableReason(RegistrationStartAtUtc, RegistrationEndAtUtc, ServerNowUtc) ??
+        (FirstSessionAt <= ServerNowUtc ? "此班級已開課，中途報名請聯繫工作室。" :
         TermStatus != "Open" || !ScheduleConfirmed || FirstSessionAt == null ? "此課程尚未開放整期報名。" :
-        HasUnavailableSessions ? "課表尚有未開放場次，請聯繫工作室。" : !HasEnrollmentCapacity ? "整期班級已額滿，請聯繫工作室。" : null;
+        HasUnavailableSessions ? "課表尚有未開放場次，請聯繫工作室。" : !HasEnrollmentCapacity ? "整期班級已額滿，請聯繫工作室。" : null);
     public bool CanEnroll => EnrollmentUnavailableReason == null;
 }
 
