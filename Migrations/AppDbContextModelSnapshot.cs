@@ -1752,6 +1752,10 @@ namespace EnjoySpace.Web.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true, "DF_Users_IsActive");
 
+                    b.Property<string>("LineId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(500)
