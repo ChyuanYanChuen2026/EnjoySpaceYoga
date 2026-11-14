@@ -15,19 +15,15 @@
     <Compile Remove="Models\Entities\Location.cs" />
     <Compile Remove="artifacts\**" />
     <Compile Remove="docs\**" />
-    <Compile Remove="Tests\**" />
     <Compile Remove="Tools\**" />
     <Content Remove="artifacts\**" />
     <Content Remove="docs\**" />
-    <Content Remove="Tests\**" />
     <Content Remove="Tools\**" />
     <EmbeddedResource Remove="artifacts\**" />
     <EmbeddedResource Remove="docs\**" />
-    <EmbeddedResource Remove="Tests\**" />
     <EmbeddedResource Remove="Tools\**" />
     <None Remove="artifacts\**" />
     <None Remove="docs\**" />
-    <None Remove="Tests\**" />
     <None Remove="Tools\**" />
   </ItemGroup>
 
@@ -39,6 +35,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="EnjoySpace.Web.slnx" />
+    <None Include="Tests\EmptyDatabaseChecks\EmptyDatabaseChecks.csproj" />
+    <None Include="Tests\EnrollmentAmountChecks\EnrollmentAmountChecks.csproj" />
+    <None Include="Tests\FirstAdminChecks\FirstAdminChecks.csproj" />
+    <None Include="Tests\MigrationDraft\MigrationDraft.csproj" />
+    <None Include="Tests\PortalValidationChecks\PortalValidationChecks.csproj" />
+    <None Include="Tests\RecoveryMigrationChecks\RecoveryMigrationChecks.csproj" />
+    <None Include="Tests\RegistrationWindowChecks\RegistrationWindowChecks.csproj" />
+    <None Include="Tests\SchemaInventory\SchemaInventory.csproj" />
+    <None Include="Tests\StudentWorkflowChecks\StudentWorkflowChecks.csproj" />
+    <None Include="Tests\WorkflowChecks\WorkflowChecks.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.*">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -46,6 +56,13 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.*" />
     <PackageReference Include="QRCoder" Version="1.7.0" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Tests\obj\" />
+    <Folder Include="Tests\WorkflowChecks\bin\Debug\net10.0\" />
+    <Folder Include="Tests\WorkflowChecks\obj\Debug\net10.0\refint\" />
+    <Folder Include="Tests\WorkflowChecks\obj\Debug\net10.0\ref\" />
   </ItemGroup>
 
 </Project>

@@ -128,10 +128,10 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
         db.EnrollmentAmountAdjustments.Add(new EnrollmentAmountAdjustment
         {
             EnrollmentApplicationId = id, PreviousAmount = payment.Amount, Amount = amount,
-            Reason = reason.Trim(), AdjustedByUserId = actorId, AdjustedAt = clock.GetUtcNow()
+            Reason = reason.Trim(), AdjustedByUserId = actorId, AdjustedAt = DateTimeOffset.UtcNow
         });
         payment.Amount = amount;
-        // Update the application version too: old payment/review forms must be rejected.
+        // 同步更新申請版本，避免舊收款或審核表單使用調整前的金額。
         db.Entry(application).Property(x => x.QuotedAmount).IsModified = true;
         await db.SaveChangesAsync();
         await tx.CommitAsync();
