@@ -106,6 +106,32 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
         return application.Id;
     }
 
+    public async Task AdjustAmountAsync(long id, byte[] version, decimal amount, string reason, long actorId)
+    {
+        await RequireAdminAsync(actorId);
+        if (amount < 0 || amount > 99999999m || amount != decimal.Truncate(amount))
+            throw new InvalidOperationException("自訂應收金額須為 0 至 99,999,999 的整數。");
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+            throw new InvalidOperationException("請填寫 500 字內的金額調整原因。");
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var application = await LoadAsync(id, version);
+        var payment = application.Payment;
+        if (application.Status != EnrollmentApplicationStatus.Pending || payment is null || payment.Status != "Pending"
+            || payment.StudentId != application.StudentId)
+            throw new InvalidOperationException("僅待審且尚未確認收款的報名可調整應收金額。");
+        if (payment.Amount == amount) { await tx.CommitAsync(); return; }
+        db.EnrollmentAmountAdjustments.Add(new EnrollmentAmountAdjustment
+        {
+            EnrollmentApplicationId = id, PreviousAmount = payment.Amount, Amount = amount,
+            Reason = reason.Trim(), AdjustedByUserId = actorId, AdjustedAt = DateTimeOffset.UtcNow
+        });
+        payment.Amount = amount;
+        // 同步更新申請版本，避免舊收款或審核表單使用調整前的金額。
+        db.Entry(application).Property(x => x.QuotedAmount).IsModified = true;
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+    }
+
     public async Task ConfirmPaymentAsync(long id, byte[] version, decimal receivedAmount,
         string method, DateTime paidAtTaiwan, string? note, long actorId, bool confirmStudentAgreement)
     {
@@ -127,8 +153,8 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
         
         if (method is not ("Cash" or "Transfer" or "LinePay")) throw new InvalidOperationException("請選擇現金、轉帳或 Line Pay。");
         
-        if (receivedAmount != application.QuotedAmount || payment.Amount != application.QuotedAmount)
-            throw new InvalidOperationException("實收金額必須等於申請報價；本階段不支援部分付款。");
+        if (receivedAmount != payment.Amount || receivedAmount < 0)
+            throw new InvalidOperationException("實收金額必須等於目前應收金額；請先調整應收並填寫原因，不支援部分付款。");
         
         var paidAtUtc = new DateTimeOffset(DateTime.SpecifyKind(paidAtTaiwan, DateTimeKind.Unspecified), TimeSpan.FromHours(8)).UtcDateTime;
         
@@ -172,7 +198,7 @@ public class EnrollmentWorkflowService(AppDbContext db, IDataProtectionProvider 
                 throw new InvalidOperationException("請完成最後核對，確認學生已了解報名後不提供退課退款。");
             await ValidateApplicationScheduleAsync(application);
             if (application.Payment is not { Status: "Confirmed" } payment ||
-                payment.Amount != application.QuotedAmount || payment.StudentId != application.StudentId)
+                payment.StudentId != application.StudentId)
                 throw new InvalidOperationException("需先確認付款，才能核准報名。");
             
             if (!application.Student.IsActive || !application.Course.IsActive)

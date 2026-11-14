@@ -31,6 +31,15 @@ public class PaymentConfirmModel
     public bool ConfirmStudentAgreement { get; set; }
 }
 
+public class EnrollmentAmountAdjustmentModel
+{
+    [Range(1, long.MaxValue)] public long Id { get; set; }
+    [Required] public byte[] RowVersion { get; set; } = [];
+    [Required, Range(typeof(decimal), "0", "99999999")]
+    public decimal? Amount { get; set; }
+    [Required, StringLength(500)] public string Reason { get; set; } = "";
+}
+
 public class EnrollmentConfirmationModel
 {
     [Range(1, long.MaxValue)] public long StudentId { get; set; }
@@ -42,6 +51,9 @@ public class EnrollmentConfirmationModel
 
 public class EnrollmentPreviewModel : EnrollmentConfirmationModel
 {
+    public DateTime? RegistrationStartAtUtc { get; set; }
+    public DateTime? RegistrationEndAtUtc { get; set; }
+    public DateTimeOffset ServerNowUtc { get; set; }
     public string StudentName { get; set; } = "";
     public string StudentAccount { get; set; } = "";
     public string TermName { get; set; } = "";
