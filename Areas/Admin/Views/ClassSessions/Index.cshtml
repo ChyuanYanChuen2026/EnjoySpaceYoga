@@ -16,12 +16,7 @@
     }
 </div>
 
-@if (TempData["SuccessMessage"] is string message)
-{
-    <div class="alert alert-success" role="alert">
-        @message
-    </div>
-}
+
 
 <div class="mb-3">
     <a asp-area="Admin" asp-controller="ScheduleSetup" asp-action="Index" asp-route-termId="@Model.Controls.Filter.TermId" class="btn btn-primary">新增場次（步驟設定）</a>

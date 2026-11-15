@@ -3,7 +3,6 @@
 <h1 class="h3">方案管理</h1>
 <p class="text-secondary">價格、堂數及效期由管理員設定。修改方案不影響既有購買紀錄。</p>
 <a asp-action="Edit" class="btn btn-primary mb-3">新增方案</a>
-@if (TempData["Success"] is string success) { <div class="alert alert-success">@success</div> }
 <div class="table-responsive card card-body"><table sort-set="plans" class="table align-middle">
     <thead><tr><th sort-key="name">方案</th><th sort-key="audience">對象</th><th sort-key="price">堂數／價格</th><th sort-key="validity">效期</th><th sort-key="status">狀態</th><th>操作</th></tr></thead>
     <tbody>@foreach (var p in Model.Items) {

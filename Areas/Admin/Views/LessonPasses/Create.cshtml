@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = "購買方案"; }
 <h1 class="h3">購買方案</h1>
 <nav class="nav nav-pills mb-3"><a asp-action="Create" asp-route-ownerType="TrialGuest" class="nav-link @(Model.OwnerType == "TrialGuest" ? "active" : "")">體驗生</a><a asp-action="Create" asp-route-ownerType="Student" class="nav-link @(Model.OwnerType == "Student" ? "active" : "")">正式學生</a></nav>
-@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+
 <form asp-action="Preview" method="post" class="card card-body">
     <div asp-validation-summary="All" class="text-danger"></div>
     <input asp-for="OwnerType" type="hidden" />

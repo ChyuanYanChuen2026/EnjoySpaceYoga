@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="~/css/workspace.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/lib/tempus-dominus/tempus-dominus.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/date-time-picker.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/save-notification.css" asp-append-version="true" />
 </head>
 <body class="admin-app">
     <a href="#main-content" class="skip-link">跳至主要內容</a>
@@ -58,11 +59,6 @@
             </div>
         </header>
         <main id="main-content" class="admin-main" tabindex="-1">
-            @if (ViewData["InlineFeedback"] is not true)
-            {
-                @if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
-                @if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
-            }
             @RenderBody()
         </main>
         <footer class="admin-footer"><span>Enjoy Space 米亞工作室 · 後台管理系統</span><a asp-area="" asp-controller="Home" asp-action="Index">返回入口首頁</a></footer>
@@ -72,6 +68,8 @@
 <script src="~/lib/tempus-dominus/popper.min.js" asp-append-version="true"></script>
     <script src="~/lib/tempus-dominus/tempus-dominus.js" asp-append-version="true"></script>
     <script type="module" src="~/js/date-time-picker.mjs" asp-append-version="true"></script>
+    <partial name="_FeedbackNotification" />
+    <script src="~/js/save-notification.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
