@@ -1,0 +1,23 @@
+@{
+    var success = TempData["Success"] as string;
+    var legacySuccess = TempData["SuccessMessage"] as string;
+    var error = TempData["Error"] as string;
+}
+<div class="modal feedback-notification" id="feedbackNotification" tabindex="-1"
+     aria-labelledby="feedbackNotificationTitle" aria-describedby="feedbackNotificationMessage"
+     data-success="@success" data-success-message="@legacySuccess" data-error="@error">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="feedbackNotificationTitle">操作通知</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉通知"></button>
+            </div>
+            <div class="modal-body">
+                <p id="feedbackNotificationMessage" class="mb-0"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">我知道了</button>
+            </div>
+        </div>
+    </div>
+</div>
