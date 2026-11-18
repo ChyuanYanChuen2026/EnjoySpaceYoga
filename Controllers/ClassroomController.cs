@@ -45,7 +45,7 @@ public class ClassroomController(AppDbContext db, CheckInService service, Attend
         var url = baseUrl + "/check-in#code=" + Uri.EscapeDataString(qr.Token);
         using var data = QRCodeGenerator.GenerateQrCode(url, QRCodeGenerator.ECCLevel.Q);
         using var png = new PngByteQRCode(data);
-        return new { image = "data:image/png;base64," + Convert.ToBase64String(png.GetGraphic(8)), qr.OpensAt, qr.ExpiresAt,
+        return new { image = "data:image/png;base64," + Convert.ToBase64String(png.GetGraphic(8)), url = env.IsDevelopment() ? url : null, qr.OpensAt, qr.ExpiresAt,
             warning = uri.IsLoopback ? "此網址只供本機測試，其他手機無法連線。" : null };
     });
     [HttpPost] public Task<IActionResult> Record(AttendanceEditViewModel input) => Api(async () => {

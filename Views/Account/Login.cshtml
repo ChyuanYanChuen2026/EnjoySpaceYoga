@@ -15,12 +15,20 @@
 <body class="entry-page admin-app login-page">
     <a href="#main-content" class="skip-link">跳至主要內容</a>
     <header class="entry-header">
-        <a class="es-brand" asp-area="" asp-controller="Home" asp-action="Index"><partial name="_BrandMark" /><span><strong>Enjoy Space</strong><small>米亞工作室</small></span></a>
+        <a class="es-brand" asp-area="" asp-controller="Home" asp-action="Index">
+            <partial name="_BrandMark" />
+            <span>
+                <strong>Enjoy Space</strong>
+                <small>米亞工作室</small>
+             </span>
+         </a>
         <a class="login-home-link" asp-area="" asp-controller="Home" asp-action="Index">返回入口首頁</a>
     </header>
     <main class="login-main" id="main-content" tabindex="-1">
         <section class="card login-card" aria-labelledby="login-title">
-            <div class="login-symbol"><partial name="_UiIcon" model='"user"' /></div>
+            <div class="login-symbol">
+                <partial name="_UiIcon" model='"user"' />
+            </div>
             <p class="entry-eyebrow">WELCOME BACK</p>
             <h1 id="login-title">管理員／老師登入</h1>
             <p class="login-intro" id="login-help">歡迎回來，請登入以管理課程與教學事務。</p>
@@ -37,9 +45,21 @@
                 </div>
                 <button class="btn btn-primary login-submit" type="submit">登入<partial name="_UiIcon" model='"arrow"' /></button>
             </form>
+            <environment include="Development">
+                <div class="border-top pt-3 mt-3">
+                    <p class="small text-secondary">開發環境專用：以既有帳號快速登入。</p>
+                    <form asp-area="" asp-controller="Account" asp-action="DevelopmentLogin" method="post" class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" name="profile" value="admin" type="submit">一鍵登入管理者</button>
+                        <button class="btn btn-outline-primary" name="profile" value="mia" type="submit">一鍵登入 Mia 老師</button>
+                    </form>
+                </div>
+            </environment>
             <p class="login-note"><a asp-action="ForgotPassword">忘記密碼／首次設定密碼</a></p>
         </section>
     </main>
-    <footer class="entry-footer"><span>© @DateTime.Now.Year Enjoy Space 米亞工作室</span><a asp-area="" asp-controller="Home" asp-action="Privacy">隱私權政策</a></footer>
+    <footer class="entry-footer">
+        <span>© @DateTime.Now.Year Enjoy Space 米亞工作室</span>
+        <a asp-area="" asp-controller="Home" asp-action="Privacy">隱私權政策</a>
+    </footer>
 </body>
 </html>

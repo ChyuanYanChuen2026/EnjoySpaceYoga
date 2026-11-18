@@ -15,6 +15,9 @@
 			<button id="open-qr" class="btn btn-primary" type="button" disabled>開啟課堂 QR Code</button>
 			<div id="qr-display" hidden class="text-center"><img id="qr-image" alt="本堂課學生確認打卡 QR Code" style="width:min(100%,360px)" />
 				<p id="qr-expiry"></p>
+				<environment include="Development">
+					<p id="qr-url-tip" class="text-secondary small text-break" hidden></p>
+				</environment>
 				<p id="qr-warning" class="text-danger"></p>
 			</div>
 </div>

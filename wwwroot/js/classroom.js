@@ -3,6 +3,12 @@
   const sessionId = root.dataset.session;
   const csrf = root.querySelector("[name=__RequestVerificationToken]").value;
   const feedback = document.querySelector("#classroom-feedback");
+  const qrUrlTip = document.querySelector("#qr-url-tip");
+  function clearQrUrl() {
+    if (!qrUrlTip) return;
+    qrUrlTip.textContent = "";
+    qrUrlTip.hidden = true;
+  }
   const labels = { Scheduled: "未點名", Present: "出席", Late: "遲到", Absent: "缺席" };
   const local = (value) => new Date(value && !/Z$|[+-]\d\d:\d\d$/.test(value) ? value + "Z" : value).toLocaleString("zh-TW", { timeZone: "Asia/Taipei" });
   async function request(action, body) {
@@ -22,6 +28,7 @@
       if (!data.canDisplayQr) {
         document.querySelector("#qr-display").hidden = true;
         document.querySelector("#qr-image").removeAttribute("src");
+        clearQrUrl();
       }
       for (const record of data.records) {
         const form = root.querySelector(`[data-id="${record.sessionParticipantId}"]`);
@@ -83,6 +90,7 @@
       feedback.textContent = e.message;
       document.querySelector("#qr-display").hidden = true;
       document.querySelector("#qr-image").removeAttribute("src");
+      clearQrUrl();
     } finally {
       polling = false;
     }
@@ -117,6 +125,10 @@
       document.querySelector("#qr-image").src = data.image;
       document.querySelector("#qr-expiry").textContent = "有效至 " + local(data.expiresAt);
       document.querySelector("#qr-warning").textContent = data.warning || "";
+      if (qrUrlTip) {
+        qrUrlTip.textContent = data.url ? "Demo 提示：掃碼網址「" + data.url + "」" : "";
+        qrUrlTip.hidden = !data.url;
+      }
       document.querySelector("#qr-display").hidden = false;
     } catch (e) {
       feedback.textContent = e.message;
