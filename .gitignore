@@ -16,6 +16,15 @@ docs/
 Tests/*
 !Tests/EnrollmentAmountChecks/
 
+# 隔離瀏覽器測試：僅允許明列的原始碼與說明，其餘輸出一律忽略。
+!Tests/StudentWorkflowChecks/
+Tests/StudentWorkflowChecks/*
+!Tests/StudentWorkflowChecks/StudentWorkflowChecks.csproj
+!Tests/StudentWorkflowChecks/Program.cs
+!Tests/StudentWorkflowChecks/HttpChecks.cs
+!Tests/StudentWorkflowChecks/PortalBrowserFixture.cs
+!Tests/StudentWorkflowChecks/README.md
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
