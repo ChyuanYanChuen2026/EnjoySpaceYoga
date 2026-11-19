@@ -14,7 +14,11 @@ using System.Text.Json;
 if (args.Any(arg => arg is not ("--http" or "--ui")))
     throw new ArgumentException("只支援 --http 或 --ui；此測試工具不提供既有資料庫更新功能。");
 var name = "EnjoySpace_StudentWorkflowChecks_" + Guid.NewGuid().ToString("N");
-var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlServer($"Server=localhost;Database={name};Integrated Security=true;TrustServerCertificate=true").Options;
+var testConnection = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder {
+    DataSource = Environment.GetEnvironmentVariable("ENJOYSPACE_TEST_SERVER") ?? "localhost",
+    InitialCatalog = name, IntegratedSecurity = true, TrustServerCertificate = true
+};
+var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlServer(testConnection.ConnectionString).Options;
 AppDbContext Db() => new(options);
 var protection = new EphemeralDataProtectionProvider();
 var clock = new TestClock(new DateTimeOffset(2031,1,1,0,0,0,TimeSpan.Zero));

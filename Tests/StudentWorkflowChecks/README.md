@@ -1,6 +1,6 @@
 # 學生流程與隔離瀏覽器測試
 
-本工具只使用 SQL Server Windows 驗證建立的隨機 `EnjoySpace_StudentWorkflowChecks_<GUID>` 資料庫，不接受既有資料庫名稱，也不讀取網站業務資料庫連線。原始碼中的虛構資料僅於該隔離資料庫執行期間建立，不提供日常 Demo 入口。
+本工具只使用 SQL Server Windows 驗證建立的隨機 `EnjoySpace_StudentWorkflowChecks_<GUID>` 資料庫，不接受既有資料庫名稱，也不讀取網站業務資料庫連線。預設伺服器為 `localhost`；CI 可用 `ENJOYSPACE_TEST_SERVER` 指向專用 LocalDB，但資料庫名稱仍由程式隨機產生。原始碼中的虛構資料僅於該隔離資料庫執行期間建立，不提供日常 Demo 入口。
 
 從 `EnjoySpace.Web` 目錄執行，需有本機 SQL Server 建立／刪除測試資料庫的權限。使用 `Rules` 組態，不必停止既有開發網站。
 
