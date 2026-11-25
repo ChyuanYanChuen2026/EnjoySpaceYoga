@@ -12,10 +12,11 @@ using Microsoft.EntityFrameworkCore;
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Authorize(Roles = "Admin")]
+[Authorize(Policy = "BackOffice")]
 public class StudentsController(AppDbContext db) : Controller
 {
     [HttpGet]
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Index(string? sort = null)
     {
         var students = await EnjoySpace.Web.Models.AdminTableSorts.Students.Apply(db.Students.AsNoTracking(), sort)

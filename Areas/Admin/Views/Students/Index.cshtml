@@ -7,7 +7,7 @@
 <h1 class="h3 mb-2">學生管理</h1>
 <p class="text-muted">共 @Model.Count 位學生。</p>
 <div class="mb-3">
-    <a asp-action="Create" class="btn btn-primary">新增學生</a>
+    @if (User.IsInRole("Admin")) { <a asp-action="Create" class="btn btn-primary">新增學生</a> }
 </div>
 
 <div class="card">
@@ -62,7 +62,7 @@
                                     </span>
                                 </td>
                                 <td class="text-nowrap">
-                                    <a asp-action="Edit" asp-route-id="@student.StudentId" class="btn btn-sm btn-outline-primary">編輯</a>
+                                    @if (User.IsInRole("Admin")) { <a asp-action="Edit" asp-route-id="@student.StudentId" class="btn btn-sm btn-outline-primary">編輯</a> }
                                 </td>
                             </tr>
                         }

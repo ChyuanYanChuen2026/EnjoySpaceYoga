@@ -31,12 +31,12 @@
                 @if (item.PassId.HasValue) { <a asp-controller="LessonPasses" asp-action="Details" asp-route-id="@item.PassId">查看方案／確認付款</a> }
                 @if (item.Payment.Status == "RefundPending" && item.ApplicationId.HasValue)
                 {
-                    <form asp-action="Refund" method="post" class="mt-2">
+                    if (User.IsInRole("Admin")) { <form asp-action="Refund" method="post" class="mt-2">
                         <input type="hidden" name="paymentId" value="@item.Payment.PaymentId" />
                         <label for="refund-@item.Payment.PaymentId" class="form-label">實際退款時間、方式與憑據</label>
                         <input id="refund-@item.Payment.PaymentId" name="note" required maxlength="400" class="form-control mb-2" />
                         <button class="btn btn-sm btn-outline-danger">登記已完成退款</button>
-                    </form>
+                    </form> }
                 }
                 @if (item.Payment.Status == "Refunded") { <p class="small mt-2">@item.Payment.Note</p> }
                 </td>

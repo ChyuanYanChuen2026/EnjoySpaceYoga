@@ -6,9 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EnjoySpace.Web.Controllers;
 
-[Authorize(Roles = "Admin,Teacher")]
+[Authorize(Policy = "BackOfficeTeacher")]
 public class TeacherRequestsController(TeacherRequestService service) : TrialLessonControllerBase
 {
+    [BackOfficeQuery]
     public async Task<IActionResult> Index(int page = 1, string? sort = null) => View(await service.ListAsync(ActorId, page, sort));
     [HttpGet] public async Task<IActionResult> Create(string kind = "ExtraSession", long teacherId = 0)
     {
@@ -22,6 +23,7 @@ public class TeacherRequestsController(TeacherRequestService service) : TrialLes
         { TempData["Success"] = "申請已送出，管理員核准後才生效。"; return RedirectToAction(nameof(Details), new { id }); }
         await service.PopulateAsync(model, ActorId); return View(model);
     }
+    [BackOfficeQuery]
     public async Task<IActionResult> Details(long id)
     {
         var request = await service.DetailAsync(id, ActorId);

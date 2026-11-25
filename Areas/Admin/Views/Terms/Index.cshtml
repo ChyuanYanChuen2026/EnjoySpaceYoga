@@ -19,7 +19,7 @@
 <h1 class="h3 mb-2">學期管理</h1>
 <p class="text-muted">共 @Model.Controls.TotalCount 個符合條件的學期。報名時間以台灣時間顯示。</p>
 <div class="mb-3">
-    <a asp-controller="ScheduleSetup" asp-action="Index" class="btn btn-primary">新增學期／課程／場次</a>
+    @if (User.IsInRole("Admin")) { <a asp-controller="ScheduleSetup" asp-action="Index" class="btn btn-primary">新增學期／課程／場次</a> }
 </div>
 
 <partial name="_CatalogFilters" model="Model.Controls" />
@@ -55,10 +55,10 @@
                                 <td class="text-nowrap">@FormatTaiwanTime(term.RegistrationEndAtUtc) </td>
                                 <td class="text-nowrap">@TermStatusOptions.GetText(term.Status)</td>
                                 <td class="text-nowrap">
-                                    <a asp-action="Edit" asp-route-id="@term.TermId" class="btn btn-sm btn-outline-primary">編輯</a>
+                                    @if (User.IsInRole("Admin")) { <a asp-action="Edit" asp-route-id="@term.TermId" class="btn btn-sm btn-outline-primary">編輯</a> }
                                     @if (term.Status == TermStatusOptions.Draft)
                                     {
-                                        <a asp-controller="ScheduleSetup" asp-action="Index" asp-route-termId="@term.TermId" class="btn btn-sm btn-outline-secondary">繼續設定</a>
+                                        if (User.IsInRole("Admin")) { <a asp-controller="ScheduleSetup" asp-action="Index" asp-route-termId="@term.TermId" class="btn btn-sm btn-outline-secondary">繼續設定</a> }
                                     }
                                 </td>
                             </tr>

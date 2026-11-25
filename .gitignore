@@ -14,7 +14,7 @@
 *.sln.docstates
 docs/
 Tests/*
-!Tests/EnrollmentAmountChecks/
+
 
 # 隔離瀏覽器測試：僅允許明列的原始碼與說明，其餘輸出一律忽略。
 !Tests/StudentWorkflowChecks/

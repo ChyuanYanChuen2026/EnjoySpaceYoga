@@ -29,7 +29,7 @@ public class AccountController(AppDbContext db, PasswordRecoveryService recovery
         var roles = user is null ? new List<string>() : await StaffAccess.RolesAsync(db, user.UserId);
         if (result == PasswordVerificationResult.Failed || roles.Count == 0)
         {
-            ModelState.AddModelError("", "帳號或密碼錯誤，或沒有有效的管理員／老師權限。");
+            ModelState.AddModelError("", "帳號或密碼錯誤，或沒有有效的管理員／唯讀／老師權限。");
             return View(model);
         }
         if (result == PasswordVerificationResult.SuccessRehashNeeded)
@@ -70,6 +70,7 @@ public class AccountController(AppDbContext db, PasswordRecoveryService recovery
             new Claim(PasswordSession.ClaimType, PasswordSession.Version(user.PasswordHash))
         }.Concat(roles.Select(role => new Claim(ClaimTypes.Role, role))), CookieAuthenticationDefaults.AuthenticationScheme);
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+        if (roles.Contains(StaffAccess.ReadOnlyRole)) return LocalRedirect("/Admin/Dashboard");
         if (!roles.Contains("Admin")) return LocalRedirect("/TeacherDashboard");
         return LocalRedirect(Url.IsLocalUrl(returnUrl) ? returnUrl! : "/Admin/EnrollmentApplications");
     }

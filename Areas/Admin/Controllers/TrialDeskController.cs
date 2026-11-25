@@ -8,13 +8,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
-[Area("Admin"), Authorize(Roles = "Admin"), AutoValidateAntiforgeryToken]
+[Area("Admin"), Authorize(Policy = "BackOffice"), AutoValidateAntiforgeryToken]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public class TrialDeskController(AppDbContext db, TrialBookingService service, TrialReviewSummaryService reviews) : Controller
 {
     private long Actor => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     [HttpGet] public async Task<IActionResult> Index(string review = "all", int page = 1) {
-        await service.AdminAsync(Actor);
         if (review is not ("plans" or "bookings")) review = "all";
         var query = service.Requests.AsNoTracking();
         if (review == "plans") query = query.Where(x => reviews.PendingPlans.Any(p => p.Id == x.Id));
@@ -31,8 +31,8 @@ public class TrialDeskController(AppDbContext db, TrialBookingService service, T
         model.BookingReminders = await service.BookingRemindersAsync(model.Items);
         return View(model);
     }
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     [HttpGet] public async Task<IActionResult> Details(long id, string bookingStatus = "all") {
-        await service.AdminAsync(Actor);
         var r = await service.Requests.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
         if (r == null) return NotFound();
         ViewBag.Bookings = await db.TrialBookings.Include(x => x.ClassSession).ThenInclude(x => x.Course).Where(x => x.TrialRequestId == id).OrderBy(x => x.Id).AsNoTracking().ToListAsync();

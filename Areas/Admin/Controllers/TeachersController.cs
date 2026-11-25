@@ -12,10 +12,11 @@ using System.Security.Cryptography;
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Authorize(Roles = "Admin")]
+[Authorize(Policy = "BackOffice")]
 public class TeachersController(AppDbContext db) : Controller
 {
     [HttpGet]
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Index(string? sort = null)
     {
         var teachers = await EnjoySpace.Web.Models.AdminTableSorts.Teachers.Apply(db.Teachers.AsNoTracking(), sort)

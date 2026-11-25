@@ -1,4 +1,4 @@
-﻿using EnjoySpace.Web.Areas.Admin.ViewModels;
+using EnjoySpace.Web.Areas.Admin.ViewModels;
 using EnjoySpace.Web.Services;
 using EnjoySpace.Web.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+[Microsoft.AspNetCore.Authorization.Authorize(Policy = "BackOffice")]
 public class CoursesController : Controller
 {
     private readonly CourseService _courseService;
@@ -19,6 +19,7 @@ public class CoursesController : Controller
         _courseService = courseService;
     }
 
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Index([FromQuery] CatalogFilter filter, [FromServices] AdminCatalogService catalog)
     {
         var courses = await catalog.GetCoursesAsync(filter);

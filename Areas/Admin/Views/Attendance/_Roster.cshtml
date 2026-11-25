@@ -27,13 +27,13 @@
             </h2>
             @if (!Model.HasStarted && row.IsActive && row.ParticipationType == "Regular")
             {
-                <a asp-controller="LeaveMakeup" asp-action="Leave" asp-route-participantId="@row.ParticipantId" asp-route-returnToSession="true" class="btn btn-sm btn-outline-primary mb-2">登記請假</a>
+                if (User.IsInRole("Admin")) { <a asp-controller="LeaveMakeup" asp-action="Leave" asp-route-participantId="@row.ParticipantId" asp-route-returnToSession="true" class="btn btn-sm btn-outline-primary mb-2">登記請假</a> }
             }
             @if (row.ParticipantStatus == "OnLeave" || row.ParticipationType == "Makeup")
             {
                 <a asp-controller="LeaveMakeup" asp-action="Index" asp-route-tab="@(row.ParticipationType == "Makeup" ? "requests" : "leaves")" class="btn btn-sm btn-outline-secondary mb-2">管理請假／補課</a>
             }
-            <form asp-area="Admin" asp-controller="Attendance" asp-action="Record" method="post">
+            @if (User.IsInRole("Admin")) { <form asp-area="Admin" asp-controller="Attendance" asp-action="Record" method="post">
                 <input type="hidden" name="SessionId" value="@Model.SessionId" />
                 <input type="hidden" name="ParticipantId" value="@row.ParticipantId" />
                 <input type="hidden" name="RowVersion" value="@Convert.ToBase64String(row.RowVersion)" />
@@ -55,7 +55,7 @@
                         <div class="col-md-2"><button type="submit" class="btn btn-primary w-100" aria-label="儲存 @row.StudentName 的出缺席">儲存</button></div>
                     </div>
                 </fieldset>
-            </form>
+            </form> }
             @if (row.UpdatedAtUtc.HasValue)
             {
                 <p class="small text-secondary mt-2 mb-0">最後登記：@row.UpdatedBy · @DateTime.SpecifyKind(row.UpdatedAtUtc.Value, DateTimeKind.Utc).AddHours(8).ToString("yyyy/MM/dd HH:mm:ss")（台灣時間）</p>

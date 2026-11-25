@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using QRCoder;
 namespace EnjoySpace.Web.Controllers;
 
-[Authorize(Roles = "Admin,Teacher"), AutoValidateAntiforgeryToken]
+[Authorize(Policy = "BackOfficeTeacher"), AutoValidateAntiforgeryToken]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public class ClassroomController(AppDbContext db, CheckInService service, AttendanceService attendance, IConfiguration config, IWebHostEnvironment env, TimeProvider clock) : Controller
 {
@@ -53,8 +53,9 @@ public class ClassroomController(AppDbContext db, CheckInService service, Attend
         await service.RequireStaffAsync(input.SessionId, Actor);
         await attendance.RecordAsync(input, Actor); return new { message = "出勤已更新。" };
     });
+    [BackOfficeQuery]
     [HttpGet] public async Task<IActionResult> Errors() {
-        if (!User.IsInRole("Admin")) return Forbid();
+        if (!User.IsInRole("Admin") && !User.IsInRole(StaffAccess.ReadOnlyRole)) return Forbid();
         return View(await db.CheckInEvents.Include(x => x.User).AsNoTracking().Where(x => x.IsError).OrderByDescending(x => x.CreatedAt).Take(200).ToListAsync());
     }
     [HttpPost] public Task<IActionResult> Resolve(long id, string reason) => Api(async () => {

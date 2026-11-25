@@ -7,9 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
-[Area("Admin"), Authorize(Roles = "Admin")]
+[Area("Admin"), Authorize(Policy = "BackOffice")]
 public class LessonPlansController(AppDbContext db, TrialLessonService service) : TrialLessonControllerBase
 {
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     [HttpGet] public async Task<IActionResult> Index(int page = 1, string? sort = null) => View(await TrialLessonService.PageAsync(EnjoySpace.Web.Models.AdminTableSorts.Plans.Apply(db.LessonPlans.AsNoTracking(), sort), page));
     [HttpGet] public async Task<IActionResult> Edit(long id = 0)
     {

@@ -59,6 +59,10 @@
             </div>
         </header>
         <main id="main-content" class="admin-main" tabindex="-1">
+            @if (User.IsInRole("AdminReadOnly"))
+            {
+                <div class="alert alert-info">目前為唯讀模式，可查看後台資料。</div>
+            }
             @RenderBody()
         </main>
         <footer class="admin-footer"><span>Enjoy Space 米亞工作室 · 後台管理系統</span><a asp-area="" asp-controller="Home" asp-action="Index">返回入口首頁</a></footer>

@@ -1,7 +1,7 @@
 @model EnjoySpace.Web.Areas.Admin.ViewModels.PagedRecords<EnjoySpace.Web.Models.Entities.LessonPass>
 @using EnjoySpace.Web.Models
 @{ ViewData["Title"] = "方案購買紀錄"; }
-<h1 class="h3">方案購買紀錄</h1><a asp-action="Create" class="btn btn-primary mb-3">購買方案</a>
+<h1 class="h3">方案購買紀錄</h1>@if (User.IsInRole("Admin")) { <a asp-action="Create" class="btn btn-primary mb-3">購買方案</a> }
 <div class="table-responsive card card-body"><table sort-set="passes" class="table align-middle"><thead><tr><th sort-key="name">購買對象</th><th sort-key="plan">購買時方案</th><th sort-key="price">堂數／金額</th><th sort-key="date">效期</th><th sort-key="payment">付款</th><th>操作</th></tr></thead><tbody>
 @foreach (var p in Model.Items) {
     <tr><td>@(p.TrialGuest?.Name ?? p.Student?.User.DisplayName)</td><td>@p.PlanNameAtPurchase</td><td>@p.SessionQuotaAtPurchase 堂／$@p.AmountAtPurchase.ToString("N0")</td>

@@ -11,11 +11,11 @@ namespace EnjoySpace.Web.Services;
 
 public class TeacherRequestService(AppDbContext db, TimeProvider clock)
 {
-    private async Task<bool> IsAdmin(long actor)
+    private async Task<bool> IsAdmin(long actor, bool query = false)
     {
         var roles = await StaffAccess.RolesAsync(db, actor);
         if (roles.Count == 0) throw new InvalidOperationException("請使用有效的老師或管理員帳號。");
-        return roles.Contains("Admin");
+        return roles.Contains("Admin") || (query && roles.Contains(StaffAccess.ReadOnlyRole));
     }
     private async Task TeacherAccess(long teacherId, long actor, bool admin)
     {
@@ -31,12 +31,12 @@ public class TeacherRequestService(AppDbContext db, TimeProvider clock)
         .Include(x => x.Course).ThenInclude(x => x.Term).Include(x => x.StudioLocation);
     public async Task<PagedRecords<TeacherRequest>> ListAsync(long actor, int page, string? sort = null)
     {
-        var admin = await IsAdmin(actor);
+        var admin = await IsAdmin(actor, query: true);
         return await TrialLessonService.PageAsync(AdminTableSorts.TeacherRequests.Apply(Requests().Where(x => admin || x.Teacher.UserId == actor), sort), page);
     }
     public async Task<TeacherRequest?> DetailAsync(long id, long actor)
     {
-        var admin = await IsAdmin(actor);
+        var admin = await IsAdmin(actor, query: true);
         return await Requests().SingleOrDefaultAsync(x => x.Id == id && (admin || x.Teacher.UserId == actor));
     }
     public async Task PopulateAsync(TeacherRequestInput input, long actor)

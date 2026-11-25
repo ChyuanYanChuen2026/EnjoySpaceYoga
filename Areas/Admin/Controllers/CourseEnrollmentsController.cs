@@ -8,9 +8,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
-[Area("Admin"), Authorize(Roles = "Admin")]
+[Area("Admin"), Authorize(Policy = "BackOffice")]
 public class CourseEnrollmentsController(AppDbContext db) : Controller
 {
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Index(string? sort = null, int page = 1)
     {
         // Keep historical enrollments visible even when their student or course is inactive.

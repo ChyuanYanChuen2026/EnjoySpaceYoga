@@ -8,10 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
-[Area("Admin"), Authorize(Roles = "Admin")]
+[Area("Admin"), Authorize(Policy = "BackOffice")]
 public class LeaveMakeupController(LeaveMakeupService workflow) : Controller
 {
     [HttpGet]
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Index(string? tab, int page = 1) => View(await workflow.GetListAsync(tab, page));
 
     [HttpGet]

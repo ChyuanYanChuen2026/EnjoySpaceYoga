@@ -15,7 +15,7 @@
 
 
 <div class="mb-3">
-    <a asp-area="Admin" asp-controller="ScheduleSetup" asp-action="Index" asp-route-termId="@Model.Controls.Filter.TermId" class="btn btn-primary">新增課程（步驟設定）</a>
+    @if (User.IsInRole("Admin")) { <a asp-area="Admin" asp-controller="ScheduleSetup" asp-action="Index" asp-route-termId="@Model.Controls.Filter.TermId" class="btn btn-primary">新增課程（步驟設定）</a> }
 </div>
 
 <partial name="_CatalogFilters" model="Model.Controls" />
@@ -53,9 +53,9 @@
                                 <td class="text-nowrap">
                                     @if (course.Term.Status == TermStatusOptions.Draft)
                                     {
-                                        <a asp-area="Admin" asp-controller="Courses" asp-action="Edit" asp-route-id="@course.CourseId" class="btn btn-sm btn-outline-primary">
+                                        if (User.IsInRole("Admin")) { <a asp-area="Admin" asp-controller="Courses" asp-action="Edit" asp-route-id="@course.CourseId" class="btn btn-sm btn-outline-primary">
                                             編輯
-                                        </a>
+                                        </a> }
                                     }
                                     else
                                     {

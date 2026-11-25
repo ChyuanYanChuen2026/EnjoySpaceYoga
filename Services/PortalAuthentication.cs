@@ -28,7 +28,7 @@ public static class PortalAuthentication
             var roles = await db.UserRoles.Where(x => x.UserId == id && x.User.IsActive && x.Role.IsActive)
                 .Select(x => x.Role.RoleCode).ToListAsync();
             var claimed = context.Principal!.FindAll(ClaimTypes.Role).Select(x => x.Value).Order().ToArray();
-            if (roles.Contains("Admin") || !roles.Intersect(Roles).Any() ||
+            if (roles.Contains("Admin") || roles.Contains(StaffAccess.ReadOnlyRole) || !roles.Intersect(Roles).Any() ||
                 !claimed.SequenceEqual(roles.Intersect(Roles).Order()) ||
                 (roles.Contains("Teacher") && !await db.Teachers.AnyAsync(x => x.UserId == id && x.IsActive)) ||
                 (roles.Contains("Student") && !await db.Students.AnyAsync(x => x.UserId == id && x.IsActive))) context.RejectPrincipal();

@@ -19,6 +19,16 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.ExpireTimeSpan = TimeSpan.FromHours(2);
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Events.OnRedirectToAccessDenied = async context =>
+    {
+        if (!context.HttpContext.User.IsInRole(StaffAccess.ReadOnlyRole))
+        {
+            context.Response.Redirect(context.RedirectUri);
+            return;
+        }
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsync("目前帳號只有後台查詢權限，無法執行這項操作。");
+    };
     options.Events.OnValidatePrincipal = async context =>
     {
         var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
@@ -33,7 +43,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         identity.AddClaims(roles.Select(role => new Claim(ClaimTypes.Role, role)));
     };
 });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("BackOffice", policy => policy.RequireAuthenticatedUser()
+        .RequireAssertion(context => context.User.IsInRole("Admin") || BackOfficeQueryAttribute.Allows(context)));
+    options.AddPolicy("BackOfficeTeacher", policy => policy.RequireAuthenticatedUser()
+        .RequireAssertion(context => context.User.IsInRole("Admin") || context.User.IsInRole("Teacher")
+            || BackOfficeQueryAttribute.Allows(context)));
+});
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;
@@ -86,12 +103,14 @@ if (resetArgument >= 0)
 }
 
 var adminArgument = Array.IndexOf(args, "--create-admin");
-if (adminArgument >= 0)
+var readOnlyArgument = Array.IndexOf(args, "--create-readonly");
+if (adminArgument >= 0 || readOnlyArgument >= 0)
 {
-    if (!app.Environment.IsDevelopment() || adminArgument + 1 >= args.Length)
-        throw new InvalidOperationException("請在 Development 環境使用 --create-admin 帳號。");
+    var argument = adminArgument >= 0 ? adminArgument : readOnlyArgument;
+    if (!app.Environment.IsDevelopment() || argument + 1 >= args.Length || (adminArgument >= 0 && readOnlyArgument >= 0))
+        throw new InvalidOperationException("請在 Development 環境使用 --create-admin 帳號或 --create-readonly 帳號。");
     using var scope = app.Services.CreateScope();
-    await AdminAccountSetup.CreateAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), args[adminArgument + 1]);
+    await AdminAccountSetup.CreateAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), args[argument + 1], readOnlyArgument >= 0);
     return;
 }
 var seedOnly = args.Contains("--seed-only", StringComparer.OrdinalIgnoreCase);
