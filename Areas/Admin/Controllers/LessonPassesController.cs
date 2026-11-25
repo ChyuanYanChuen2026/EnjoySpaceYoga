@@ -7,9 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
-[Area("Admin"), Authorize(Roles = "Admin")]
+[Area("Admin"), Authorize(Policy = "BackOffice")]
 public class LessonPassesController(AppDbContext db, TrialLessonService service) : TrialLessonControllerBase
 {
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     [HttpGet] public async Task<IActionResult> Index(int page = 1, string? sort = null) => View(await TrialLessonService.PageAsync(EnjoySpace.Web.Models.AdminTableSorts.Passes.Apply(db.LessonPasses.AsNoTracking()
         .Include(x => x.Payment).Include(x => x.TrialGuest).Include(x => x.Student).ThenInclude(x => x!.User), sort), page));
     [HttpGet] public async Task<IActionResult> Create(string ownerType = "TrialGuest", long ownerId = 0)
@@ -31,6 +32,7 @@ public class LessonPassesController(AppDbContext db, TrialLessonService service)
         if (!ModelState.IsValid && TempData["Error"] == null) TempData["Error"] = "確認資料無效，請重新選擇方案。";
         return RedirectToAction(nameof(Create));
     }
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     [HttpGet] public async Task<IActionResult> Details(long id)
     {
         var model = await service.PassAsync(id);

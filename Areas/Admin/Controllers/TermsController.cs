@@ -11,10 +11,11 @@ using EnjoySpace.Web.Services;
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Authorize(Roles = "Admin")]
+[Authorize(Policy = "BackOffice")]
 public class TermsController(AppDbContext db, TermScheduleService schedule) : Controller
 {
     [HttpGet]
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Index([FromQuery] CatalogFilter filter, [FromServices] AdminCatalogService catalog)
     {
         var terms = await catalog.GetTermsAsync(filter);

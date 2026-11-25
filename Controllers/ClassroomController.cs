@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using QRCoder;
 namespace EnjoySpace.Web.Controllers;
 
-[Authorize(Roles = "Admin,Teacher"), AutoValidateAntiforgeryToken]
+[Authorize(Policy = "BackOfficeTeacher"), AutoValidateAntiforgeryToken]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public class ClassroomController(AppDbContext db, CheckInService service, AttendanceService attendance, IConfiguration config, IWebHostEnvironment env, TimeProvider clock) : Controller
 {
@@ -45,7 +45,7 @@ public class ClassroomController(AppDbContext db, CheckInService service, Attend
         var url = baseUrl + "/check-in#code=" + Uri.EscapeDataString(qr.Token);
         using var data = QRCodeGenerator.GenerateQrCode(url, QRCodeGenerator.ECCLevel.Q);
         using var png = new PngByteQRCode(data);
-        return new { image = "data:image/png;base64," + Convert.ToBase64String(png.GetGraphic(8)), qr.OpensAt, qr.ExpiresAt,
+        return new { image = "data:image/png;base64," + Convert.ToBase64String(png.GetGraphic(8)), url = env.IsDevelopment() ? url : null, qr.OpensAt, qr.ExpiresAt,
             warning = uri.IsLoopback ? "此網址只供本機測試，其他手機無法連線。" : null };
     });
     [HttpPost] public Task<IActionResult> Record(AttendanceEditViewModel input) => Api(async () => {
@@ -53,8 +53,9 @@ public class ClassroomController(AppDbContext db, CheckInService service, Attend
         await service.RequireStaffAsync(input.SessionId, Actor);
         await attendance.RecordAsync(input, Actor); return new { message = "出勤已更新。" };
     });
+    [BackOfficeQuery]
     [HttpGet] public async Task<IActionResult> Errors() {
-        if (!User.IsInRole("Admin")) return Forbid();
+        if (!User.IsInRole("Admin") && !User.IsInRole(StaffAccess.ReadOnlyRole)) return Forbid();
         return View(await db.CheckInEvents.Include(x => x.User).AsNoTracking().Where(x => x.IsError).OrderByDescending(x => x.CreatedAt).Take(200).ToListAsync());
     }
     [HttpPost] public Task<IActionResult> Resolve(long id, string reason) => Api(async () => {

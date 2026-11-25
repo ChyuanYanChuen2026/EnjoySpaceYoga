@@ -8,10 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
-[Area("Admin"), Authorize(Roles = "Admin")]
+[Area("Admin"), Authorize(Policy = "BackOffice")]
 public class AttendanceController(AttendanceService attendance) : Controller
 {
     [HttpGet]
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Index(int sessionId)
     {
         var roster = await attendance.GetRosterAsync(sessionId);

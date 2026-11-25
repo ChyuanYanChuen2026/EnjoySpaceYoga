@@ -17,7 +17,7 @@
 </dl></div>
 @if (Model.Status == "Pending" && Model.Payment.Status == "Pending")
 {
-    <form asp-action="ConfirmPayment" method="post" class="card card-body mb-3">
+    if (User.IsInRole("Admin")) { <form asp-action="ConfirmPayment" method="post" class="card card-body mb-3">
         <h2 class="h5">確認收款並啟用</h2>
         <input name="Id" type="hidden" value="@Model.LessonPassId" /><input name="RowVersion" type="hidden" value="@Convert.ToBase64String(Model.RowVersion)" />
         <div class="row g-3">
@@ -27,11 +27,11 @@
             <div><label for="PaymentNote" class="form-label">收款備註</label><input name="Note" id="PaymentNote" maxlength="500" class="form-control" /></div>
             <div class="form-check ms-2"><input name="ConfirmDetails" id="ConfirmDetails" type="checkbox" value="true" class="form-check-input" required /><label for="ConfirmDetails" class="form-check-label">已核對購買對象、實收金額與方案內容。</label></div>
         </div><div class="mt-3"><button class="btn btn-primary" type="submit">確認收款並啟用</button></div>
-    </form>
-    <form asp-action="Cancel" method="post" class="card card-body mb-3">
+    </form> }
+    @if (User.IsInRole("Admin")) { <form asp-action="Cancel" method="post" class="card card-body mb-3">
         <h2 class="h5">取消待付款訂單</h2><input name="Id" type="hidden" value="@Model.LessonPassId" /><input name="RowVersion" type="hidden" value="@Convert.ToBase64String(Model.RowVersion)" />
         <label for="CancelNote" class="form-label">取消原因</label><input name="Note" id="CancelNote" maxlength="400" class="form-control mb-2" required />
         <div><button class="btn btn-outline-danger" type="submit">取消尚未收款訂單</button></div>
-    </form>
+    </form> }
 }
 <a asp-action="Index" class="btn btn-outline-secondary">返回方案購買紀錄</a>

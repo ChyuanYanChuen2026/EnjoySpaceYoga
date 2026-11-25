@@ -12,7 +12,7 @@
     <a asp-action="Index" class="btn btn-outline-secondary">返回場次列表</a>
 </div>
 <div class="mb-3">
-    <a asp-area="" asp-controller="Classroom" asp-action="Index" asp-route-sessionId="@session.Id" class="btn btn-primary">課堂 QR Code 與即時點名</a>
+    @if (User.IsInRole("Admin")) { <a asp-area="" asp-controller="Classroom" asp-action="Index" asp-route-sessionId="@session.Id" class="btn btn-primary">課堂 QR Code 與即時點名</a> }
 </div>
 
 <section id="session-information" class="card shadow-sm mb-4" aria-label="場次資訊">
@@ -55,7 +55,7 @@
 </section>
 @if (session.CanDelete)
 {
-    <a asp-action="Delete" asp-route-id="@session.Id" class="btn btn-outline-danger">刪除場次</a>
+    if (User.IsInRole("Admin")) { <a asp-action="Delete" asp-route-id="@session.Id" class="btn btn-outline-danger">刪除場次</a> }
 }
 else
 {

@@ -9,9 +9,10 @@ using EnjoySpace.Web.Areas.Admin.ViewModels;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
-[Area("Admin"), Authorize(Roles = "Admin")]
+[Area("Admin"), Authorize(Policy = "BackOffice")]
 public class PaymentsController(AppDbContext db, EnrollmentWorkflowService workflow) : Controller
 {
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Index(int page = 1, string? sort = null)
     {
         var result = new PaymentListModel { TotalCount = await db.Payments.CountAsync() };

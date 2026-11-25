@@ -90,7 +90,7 @@
                     {
                         <p class="alert alert-warning small">此為舊申請，未保存當時的堂數與效期快照。核准前請核對目前方案與原約定；價格仍使用申請時的報價。</p>
                     }
-                    <form asp-action="Review" method="post" class="trial-form">
+                    @if (User.IsInRole("Admin")) { <form asp-action="Review" method="post" class="trial-form">
                         <input name="id" type="hidden" value="@Model.Id" />
                         <input name="rowVersion" type="hidden" value="@Convert.ToBase64String(Model.RowVersion)" />
                         <div><label for="trial-valid-from" class="form-label">方案生效日</label><input id="trial-valid-from" type="date" name="from" value="@DateTimeOffset.UtcNow.ToOffset(taiwan).ToString("yyyy-MM-dd")" required class="form-control" /></div>
@@ -100,7 +100,7 @@
                         }
                         <div><label for="trial-review-note" class="form-label">審核說明 <span class="text-secondary small">（退回必填）</span></label><textarea id="trial-review-note" name="note" maxlength="500" rows="3" class="form-control" placeholder="請填寫核對結果或退回原因"></textarea></div>
                         <div class="trial-actions"><button type="submit" name="approve" value="true" class="btn btn-primary">核准方案</button><button type="submit" name="approve" value="false" class="btn btn-outline-danger">退回申請</button></div>
-                    </form>
+                    </form> }
                 </div>
             </section>
         }
@@ -120,12 +120,12 @@
     {
         <section class="card mb-4"><div class="card-body">
             <h2 class="h5">安排希望上的場次</h2><p class="text-secondary small">送出後每堂產生獨立預約單，再於下方逐堂核准；核准後才加入上課名單。</p>
-            <form id="trial-booking-form" asp-action="Book" method="post" data-request="@Model.Id" class="trial-form">
+            @if (User.IsInRole("Admin")) { <form id="trial-booking-form" asp-action="Book" method="post" data-request="@Model.Id" class="trial-form">
                 <input name="id" type="hidden" value="@Model.Id" /><input name="rowVersion" type="hidden" value="@Convert.ToBase64String(Model.RowVersion)" /><input name="batchKey" type="hidden" value="@Guid.NewGuid()" />
                 <div id="trial-selects"></div>
                 <div class="trial-actions"><button id="add-trial-session" type="button" class="btn btn-outline-secondary" disabled>＋ 增加一堂</button><button id="submit-trial-booking" type="submit" class="btn btn-primary" disabled>送出預約</button></div>
                 <p id="trial-booking-message" role="alert" class="text-secondary mb-0"></p>
-            </form>
+            </form> }
         </div></section>
     }
     <section aria-labelledby="trial-bookings-title">
@@ -164,21 +164,21 @@
                 @if (!string.IsNullOrWhiteSpace(b.ReviewNote)) { <p class="trial-note">@b.ReviewNote</p> }
                 @if (b.Status == "Pending")
                 {
-                    <form asp-action="ReviewBooking" method="post" class="trial-form trial-booking-review">
+                    if (User.IsInRole("Admin")) { <form asp-action="ReviewBooking" method="post" class="trial-form trial-booking-review">
                         <input name="id" type="hidden" value="@b.Id" /><input name="requestId" type="hidden" value="@Model.Id" /><input name="rowVersion" type="hidden" value="@Convert.ToBase64String(b.RowVersion)" />
                         <div><label for="@($"booking-note-{b.Id}")" class="form-label">審核說明 <span class="text-secondary small">（退回必填）</span></label><input id="@($"booking-note-{b.Id}")" name="note" maxlength="500" class="form-control" /></div>
                         <div class="trial-actions"><button type="submit" name="approve" value="true" class="btn btn-primary">核准並登記上課</button><button type="submit" name="approve" value="false" class="btn btn-outline-danger">退回這堂</button></div>
-                    </form>
+                    </form> }
                 }
                 @if (b.Status is "Pending" or "Approved")
                 {
-                    <form asp-action="CancelBooking" method="post" class="trial-form trial-cancel-form">
+                    if (User.IsInRole("Admin")) { <form asp-action="CancelBooking" method="post" class="trial-form trial-cancel-form">
                         <input name="id" type="hidden" value="@b.Id" /><input name="requestId" type="hidden" value="@Model.Id" /><input name="rowVersion" type="hidden" value="@Convert.ToBase64String(b.RowVersion)" />
                         <div><label for="@($"booking-cancel-{b.Id}")" class="form-label">取消原因</label><input id="@($"booking-cancel-{b.Id}")" name="reason" required maxlength="500" class="form-control" /></div>
                         <div><button type="submit" class="btn btn-outline-secondary">取消這堂預約</button></div>
-                    </form>
+                    </form> }
                 }
-                @if (b.Status == "Approved") { <a asp-area="" asp-controller="Classroom" asp-action="Index" asp-route-sessionId="@b.ClassSessionId" class="btn btn-outline-primary mt-3">課堂打卡與點名</a> }
+                @if (b.Status == "Approved") { if (User.IsInRole("Admin")) { <a asp-area="" asp-controller="Classroom" asp-action="Index" asp-route-sessionId="@b.ClassSessionId" class="btn btn-outline-primary mt-3">課堂打卡與點名</a> } }
             </div></article>
         }
     </section>

@@ -19,7 +19,7 @@
 
 
 <div class="mb-3">
-    <a asp-area="Admin" asp-controller="ScheduleSetup" asp-action="Index" asp-route-termId="@Model.Controls.Filter.TermId" class="btn btn-primary">新增場次（步驟設定）</a>
+    @if (User.IsInRole("Admin")) { <a asp-area="Admin" asp-controller="ScheduleSetup" asp-action="Index" asp-route-termId="@Model.Controls.Filter.TermId" class="btn btn-primary">新增場次（步驟設定）</a> }
 </div>
 
 <partial name="_CatalogFilters" model="Model.Controls" />
@@ -55,9 +55,9 @@
                                 <td>@session.EndsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm")</td>
                                 <td>@session.EffectiveCapacity</td>
                                 <td>
-                                    <a asp-area="" asp-controller="Classroom" asp-action="Index" asp-route-sessionId="@session.Id"
+                                    @if (User.IsInRole("Admin")) { <a asp-area="" asp-controller="Classroom" asp-action="Index" asp-route-sessionId="@session.Id"
                                        class="btn btn-sm btn-outline-primary text-nowrap"
-                                       aria-label="@(session.CourseName + " " + session.StartsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm") + " 的 QR Code 與即時點名")">QR Code／點名</a>
+                                       aria-label="@(session.CourseName + " " + session.StartsAt.ToOffset(taiwanOffset).ToString("yyyy/MM/dd HH:mm") + " 的 QR Code 與即時點名")">QR Code／點名</a> }
                                 </td>
                             </tr>
                         }

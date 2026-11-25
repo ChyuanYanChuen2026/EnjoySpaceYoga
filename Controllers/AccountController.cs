@@ -13,7 +13,7 @@ using System.Security.Claims;
 namespace EnjoySpace.Web.Controllers;
 
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public class AccountController(AppDbContext db, PasswordRecoveryService recovery, ILogger<AccountController> logger) : Controller
+public class AccountController(AppDbContext db, PasswordRecoveryService recovery, ILogger<AccountController> logger, IWebHostEnvironment environment) : Controller
 {
     [HttpGet]
     public IActionResult Login(string? returnUrl) => View(new AdminLoginModel { ReturnUrl = returnUrl });
@@ -29,7 +29,7 @@ public class AccountController(AppDbContext db, PasswordRecoveryService recovery
         var roles = user is null ? new List<string>() : await StaffAccess.RolesAsync(db, user.UserId);
         if (result == PasswordVerificationResult.Failed || roles.Count == 0)
         {
-            ModelState.AddModelError("", "帳號或密碼錯誤，或沒有有效的管理員／老師權限。");
+            ModelState.AddModelError("", "帳號或密碼錯誤，或沒有有效的管理員／唯讀／老師權限。");
             return View(model);
         }
         if (result == PasswordVerificationResult.SuccessRehashNeeded)
@@ -37,6 +37,32 @@ public class AccountController(AppDbContext db, PasswordRecoveryService recovery
             user!.PasswordHash = hasher.HashPassword(user, model.Password);
             await db.SaveChangesAsync();
         }
+        return await SignInStaffAsync(user!, roles, model.ReturnUrl);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken, EnableRateLimiting("login")]
+    public async Task<IActionResult> DevelopmentLogin(string profile)
+    {
+        if (!environment.IsDevelopment()) return NotFound();
+        var target = profile switch
+        {
+            "admin" => (Account: "admin", Role: "Admin"),
+            "mia" => (Account: "teacher-mia", Role: "Teacher"),
+            _ => (Account: "", Role: "")
+        };
+        if (target.Account.Length == 0) return BadRequest();
+        var user = await db.Users.SingleOrDefaultAsync(x => x.Account == target.Account && x.IsActive);
+        var roles = user is null ? new List<string>() : await StaffAccess.RolesAsync(db, user.UserId);
+        if (user is null || !roles.Contains(target.Role) || (profile == "mia" && roles.Contains("Admin")))
+        {
+            ModelState.AddModelError("", "開發用登入帳號不存在、已停用或角色不符，請確認帳號設定。");
+            return View("Login", new AdminLoginModel());
+        }
+        return await SignInStaffAsync(user, roles, null);
+    }
+
+    private async Task<IActionResult> SignInStaffAsync(User user, List<string> roles, string? returnUrl)
+    {
         var identity = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, user!.UserId.ToString()),
@@ -44,8 +70,9 @@ public class AccountController(AppDbContext db, PasswordRecoveryService recovery
             new Claim(PasswordSession.ClaimType, PasswordSession.Version(user.PasswordHash))
         }.Concat(roles.Select(role => new Claim(ClaimTypes.Role, role))), CookieAuthenticationDefaults.AuthenticationScheme);
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+        if (roles.Contains(StaffAccess.ReadOnlyRole)) return LocalRedirect("/Admin/Dashboard");
         if (!roles.Contains("Admin")) return LocalRedirect("/TeacherDashboard");
-        return LocalRedirect(Url.IsLocalUrl(model.ReturnUrl) ? model.ReturnUrl! : "/Admin/EnrollmentApplications");
+        return LocalRedirect(Url.IsLocalUrl(returnUrl) ? returnUrl! : "/Admin/EnrollmentApplications");
     }
 
     [HttpGet]

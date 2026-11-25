@@ -7,7 +7,7 @@
 <h1 class="h3 mb-2">老師管理</h1>
 <p class="text-muted">共 @Model.Count 位老師。</p>
 <div class="mb-3">
-    <a asp-action="Create" class="btn btn-primary">新增老師</a>
+    @if (User.IsInRole("Admin")) { <a asp-action="Create" class="btn btn-primary">新增老師</a> }
 </div>
 
 <div class="card">
@@ -46,7 +46,7 @@
                                     <span class="badge @(teacher.IsUserActive ? "bg-success" : "bg-secondary")">@(teacher.IsUserActive ? "啟用" : "停用") </span>
                                 </td>
                                 <td class="text-nowrap">
-                                    <a asp-action="Edit" asp-route-id="@teacher.TeacherId"  class="btn btn-sm btn-outline-primary">編輯</a>
+                                    @if (User.IsInRole("Admin")) { <a asp-action="Edit" asp-route-id="@teacher.TeacherId"  class="btn btn-sm btn-outline-primary">編輯</a> }
                                 </td>
                             </tr>
                         }

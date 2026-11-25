@@ -32,7 +32,7 @@ public class PortalController(AppDbContext db, IAntiforgery antiforgery, TimePro
         var hasher = new PasswordHasher<User>();
         var result = user is null ? PasswordVerificationResult.Failed : hasher.VerifyHashedPassword(user, user.PasswordHash, input.Password);
         var roles = user is null ? [] : await db.UserRoles.Where(x => x.UserId == user.UserId && x.Role.IsActive).Select(x => x.Role.RoleCode).ToListAsync();
-        if (result == PasswordVerificationResult.Failed || roles.Contains("Admin") || !roles.Intersect(PortalAuthentication.Roles).Any())
+        if (result == PasswordVerificationResult.Failed || roles.Contains("Admin") || roles.Contains(StaffAccess.ReadOnlyRole) || !roles.Intersect(PortalAuthentication.Roles).Any())
             return Unauthorized(new { message = "帳號或密碼錯誤，或此帳號無官網使用權限。" });
         if ((roles.Contains("Teacher") && !await db.Teachers.AnyAsync(x => x.UserId == user!.UserId && x.IsActive)) ||
             (roles.Contains("Student") && !await db.Students.AnyAsync(x => x.UserId == user!.UserId && x.IsActive)))

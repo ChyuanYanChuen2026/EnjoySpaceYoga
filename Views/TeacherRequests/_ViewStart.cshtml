@@ -1,1 +1,1 @@
-@{ Layout = User.IsInRole("Admin") ? "/Areas/Admin/Views/Shared/_AdminLayout.cshtml" : "_TeacherLayout"; }
+@{ Layout = (User.IsInRole("Admin") || User.IsInRole("AdminReadOnly")) ? "/Areas/Admin/Views/Shared/_AdminLayout.cshtml" : "_TeacherLayout"; }

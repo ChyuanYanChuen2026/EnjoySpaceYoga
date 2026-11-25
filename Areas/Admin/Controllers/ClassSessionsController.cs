@@ -1,4 +1,4 @@
-﻿using EnjoySpace.Web.Services;
+using EnjoySpace.Web.Services;
 using EnjoySpace.Web.Areas.Admin.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -8,7 +8,7 @@ using Microsoft.Data.SqlClient;
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+[Microsoft.AspNetCore.Authorization.Authorize(Policy = "BackOffice")]
 public class ClassSessionsController : Controller
 {
     private readonly ClassSessionService _classSessionService;
@@ -18,6 +18,7 @@ public class ClassSessionsController : Controller
         _classSessionService = classSessionService;
     }
 
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Index([FromQuery] CatalogFilter filter, [FromServices] AdminCatalogService catalog)
     {
         var sessions = await catalog.GetSessionsAsync(filter);
@@ -26,6 +27,7 @@ public class ClassSessionsController : Controller
 
 
     [HttpGet]
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Details(int id, [FromServices] AttendanceService attendance)
     {
         var model = await _classSessionService.GetDetailAsync(id);
@@ -67,6 +69,7 @@ public class ClassSessionsController : Controller
     }
 
     [HttpGet]
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Events( [FromQuery] DateTimeOffset? start,  [FromQuery] DateTimeOffset? end)
     {
         if (!ModelState.IsValid ||  !start.HasValue ||  !end.HasValue || end.Value <= start.Value)

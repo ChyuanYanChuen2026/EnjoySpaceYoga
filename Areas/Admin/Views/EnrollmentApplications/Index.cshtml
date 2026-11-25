@@ -3,7 +3,7 @@
 @{ ViewData["Title"] = "報名管理"; }
 <h1 class="h3">報名管理</h1>
 <div class="d-flex flex-wrap gap-2 my-3">
-    <a asp-action="Create" class="btn btn-primary">新增報名</a>
+    @if (User.IsInRole("Admin")) { <a asp-action="Create" class="btn btn-primary">新增報名</a> }
     <a asp-action="Index" class="btn btn-outline-secondary">待審核</a>
     <a asp-action="Index" asp-route-all="true" class="btn btn-outline-secondary">全部申請</a>
 </div>

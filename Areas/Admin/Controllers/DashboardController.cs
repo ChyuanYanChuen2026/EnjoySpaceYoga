@@ -1,11 +1,11 @@
-﻿using EnjoySpace.Web.Areas.Admin.ViewModels;
+using EnjoySpace.Web.Areas.Admin.ViewModels;
 using EnjoySpace.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
-[Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+[Microsoft.AspNetCore.Authorization.Authorize(Policy = "BackOffice")]
 public class DashboardController : Controller
 {
     private readonly DashboardService _dashboardService;
@@ -15,6 +15,7 @@ public class DashboardController : Controller
         _dashboardService = dashboardService;
     }
 
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Index()
     {
         var model = new DashboardViewModel

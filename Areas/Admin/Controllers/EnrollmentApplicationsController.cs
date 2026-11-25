@@ -11,9 +11,10 @@ using Microsoft.Data.SqlClient;
 
 namespace EnjoySpace.Web.Areas.Admin.Controllers;
 
-[Area("Admin"), Authorize(Roles = "Admin")]
+[Area("Admin"), Authorize(Policy = "BackOffice")]
 public class EnrollmentApplicationsController(AppDbContext db, EnrollmentWorkflowService workflow) : Controller
 {
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Index(bool all = false, string? sort = null)
     {
         var query = db.EnrollmentApplications.AsNoTracking().Include(x => x.Student).ThenInclude(x => x.User)
@@ -22,6 +23,7 @@ public class EnrollmentApplicationsController(AppDbContext db, EnrollmentWorkflo
         ViewBag.All = all;
         return View(await EnjoySpace.Web.Models.AdminTableSorts.Applications.Apply(query.OrderByDescending(x => x.SubmittedAt).ThenBy(x => x.Id).Take(200), sort).ToListAsync());
     }
+    [EnjoySpace.Web.Services.BackOfficeQuery]
     public async Task<IActionResult> Details(long id)
     {
         var application = await db.EnrollmentApplications.AsNoTracking().Include(x => x.Student).ThenInclude(x => x.User)

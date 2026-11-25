@@ -1,4 +1,5 @@
 using EnjoySpace.Web.Models.Entities;
+using EnjoySpace.Web.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,21 +7,22 @@ namespace EnjoySpace.Web.Data;
 
 public static class AdminAccountSetup
 {
-    public static async Task CreateAsync(AppDbContext db, string account)
+    public static async Task CreateAsync(AppDbContext db, string account, bool readOnly = false)
     {
-        if (string.IsNullOrWhiteSpace(account) || account.Length > 100) throw new InvalidOperationException("請提供 100 字內的管理員帳號。");
+        var label = readOnly ? "後台唯讀" : "管理員";
+        if (string.IsNullOrWhiteSpace(account) || account.Length > 100) throw new InvalidOperationException($"請提供 100 字內的{label}帳號。");
         account = account.Trim();
         if (await db.Users.AnyAsync(x => x.Account == account))  throw new InvalidOperationException("此帳號已存在；不會覆蓋既有密碼或提升既有帳號權限。");
-        Console.Write("請輸入新管理員密碼（12～200 字元，不會顯示）：");
+        Console.Write($"請輸入新{label}密碼（12～200 字元，不會顯示）：");
         var password = ReadPassword();
         Console.Write("再次輸入密碼：");
         var confirmation = ReadPassword();
-        await CreateAccountAsync(db, account, password, confirmation);
-        Console.WriteLine("管理員已建立，請至 /Account/Login 登入。");
+        await CreateAccountAsync(db, account, password, confirmation, readOnly);
+        Console.WriteLine($"{label}帳號已建立，請至 /Account/Login 登入。");
     }
 
     // 共用既有帳號與雜湊流程；由呼叫者決定交易範圍及提交後的成功提示。
-    public static async Task<User> CreateAccountAsync(AppDbContext db, string account, string password, string confirmation)
+    public static async Task<User> CreateAccountAsync(AppDbContext db, string account, string password, string confirmation, bool readOnly = false)
     {
         if (string.IsNullOrWhiteSpace(account) || account.Length > 100)
             throw new InvalidOperationException("請提供 100 字內的管理員帳號。");
@@ -29,11 +31,15 @@ public static class AdminAccountSetup
             throw new InvalidOperationException("密碼須為 12～200 字元，且兩次輸入相同。");
         if (await db.Users.AnyAsync(x => x.Account == account))
             throw new InvalidOperationException("此帳號已存在；不會覆蓋既有密碼或提升既有帳號權限。");
-        var role = await db.Roles.SingleOrDefaultAsync(x => x.RoleCode == "Admin" && x.IsActive)
-            ?? throw new InvalidOperationException("找不到啟用中的 Admin 角色，請先確認資料庫初始化結果。");
+        var roleCode = readOnly ? StaffAccess.ReadOnlyRole : "Admin";
+        var role = await db.Roles.SingleOrDefaultAsync(x => x.RoleCode == roleCode);
+        if (role is null && readOnly)
+            role = new Role { RoleCode = roleCode, RoleName = "後台唯讀" };
+        if (role is null || !role.IsActive)
+            throw new InvalidOperationException("找不到啟用中的後台角色，請確認資料庫角色設定。");
         var user = new User { Account = account, DisplayName = account, IsActive = true };
         user.PasswordHash = new PasswordHasher<User>().HashPassword(user, password);
-        db.UserRoles.Add(new UserRole { User = user, RoleId = role.RoleId });
+        db.UserRoles.Add(new UserRole { User = user, Role = role });
         await db.SaveChangesAsync();
         return user;
     }
